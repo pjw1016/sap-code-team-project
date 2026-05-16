@@ -1,0 +1,21 @@
+# Local SAP training materials and large reference files
+SAP 개발 교재/
+*.pdf
+
+# UI5 / Node.js
+node_modules/
+dist/
+coverage/
+.ui5/
+
+# Environment and local machine files
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.idea/
+.vscode/
