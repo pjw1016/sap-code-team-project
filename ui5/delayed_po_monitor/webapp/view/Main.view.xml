@@ -61,12 +61,12 @@
                                     </MultiComboBox>
                                 </VBox>
 
-                                <VBox class="dpmFilterItem dpmCheckItem">
+                                <!-- <VBox class="dpmFilterItem dpmCheckItem">
                                     <Label text=" "/>
                                     <CheckBox
                                         text="{i18n>excludeCompleted}"
                                         selected="{view>/filters/excludeCompleted}"/>
-                                </VBox>
+                                </VBox> -->  <!--"입고완료 제외" 체크박스 사용 안 함-->
                             </FlexBox>
 
                             <FlexBox
@@ -178,69 +178,84 @@
 
                 <Table
                     id="delayedPoTable"
+                    width="100%"
+                    contextualWidth="Auto"
                     items="{view>/items}"
                     busy="{view>/tableBusy}"
                     growing="true"
                     growingThreshold="20"
                     sticky="ColumnHeaders,HeaderToolbar"
-                    mode="None"
-                    >
-                    <headerToolbar>
-                        <OverflowToolbar>
-                            <Title text="{i18n>resultTableTitle}" level="H2"/>
-                            <ObjectStatus
-                                text="{= ${view>/tableCount} + ' ' + ${i18n>countUnit} }"
-                                state="Information"/>
-                            <ToolbarSpacer/>
-                            <Button
-                                icon="sap-icon://refresh"
-                                tooltip="{i18n>refresh}"
-                                type="Transparent"
-                                press=".onSearch"/>
-                        </OverflowToolbar>
-                    </headerToolbar>
-                    <columns>
-                        <Column width="8rem"><Text text="{i18n>colStatus}"/></Column>
-                        <Column width="6rem" hAlign="End"><Text text="{i18n>colDelayDays}"/></Column>
-                        <Column width="7rem"><Text text="{i18n>colEindt}"/></Column>
-                        <Column width="9rem"><Text text="{i18n>colEbeln}"/></Column>
-                        <Column width="6rem"><Text text="{i18n>colEbelp}"/></Column>
-                        <Column width="7rem"><Text text="{i18n>colLifnr}"/></Column>
-                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colName1}"/></Column>
-                        <Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colMatnr}"/></Column>
-                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colMaktx}"/></Column>
-                        <Column width="8rem" hAlign="End"><Text text="{i18n>colPoQty}"/></Column>
-                        <Column width="8rem" hAlign="End"><Text text="{i18n>colGrQty}"/></Column>
-                        <Column width="8rem" hAlign="End"><Text text="{i18n>colOpenQty}"/></Column>
-                    </columns>
-                    <items>
-                        <ColumnListItem type="Active" press=".onItemPress">
-                            <cells>
+                    mode="None">
+                        <headerToolbar>
+                            <OverflowToolbar>
+                                <Title text="{i18n>resultTableTitle}" level="H2"/>
                                 <ObjectStatus
-                                    text="{view>StatusText}"
-                                    state="{view>StatusState}"/>
-                                <Text
-                                    text="{path: 'view>DelayDays', formatter: '.formatter.formatDelayDays'}"
-                                    textAlign="End"/>
-                                <Text text="{path: 'view>Eindt', formatter: '.formatter.formatDate'}"/>
-                                <ObjectIdentifier title="{view>Ebeln}"/>
-                                <Text text="{view>Ebelp}"/>
-                                <Text text="{view>Lifnr}"/>
-                                <Text text="{view>Name1}"/>
-                                <Text text="{view>Matnr}"/>
-                                <Text text="{view>Maktx}"/>
-                                <ObjectNumber
-                                    number="{path: 'view>PoQty', formatter: '.formatter.formatQuantity'}"
-                                    unit="{view>Meins}"/>
-                                <ObjectNumber
-                                    number="{path: 'view>GrQty', formatter: '.formatter.formatQuantity'}"
-                                    unit="{view>Meins}"/>
-                                <ObjectNumber
-                                    number="{path: 'view>OpenQty', formatter: '.formatter.formatQuantity'}"
-                                    unit="{view>Meins}"/>
-                            </cells>
-                        </ColumnListItem>
-                    </items>
+                                    text="{= ${view>/tableCount} + ' ' + ${i18n>countUnit} }"
+                                    state="Information"/>
+                                <ToolbarSpacer/>
+                                <Button
+                                    icon="sap-icon://refresh"
+                                    tooltip="{i18n>refresh}"
+                                    type="Transparent"
+                                    press=".onSearch"/>
+                            </OverflowToolbar>
+                        </headerToolbar>
+                        <columns>
+                            <Column width=""><Text text="{i18n>colStatus}"/></Column>
+                            <Column width="" hAlign="End"><Text text="{i18n>colDelayDays}"/></Column>
+                            <Column width=""><Text text="{i18n>colEindt}"/></Column>
+                            <Column width=""><Text text="{i18n>colEbeln}"/></Column>
+                            <Column width=""><Text text="{i18n>colEbelp}"/></Column>
+                            <Column width=""><Text text="{i18n>colLifnr}"/></Column>
+                            <Column
+                                width=""
+                                minScreenWidth="1000px"
+                                demandPopin="false"
+                                importance="Low">
+                                <Text text="{i18n>colName1}"/>
+                            </Column>
+                            <Column width="8rem"><Text text="{i18n>colMatnr}"/></Column>
+                            <Column
+                                width=""
+                                minScreenWidth="1000px"
+                                demandPopin="false"
+                                importance="Low">
+                                <Text text="{i18n>colMaktx}"/>
+                            </Column>
+                            <Column width="" hAlign="End"><Text text="{i18n>colPoQty}"/></Column>
+                            <Column width="" hAlign="End"><Text text="{i18n>colGrQty}"/></Column>
+                            <Column width="" hAlign="End"><Text text="{i18n>colOpenQty}"/></Column>
+                        </columns>
+                        <items>
+                            <ColumnListItem type="Active" press=".onItemPress">
+                                <cells>
+                                    <ObjectStatus
+                                        text="{view>StatusText}"
+                                        state="{view>StatusState}"/>
+                                    <Text
+                                        text="{path: 'view>DelayDays', formatter: '.formatter.formatDelayDays'}"
+                                        textAlign="End"/>
+                                    <Text text="{path: 'view>Eindt', formatter: '.formatter.formatDate'}"/>
+                                    <ObjectIdentifier title="{view>Ebeln}"/>
+                                    <Text
+                                        text="{path: 'view>Ebelp', formatter: '.formatter.formatItemNo'}"
+                                        wrapping="false"/>
+                                    <Text text="{view>Lifnr}"/>
+                                    <Text text="{view>Name1}" wrapping="false"/>
+                                    <Text text="{view>Matnr}"/>
+                                    <Text text="{view>Maktx}" wrapping="false"/>
+                                    <ObjectNumber
+                                        number="{path: 'view>PoQty', formatter: '.formatter.formatQuantity'}"
+                                        unit="{view>Meins}"/>
+                                    <ObjectNumber
+                                        number="{path: 'view>GrQty', formatter: '.formatter.formatQuantity'}"
+                                        unit="{view>Meins}"/>
+                                    <ObjectNumber
+                                        number="{path: 'view>OpenQty', formatter: '.formatter.formatQuantity'}"
+                                        unit="{view>Meins}"/>
+                                </cells>
+                            </ColumnListItem>
+                        </items>
                 </Table>
             </VBox>
         </content>

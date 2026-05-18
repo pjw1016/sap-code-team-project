@@ -77,6 +77,16 @@ sap.ui.define([], function () {
             }
 
             return iDays + "일";
+        },
+
+        formatItemNo: function (vValue) {
+            var sValue = String(vValue || "");
+
+            if (!sValue) {
+                return "";
+            }
+
+            return sValue.replace(/^0+/, "") || "0";
         }
     };
 });

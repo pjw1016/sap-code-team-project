@@ -101,7 +101,7 @@ sap.ui.define([
                     eindtTo: oEindtTo,
                     werks: "",
                     statusCodes: ["O", "D", "P", "L"],
-                    excludeCompleted: true,
+                    // excludeCompleted: true,  "입고완료 제외" 체크박스 더이상 사용 안 함
                     bukrs: "",
                     ebeln: "",
                     lifnr: "",
@@ -139,7 +139,7 @@ sap.ui.define([
             this._addTextFilter(aFilters, "Name1", oFilterData.name1);
             this._addTextFilter(aFilters, "Matnr", oFilterData.matnr);
             this._addTextFilter(aFilters, "Maktx", oFilterData.maktx);
-            this._addStatusFilters(aFilters, oFilterData.statusCodes, oFilterData.excludeCompleted);
+            this._addStatusFilters(aFilters, oFilterData.statusCodes);
 
             return aFilters;
         },
@@ -256,14 +256,29 @@ sap.ui.define([
             }
         },
 
-        _addStatusFilters: function (aFilters, aStatusCodes, bExcludeCompleted) {
-            var aCodes = Array.isArray(aStatusCodes) ? aStatusCodes.slice() : [];
+        // _addStatusFilters: function (aFilters, aStatusCodes, bExcludeCompleted) {
+        //     var aCodes = Array.isArray(aStatusCodes) ? aStatusCodes.slice() : [];
 
-            if (bExcludeCompleted) {
-                aCodes = aCodes.length ? aCodes.filter(function (sCode) {
-                    return sCode !== "C";
-                }) : ["O", "D", "P", "L"];
-            }
+        //     if (bExcludeCompleted) {
+        //         aCodes = aCodes.length ? aCodes.filter(function (sCode) {
+        //             return sCode !== "C";
+        //         }) : ["O", "D", "P", "L"];
+        //     }
+
+        //     if (!aCodes.length) {
+        //         return;
+        //     }
+
+        //     aFilters.push(new Filter({
+        //         filters: aCodes.map(function (sCode) {
+        //             return new Filter("StatusCode", FilterOperator.EQ, sCode);
+        //         }),
+        //         and: false
+        //     }));
+        // },
+
+        _addStatusFilters: function (aFilters, aStatusCodes) {
+            var aCodes = Array.isArray(aStatusCodes) ? aStatusCodes.slice() : [];
 
             if (!aCodes.length) {
                 return;
