@@ -1,1 +1,64 @@
-/* Enter your custom styles here */
+.dpmPage {
+    gap: 1rem;
+}
+
+.dpmSection {
+    width: 100%;
+}
+
+.dpmSectionHeader {
+    margin-bottom: 0.5rem;
+}
+
+.dpmFilterBar,
+.dpmKpiBox,
+.dpmInfoGrid {
+    gap: 0.75rem;
+}
+
+.dpmFilterItem {
+    width: 12rem;
+}
+
+.dpmFilterItemWide {
+    width: 18rem;
+}
+
+.dpmCheckItem {
+    justify-content: flex-end;
+}
+
+.dpmActionToolbar {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.dpmKpiTile {
+    width: 14rem;
+}
+
+.dpmDialogHeader {
+    margin-bottom: 0.75rem;
+}
+
+.dpmDialogSection {
+    margin-bottom: 0.75rem;
+}
+
+.dpmInfoItem {
+    width: 11rem;
+}
+
+.dpmInfoItemWide {
+    width: 18rem;
+}
+
+@media (max-width: 600px) {
+    .dpmFilterItem,
+    .dpmFilterItemWide,
+    .dpmInfoItem,
+    .dpmInfoItemWide,
+    .dpmKpiTile {
+        width: 100%;
+    }
+}

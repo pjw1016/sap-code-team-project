@@ -1,0 +1,163 @@
+<mvc:View
+    controllerName="code.t0.ui5.review4.controller.NextPage"
+    displayBlock="true"
+    height="100%"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+>
+    <f:DynamicPage
+        id="idDynamicPage"
+        title="{i18n>nextPageTitle}"
+    >
+        <f:title>
+            <f:DynamicPageTitle>
+                <f:heading>
+                    <Title text="Header Title" />
+                </f:heading>
+                <f:breadcrumbs>
+                    <Breadcrumbs>
+                        <Link
+                            text="Home"
+                            press=".onHomeLinkPress"
+                        />
+                        <Link text="Page 1" />
+                        <Link text="Page 2" />
+                        <Link text="Page 3" />
+                        <Link text="Page 4" />
+                        <Link text="Page 5" />
+                    </Breadcrumbs>
+                </f:breadcrumbs>
+                <f:expandedContent>
+                    <Label text="This is a subheading" />
+                </f:expandedContent>
+                <f:snappedContent>
+                    <Label text="This is a subheading" />
+                </f:snappedContent>
+                <f:snappedTitleOnMobile>
+                    <Title text="This is a subheading" />
+                </f:snappedTitleOnMobile>
+                <f:content>
+                    <OverflowToolbar>
+                        <GenericTag
+                            text="SR"
+                            status="Error"
+                            press=".onGenericTagPress"
+                            design="StatusIconHidden"
+                        >
+                            <ObjectNumber
+                                number="2"
+                                unit="M"
+                                emphasized="false"
+                                state="Error"
+                            />
+                        </GenericTag>
+                    </OverflowToolbar>
+                </f:content>
+                <f:actions>
+                    <Button
+                        text="Edit"
+                        type="Emphasized"
+                    />
+                    <Button
+                        text="Delete"
+                        type="Transparent"
+                    />
+                    <Button
+                        text="Copy"
+                        type="Transparent"
+                    />
+                    <Button
+                        text="Toggle Footer"
+                        type="Transparent"
+                        press=".onToggleFooter"
+                    />
+                    <Button
+                        icon="sap-icon://action"
+                        type="Transparent"
+                    />
+                </f:actions>
+                <f:navigationActions>
+                    <Button
+                        icon="sap-icon://full-screen"
+                        type="Transparent"
+                    />
+                    <Button
+                        icon="sap-icon://decline"
+                        type="Transparent"
+                        press=".onButtonClosePress"
+                    />
+                </f:navigationActions>
+            </f:DynamicPageTitle>
+        </f:title>
+
+        <!-- DynamicPage Header -->
+        <f:header>
+            <f:DynamicPageHeader>
+                <HBox>
+                    <VBox class="sapUiLargeMarginEnd">
+                        <ObjectAttribute
+                            title="Location"
+                            text="Warehouse A"
+                        />
+                        <ObjectAttribute
+                            title="Halway"
+                            text="23L"
+                        />
+                        <ObjectAttribute
+                            title="Rack"
+                            text="34"
+                        />
+                    </VBox>
+
+                    <VBox>
+                        <ObjectAttribute title="Availability" />
+                        <ObjectStatus
+                            text="In Stock"
+                            state="Success"
+                        />
+                    </VBox>
+                </HBox>
+            </f:DynamicPageHeader>
+        </f:header>
+        <f:content>
+            <Text text="페이지 이동 완료! 이런 식으로 다루면 됩니다." />
+        </f:content>
+
+        <f:content>
+            <IconTabBar
+                id="iconTabBar"
+                class="sapUiResponsiveContentPadding"
+            >
+                <items>
+                    <IconTabFilter text="비행일정">
+                        <Text text="비행일정에 대한 세부내용" />
+                    </IconTabFilter>
+                    <IconTabFilter text="예약정보">
+                        <Text text="예약정보에 대한 세부내용" />
+                    </IconTabFilter>
+                    <IconTabFilter text="매출현황">
+                        <Text text="매출현황에 대한 세부내용" />
+                    </IconTabFilter>
+                    <IconTabFilter text="추가정보">
+                        <Text text="추가정보에 대한 세부내용" />
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
+        </f:content>
+        <!-- DynamicPage Footer -->
+        <f:footer>
+            <OverflowToolbar>
+                <ToolbarSpacer />
+                <Button
+                    type="Accept"
+                    text="Accept"
+                />
+                <Button
+                    type="Reject"
+                    text="Reject"
+                />
+            </OverflowToolbar>
+        </f:footer>
+    </f:DynamicPage>
+</mvc:View>

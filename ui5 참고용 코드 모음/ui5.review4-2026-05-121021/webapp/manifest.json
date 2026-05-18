@@ -1,0 +1,167 @@
+{
+  "_version": "1.60.0",
+  "sap.app": {
+    "id": "code.t0.ui5.review4",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:basic",
+      "version": "1.23.0",
+      "toolsId": "a334e277-ec54-4575-b95a-c582f147b656"
+    },
+    "dataSources": {
+      "ZUI_JHY_CARRIER_O2_VAN": {
+        "uri": "/sap/opu/odata/IWFND/CATALOGSERVICE;v=2/Annotations(TechnicalName='ZUI_JHY_CARRIER_O2_VAN',Version='0001')/$value/",
+        "type": "ODataAnnotation",
+        "settings": {
+          "localUri": "localService/mainService/ZUI_JHY_CARRIER_O2_VAN.xml"
+        }
+      },
+      "mainService": {
+        "uri": "/sap/opu/odata/sap/ZUI_JHY_CARRIER_O2/",
+        "type": "OData",
+        "settings": {
+          "annotations": [
+            "ZUI_JHY_CARRIER_O2_VAN"
+          ],
+          "localUri": "localService/mainService/metadata.xml",
+          "odataVersion": "2.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.120.23",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.f": {},
+        "sap.ui.table": {},
+        "sap.uxap": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "code.t0.ui5.review4.i18n.i18n"
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {}
+      }
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.f.routing.Router",
+        "type": "View",
+        "viewType": "XML",
+        "path": "code.t0.ui5.review4.view",
+        "controlId": "idFlexibleColumnLayout",
+        "transition": "show",
+        "bypassed": {},
+        "async": true
+      },
+      "routes": [
+        
+        {
+          "name": "RouteNextPage",
+          "pattern": "nextPage",
+          "target": [
+            "TargetNext"
+          ],
+          "layout": "EndColumnFullScreen"
+        },
+        {
+          "name": "RouteList",
+          "pattern": ":layout:",
+          "target": [
+            "TargetList"
+          ]
+        },
+        {
+          "name": "RouteDetail",
+          "pattern": "detail/{carrid}/:layout:",
+          "target": [
+            "TargetList",
+            "TargetDetail"
+          ]
+        },
+        {
+          "name": "RouteFlight",
+          "pattern": "detail/{carrid}/flight/{connid}/:layout:",
+          "target": [
+            "TargetList",
+            "TargetDetail",
+            "TargetFlight"
+          ]
+        }
+      ],
+      "targets": {
+        "TargetList": {
+          "id": "List",
+          "name": "List",
+          "controlAggregation": "beginColumnPages"
+        },
+        "TargetDetail": {
+          "id": "Detail",
+          "name": "Detail",
+          "controlAggregation": "midColumnPages"
+        },
+        "TargetFlight": {
+          "id": "Flight",
+          "name": "Flight",
+          "controlAggregation": "endColumnPages"
+        },
+        "TargetNext": {
+          "id": "NextPage",
+          "name": "NextPage",
+          "controlAggregation": "endColumnPages"
+        }
+      }
+    },
+    "rootView": {
+      "viewName": "code.t0.ui5.review4.view.App",
+      "type": "XML",
+      "id": "idFlexibleColumnLayout",
+      "async": true
+    }
+  }
+}

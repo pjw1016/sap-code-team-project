@@ -3,7 +3,13 @@
   "sap.app": {
     "id": "code.d3.delayedpomonitor",
     "type": "application",
-    "i18n": "i18n/i18n.properties",
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [
+        ""
+      ],
+      "fallbackLocale": ""
+    },
     "applicationVersion": {
       "version": "0.0.1"
     },
@@ -60,13 +66,20 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "code.d3.delayedpomonitor.i18n.i18n"
+          "bundleName": "code.d3.delayedpomonitor.i18n.i18n",
+          "supportedLocales": [
+            ""
+          ],
+          "fallbackLocale": ""
         }
       },
       "": {
         "dataSource": "mainService",
         "preload": true,
-        "settings": {}
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
       }
     },
     "resources": {

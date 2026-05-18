@@ -1,0 +1,20 @@
+<mvc:View
+    controllerName="code.t0.ui5.review4.controller.App"
+    displayBlock="true"
+    height="100%"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+>
+    <!--
+        manifest.json의 routing.config.controlId가 이 idFlexibleColumnLayout을 가리킨다.
+        라우터는 각 Target View를 beginColumnPages, midColumnPages, endColumnPages aggregation에 넣는다.
+    -->
+    <!-- config 모델의 /layout 값은 Component.js의 beforeRouteMatched에서 URL 파라미터를 기준으로 갱신된다. -->
+    <f:FlexibleColumnLayout
+        id="idFlexibleColumnLayout"
+        backgroundDesign="Solid"
+        stateChange=".onFlexibleColumnLayoutStateChange"
+        layout="{config>/layout}"
+    />
+</mvc:View>

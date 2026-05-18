@@ -1,0 +1,131 @@
+<!--
+    Flight.view.xml은 선택한 연결편의 상세 정보를 보여 주는 마지막 컬럼 화면입니다.
+    항공사와 연결편의 기본 정보, 날짜별 좌석 현황, 그리고 인쇄/다운로드 기능의 버튼들이 이곳에 배치됩니다.
+-->
+<mvc:View
+    controllerName="code.t0.ui5.review5.controller.Flight"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:form="sap.ui.layout.form"
+    xmlns="sap.m"
+>
+    <!-- Page는 Flight 상세 화면 전체의 기본 컨테이너입니다. -->
+    <Page id="idFlightPage">
+        <!--
+            headerContent에는 뒤로 가기 버튼과 화면 제목을 배치합니다.
+            사용자는 세 번째 컬럼까지 들어온 상태에서도 이 영역을 통해 현재 화면의 성격을 빠르게 알 수 있습니다.
+        -->
+        <headerContent>
+            <Button
+                icon="sap-icon://nav-back"
+                press=".onNavBack"
+                type="Transparent"
+                class="sapUiTinyMarginBegin"
+            />
+            <Title
+                text="{i18n>titleFlight}"
+                level="H1"
+            />
+        </headerContent>
+        <!--
+            subHeader는 상세 화면에서 자주 쓰는 명령 버튼을 모아 두는 자리입니다.
+            편집, 삭제, 복사, 인쇄, PDF 저장, 이미지 저장처럼 화면 전체를 대상으로 하는 작업이 여기에 놓입니다.
+        -->
+        <subHeader>
+            <Toolbar>
+                <Title
+                    text="{i18n>flightDetails}"
+                    level="H2"
+                />
+                <ToolbarSpacer />
+                <Button
+                    icon="sap-icon://edit"
+                    type="Emphasized"
+                    press=".onEdit"
+                />
+                <Button
+                    icon="sap-icon://delete"
+                    type="Transparent"
+                    press=".onDelete"
+                />
+                <Button
+                    icon="sap-icon://copy"
+                    type="Transparent"
+                    press=".onCopy"
+                />
+                <Button
+                    icon="sap-icon://print"
+                    type="Transparent"
+                    press=".onPrint"
+                />
+                <Button
+                    icon="sap-icon://pdf-attachment"
+                    type="Transparent"
+                    press=".onDownloadPDF"
+                />
+                <Button
+                    icon="sap-icon://picture"
+                    type="Transparent"
+                    press=".onDownloadImage"
+                />
+
+            </Toolbar>
+        </subHeader>
+
+        <content>
+            <!--
+                SimpleForm은 현재 연결편의 핵심 식별 정보를 간결하게 보여 줍니다.
+                바인딩 경로는 컨트롤러에서 bindElement로 지정한 ConnectionSet 한 건을 기준으로 해석됩니다.
+            -->
+            <form:SimpleForm labelSpanS="4" class="myBackground" backgroundDesign="Transparent">
+                <Label text="항공사ID" />
+                <Text text="{Carrid}" />
+
+                <Label text="항공편번호" />
+                <Text text="{Connid}" />
+
+                <Label text="출발도시" />
+                <Text text="{Cityfrom}" />
+
+                <Label text="도착도시" />
+                <Text text="{Cityto}" />
+            </form:SimpleForm>
+
+            
+
+            <!--
+                to_Flight 내비게이션 속성을 통해 날짜별 실제 운항 정보를 보여 주는 표입니다.
+                하나의 Connection이 여러 Flight 일정을 가질 수 있으므로, 이 영역은 상세 안의 하위 목록이라고 볼 수 있습니다.
+            -->
+            <Table id="idToFlightsTable" items="{to_Flight}">
+                <columns>
+                    <Column width="12em">
+                        <Text text="일정" />
+                    </Column>
+                    <Column>
+                        <Text text="이코노미 좌석수" />
+                    </Column>
+                    <Column>
+                        <Text text="이코노미 예약석" />
+                    </Column>
+                    <Column>
+                        <Text text="이코노미 잔여석" />
+                    </Column>
+                </columns>
+                <items>
+                    <ColumnListItem>
+                        <cells>
+                            <!-- OData DateTime 값을 yyyy-MM-dd 형식으로 표시합니다. -->
+                            <ObjectIdentifier
+                                title="{path: 'Fldate', type: 'sap.ui.model.odata.type.DateTime', formatOptions: { pattern: 'yyyy-MM-dd' }}"
+                            />
+                            <!-- 최대 좌석, 예약 좌석, 잔여 좌석을 나란히 보여 주어 좌석 상황을 읽기 쉽게 합니다. -->
+                            <Text text="{Seatsmax}" />
+                            <Text text="{Seatsocc}" />
+                            <Text text="{= ${Seatsmax} - ${Seatsocc} }" />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </content>
+    </Page>
+</mvc:View>

@@ -1,0 +1,148 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Dialog
+        id="poItemDetailDialog"
+        title="{i18n>detailDialogTitle}"
+        contentWidth="72rem"
+        contentHeight="42rem"
+        draggable="true"
+        resizable="true"
+        stretchOnPhone="true">
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <HBox alignItems="Center" class="dpmDialogHeader">
+                    <ObjectIdentifier
+                        title="{detail>/Ebeln}"
+                        text="{= ${i18n>detailItemLabel} + ' ' + ${detail>/Ebelp} }"/>
+                    <ToolbarSpacer/>
+                    <ObjectStatus
+                        text="{detail>/StatusText}"
+                        state="{detail>/StatusState}"/>
+                </HBox>
+
+                <Panel headerText="{i18n>detailBasicInfo}" class="dpmDialogSection">
+                    <content>
+                        <FlexBox wrap="Wrap" renderType="Bare" class="dpmInfoGrid">
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>colLifnr}"/>
+                                <Text text="{detail>/Lifnr}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItemWide">
+                                <Label text="{i18n>colName1}"/>
+                                <Text text="{detail>/Name1}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>colMatnr}"/>
+                                <Text text="{detail>/Matnr}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItemWide">
+                                <Label text="{i18n>colMaktx}"/>
+                                <Text text="{detail>/Maktx}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>colEindt}"/>
+                                <Text text="{path: 'detail>/Eindt', formatter: '.formatter.formatDate'}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>werks}"/>
+                                <Text text="{detail>/Werks}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>lgort}"/>
+                                <Text text="{detail>/Lgort}"/>
+                            </VBox>
+                        </FlexBox>
+                    </content>
+                </Panel>
+
+                <Panel headerText="{i18n>detailQtyInfo}" class="dpmDialogSection">
+                    <content>
+                        <FlexBox wrap="Wrap" renderType="Bare" class="dpmInfoGrid">
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>colPoQty}"/>
+                                <ObjectNumber number="{path: 'detail>/PoQty', formatter: '.formatter.formatQuantity'}" unit="{detail>/Meins}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>gr101Qty}"/>
+                                <ObjectNumber number="{path: 'detail>/Gr101Qty', formatter: '.formatter.formatQuantity'}" unit="{detail>/Meins}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>gr102Qty}"/>
+                                <ObjectNumber number="{path: 'detail>/Gr102Qty', formatter: '.formatter.formatQuantity'}" unit="{detail>/Meins}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>colGrQty}"/>
+                                <ObjectNumber number="{path: 'detail>/GrQty', formatter: '.formatter.formatQuantity'}" unit="{detail>/Meins}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>colOpenQty}"/>
+                                <ObjectNumber number="{path: 'detail>/OpenQty', formatter: '.formatter.formatQuantity'}" unit="{detail>/Meins}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>baseDate}"/>
+                                <Text text="{path: 'detail>/BaseDate', formatter: '.formatter.formatDate'}"/>
+                            </VBox>
+                            <VBox class="dpmInfoItem">
+                                <Label text="{i18n>colDelayDays}"/>
+                                <Text text="{path: 'detail>/DelayDays', formatter: '.formatter.formatDelayDays'}"/>
+                            </VBox>
+                        </FlexBox>
+                    </content>
+                </Panel>
+
+                <Table
+                    id="grHistoryTable"
+                    items="{grHistory>/items}"
+                    busy="{grHistory>/busy}"
+                    growing="true"
+                    growingThreshold="10">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="{i18n>historyTableTitle}" level="H3"/>
+                            <ToolbarSpacer/>
+                            <ObjectStatus
+                                text="{= ${grHistory>/items}.length + ' ' + ${i18n>countUnit} }"
+                                state="Information"/>
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <columns>
+                        <Column><Text text="{i18n>histMblnr}"/></Column>
+                        <Column width="5rem"><Text text="{i18n>histMjahr}"/></Column>
+                        <Column width="5rem"><Text text="{i18n>histZeile}"/></Column>
+                        <Column width="6rem"><Text text="{i18n>histBwart}"/></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>histBwartText}"/></Column>
+                        <Column width="7rem"><Text text="{i18n>histBudat}"/></Column>
+                        <Column width="7rem"><Text text="{i18n>histBldat}"/></Column>
+                        <Column width="8rem" hAlign="End"><Text text="{i18n>histMenge}"/></Column>
+                        <Column width="9rem" hAlign="End"><Text text="{i18n>histSignedQty}"/></Column>
+                        <Column width="8rem"><Text text="{i18n>histSignText}"/></Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem>
+                            <cells>
+                                <Text text="{grHistory>Mblnr}"/>
+                                <Text text="{grHistory>Mjahr}"/>
+                                <Text text="{grHistory>Zeile}"/>
+                                <Text text="{grHistory>Bwart}"/>
+                                <Text text="{grHistory>BwartText}"/>
+                                <Text text="{path: 'grHistory>Budat', formatter: '.formatter.formatDate'}"/>
+                                <Text text="{path: 'grHistory>Bldat', formatter: '.formatter.formatDate'}"/>
+                                <ObjectNumber
+                                    number="{path: 'grHistory>Menge', formatter: '.formatter.formatQuantity'}"
+                                    unit="{grHistory>Meins}"/>
+                                <ObjectNumber
+                                    number="{path: 'grHistory>SignedQty', formatter: '.formatter.formatSignedQuantity'}"
+                                    unit="{grHistory>Meins}"/>
+                                <Text text="{grHistory>SignText}"/>
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </VBox>
+        </content>
+        <endButton>
+            <Button text="{i18n>close}" press=".onCloseDetailDialog"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

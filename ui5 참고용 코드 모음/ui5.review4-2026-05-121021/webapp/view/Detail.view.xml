@@ -1,0 +1,309 @@
+<mvc:View
+    controllerName="code.t0.ui5.review4.controller.Detail"
+    xmlns:uxap="sap.uxap"
+    xmlns="sap.m"
+    xmlns:form="sap.ui.layout.form"
+    xmlns:mvc="sap.ui.core.mvc"
+>
+    <!-- 
+        sap.uxap.ObjectPageLayout은 상세 화면 전용 레이아웃으로,
+
+        상단에는 제목과 요약 정보를 보여주고,
+        중간에는 Section으로 이동하는 Anchor Bar가 있으며,
+        본문에는 여러 Section과 SubSection이 있을 수 있다.
+
+        sap.m.Page보다 더 복잡하고 상세한 화면을 만들 때 사용한다.
+        예시) 항공사 상세 화면
+
+        [상단 헤더]
+        항공사명, 항공사 코드, 국가, 주요 상태
+
+        [Anchor Bar]
+        기본정보 | 연결정보 | 항공편 | 예약정보
+
+        [본문 Section]
+        기본정보
+        연결정보
+        항공편
+        예약정보
+    -->
+    <uxap:ObjectPageLayout
+        id="idObjectPageLayout"
+        showTitleInHeaderContent="true"
+        alwaysShowContentHeader="false"
+        preserveHeaderStateOnScroll="false"
+        headerContentPinnable="true"
+        isChildPage="true"
+        upperCaseAnchorBar="false"
+    >
+        <uxap:headerTitle>
+            <uxap:ObjectPageDynamicHeaderTitle>
+                <uxap:expandedHeading>
+                    <Title
+                        text="{Carrname}"
+                        wrapping="true"
+                        class="sapUiSmallMarginEnd"
+                    />
+                </uxap:expandedHeading>
+                <uxap:snappedHeading>
+                    <FlexBox
+                        wrap="Wrap"
+                        fitContainer="true"
+                        alignItems="Center"
+                    >
+                        <FlexBox
+                            wrap="NoWrap"
+                            fitContainer="true"
+                            alignItems="Center"
+                            class="sapUiTinyMarginEnd"
+                        >
+                            <Avatar
+                                src="{view>/imageSrc}"
+                                displaySize="S"
+                                displayShape="Square"
+                                class="sapUiTinyMarginEnd"
+                            />
+                            <Title
+                                text="{Carrname} ( {ConnectionCount}{i18n>unitConnections} )"
+                                wrapping="true"
+                            />
+                        </FlexBox>
+                    </FlexBox>
+                </uxap:snappedHeading>
+                <uxap:actions>
+                    <ToggleButton
+                        text="{i18n>showFooter}"
+                        type="Emphasized"
+                        press=".onToggleButtonPress"
+                    />
+                </uxap:actions>
+                <uxap:navigationActions>
+                    <!-- config 모델의 actionButtonsInfo는 현재 FCL 상태에 따라 App.controller.js에서 갱신된다. -->
+                    <OverflowToolbarButton
+                        type="Transparent"
+                        icon="sap-icon://full-screen"
+                        press=".onOverflowToolbarButton_FullScreen_Press"
+                        tooltip="Enter Full Screen Mode"
+                        visible="{= ${config>/actionButtonsInfo/midColumn/fullScreen} !== null }"
+                    />
+                    <OverflowToolbarButton
+                        type="Transparent"
+                        icon="sap-icon://exit-full-screen"
+                        press=".onOverflowToolbarButton_ExitFullScreen_Press"
+                        tooltip="Exit Full Screen Mode"
+                        visible="{= ${config>/actionButtonsInfo/midColumn/exitFullScreen} !== null }"
+                    />
+                    <OverflowToolbarButton
+                        type="Transparent"
+                        icon="sap-icon://decline"
+                        press=".onOverflowToolbarButton_Close_Press"
+                        tooltip="Close column"
+                        visible="{= ${config>/actionButtonsInfo/midColumn/closeColumn} !== null }"
+                    />
+                </uxap:navigationActions>
+            </uxap:ObjectPageDynamicHeaderTitle>
+        </uxap:headerTitle>
+        <uxap:headerContent>
+            <!-- FlexBox는 유연하게 줄바꿈, 정렬, 늘림, 방향 제어를 할 수 있다.
+                 FlexBox는 HBox와 VBox의 기능을 모두 포함하는 컨테이너
+                 - 위에서 아래로 쌓는 VBox
+                 - 좌에서 우로 배치하는 HBox
+                    
+                Property 설명:
+                    wrap="Wrap" : 한 줄에 다 들어가지 않으면 다음 줄로 내림
+                        넓은 화면:
+                        [Item1] [Item2] [Item3] [Item4]
+
+                        좁은 화면:
+                        [Item1] [Item2]
+                        [Item3] [Item4]
+
+                    fitContainer="true" : FlexBox가 부모 컨테이너의 전체 공간을 차지하도록 설정
+                                          단, FlexBox가 sap.m.Page 안에 있고 전체 viewport 높이를 채우려는 목적이라면
+                                          Page의 enableScrolling="false" 설정이 필요할 수 있음
+                        <Page enableScrolling="false">
+                            <FlexBox fitContainer="true">
+                                ...
+                            </FlexBox>
+                        </Page>
+
+                    alignItems="Stretch" : 동일 행에 출력될 항목들의 높이를 동일하게 맞추기 위해 높이가 큰 항목을 기준으로 세로 방향으로 가능한 늘림
+             -->
+
+            <FlexBox
+                wrap="Wrap"
+                fitContainer="true"
+                alignItems="Stretch"
+            >
+                <Avatar
+                    displaySize="L"
+                    displayShape="Square"
+                    badgeIcon="sap-icon://flight"
+                    fallbackIcon="sap-icon://flight"
+                    class="sapUiTinyMarginEnd"
+                    src="{view>/imageSrc}"
+                />
+                <VBox
+                    justifyContent="Center"
+                    class="sapUiSmallMarginEnd"
+                >
+                    <Label text="{i18n>columnCarrier}" />
+                    <Text text="{Carrid}" />
+                </VBox>
+                <VBox
+                    justifyContent="Center"
+                    class="sapUiSmallMarginEnd"
+                >
+                    <Label text="{i18n>columnCurrency}" />
+                    <Text text="{Currcode}" />
+                </VBox>
+                <VBox
+                    justifyContent="Center"
+                    class="sapUiSmallMarginEnd"
+                >
+                    <Label text="{i18n>columnUrl}" />
+                    <Link
+                        text="{Url}"
+                        href="{Url}"
+                        target="_blank"
+                    />
+                </VBox>
+                <VBox
+                    justifyContent="Center"
+                    class="sapUiSmallMarginEnd"
+                >
+                    <Label text="{i18n>columnConnectionCount}" />
+
+                    <!-- ConnectionCount도 있지만, Expression Binding을 통해 Navigation Property의 개수도 확인이 가능하다. -->
+                    <ObjectNumber
+                        number="{= ${to_Connection}.length }"
+                        textAlign="End"
+                        unit="{i18n>unitConnections}"
+                    />
+                    <ObjectNumber
+                        number="{ConnectionCount}"
+                        textAlign="End"
+                        unit="{i18n>unitConnections}"
+                        emphasized="false"
+                    />
+                </VBox>
+            </FlexBox>
+        </uxap:headerContent>
+        <uxap:sections>
+            <uxap:ObjectPageSection title="{i18n>sectionCarrierInfo}">
+                <uxap:subSections>
+                    <uxap:ObjectPageSubSection>
+                        <uxap:blocks>
+                            <form:SimpleForm
+                                id="idSimpleForm"
+                                layout="ResponsiveGridLayout"
+                                labelSpanXL="2"
+                                labelSpanL="2"
+                                labelSpanM="2"
+                                labelSpanS="12"
+                                adjustLabelSpan="false"
+                            >
+                                <Label text="{i18n>labelCarrierId}" />
+                                <Text text="{Carrid}" />
+                                <Label text="{i18n>labelCarrierName}" />
+                                <Text text="{Carrname}" />
+                                <Label text="{i18n>labelCurrencyCode}" />
+                                <Text text="{Currcode}" />
+                                <Label text="{i18n>labelUrl}" />
+                                <Link
+                                    text="{Url}"
+                                    href="{Url}"
+                                    target="_blank"
+                                />
+                            </form:SimpleForm>
+                        </uxap:blocks>
+                    </uxap:ObjectPageSubSection>
+                </uxap:subSections>
+            </uxap:ObjectPageSection>
+            <uxap:ObjectPageSection title="{i18n>sectionConnectionInfo}">
+                <uxap:subSections>
+                    <uxap:ObjectPageSubSection>
+                        <uxap:blocks>
+                            <!-- Detail.controller.js에서 View를 /CarrierSet(...)에 bindElement했기 때문에 to_Connection은 상대 바인딩으로 동작한다. -->
+                            <Table
+                                id="idConnectionTable"
+                                items="{to_Connection}"
+                            >
+                                <columns>
+                                    <Column>
+                                        <Text text="{i18n>columnCityfrom}" />
+                                    </Column>
+                                    <Column>
+                                        <Text text="{i18n>columnCityto}" />
+                                    </Column>
+                                    <Column hAlign="End">
+                                        <Text text="{i18n>columnDistance}" />
+                                    </Column>
+                                    <Column hAlign="End">
+                                        <Text text="{i18n>columnFlightTime}" />
+                                    </Column>
+                                </columns>
+                                <items>
+                                    <!-- 연결편 행을 클릭하면 해당 행의 Carrid/Connid를 읽어 RouteFlight로 이동한다. -->
+                                    <ColumnListItem
+                                        type="Navigation"
+                                        press=".onColumnListItemConnectionPress"
+                                    >
+                                        <cells>
+                                            <Text text="{Cityfrom}" />
+                                            <Text text="{Cityto}" />
+                                            <!-- 
+                                                거리(Distance) 필드는 OData 모델에서 Decimal 타입으로 정의되어 있습니다.
+                                                ObjectNumber 컨트롤의 number 속성에 바인딩할 때, 
+                                                type을 sap.ui.model.odata.type.Decimal로 명시적으로 지정함.
+                                                formatOptions를 사용하여 소수점 이하 자릿수와 그룹화 옵션을 설정함.
+                                                - showMeasure: false -> 단위(Distid)가 별도의 속성으로 제공되므로, 숫자 뒤에 단위를 표시하지 않도록 설정.
+                                                - minFractionDigits: 0 -> 소수점 이하 최소 자릿수를 0으로 설정하여, 정수인 경우 소수점 이하를 표시하지 않도록 함.
+                                                - maxFractionDigits: 3 -> 소수점 이하 최대 자릿수를 3으로 설정하여, 필요에 따라 최대 3자리까지 소수점 이하를 표시할 수 있도록 함.
+                                                - groupingEnabled: true -> 숫자에 천 단위 구분 기호를 사용하여 가독성을 높임.
+                                             -->
+                                            <ObjectNumber
+                                                number="{
+                                                    path:'Distance', 
+                                                    type:'sap.ui.model.odata.type.Decimal',
+                                                    formatOptions: {
+                                                        showMeasure: false,
+                                                        minFractionDigits: 0,
+                                                        maxFractionDigits: 3,
+                                                        groupingEnabled: true
+                                                    }
+                                                }"
+                                                unit="{Distid}"
+                                            />
+                                            <Text
+                                                text="{
+                                                    path:'Fltime',
+                                                    formatter: '.formatter.formatFlightTime'
+                                                }"
+                                            />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </uxap:blocks>
+                    </uxap:ObjectPageSubSection>
+                </uxap:subSections>
+            </uxap:ObjectPageSection>
+        </uxap:sections>
+        <uxap:footer>
+            <OverflowToolbar>
+                <ToolbarSpacer />
+                <Button
+                    type="Accept"
+                    text="(예시버튼)저장"
+                    press=".onButtonSavePress"
+                />
+                <Button
+                    type="Reject"
+                    text="(예시버튼)삭제"
+                    press=".onButtonDeletePress"
+                />
+            </OverflowToolbar>
+        </uxap:footer>
+    </uxap:ObjectPageLayout>
+</mvc:View>

@@ -1,0 +1,29 @@
+
+<!-- 재사용이 가능한 Result.fragment.xml 파일 -->
+<core:FragmentDefinition
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m"
+>
+    <!-- View의 팝업을 출력하는 Control -->
+    <Dialog 
+        id="idResultDialog"
+        title="생성결과"
+    >
+        <content>
+            <!-- <Text text="생성된 고객의 ID는 [ " />
+            <Text text="{/Id}" />
+            <Text text=" ] 입니다." /> -->
+
+            <Text text="생성된 고객의 ID는 [ {result>/Id} ] 입니다." />
+            <Text text="생성된 고객의 이름은 [ {/name} ] 입니다." />
+
+        </content>
+        <endButton>
+            <Button 
+                text="닫기"
+                press=".onCloseDialog"
+            />
+        </endButton>
+    </Dialog>
+
+</core:FragmentDefinition>

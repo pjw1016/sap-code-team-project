@@ -1,6 +1,248 @@
-<mvc:View controllerName="code.d3.delayedpomonitor.controller.Main"
+<mvc:View
+    controllerName="code.d3.delayedpomonitor.controller.Main"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m">
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
     <Page id="page" title="{i18n>title}">
+        <content>
+            <VBox class="dpmPage sapUiResponsiveContentPadding">
+                <Panel headerText="{i18n>searchPanelTitle}" class="dpmSection" expandable="true" expanded="true">
+                    <content>
+                        <VBox class="sapUiSmallMargin">
+                            <FlexBox wrap="Wrap" renderType="Bare" class="dpmFilterBar">
+                                <VBox class="dpmFilterItem">
+                                    <Label text="{i18n>baseDate}" labelFor="baseDatePicker"/>
+                                    <DatePicker
+                                        id="baseDatePicker"
+                                        dateValue="{view>/filters/baseDate}"
+                                        displayFormat="yyyy-MM-dd"
+                                        valueFormat="yyyy-MM-dd"
+                                        change=".onBaseDateChange"/>
+                                </VBox>
+
+                                <VBox class="dpmFilterItem">
+                                    <Label text="{i18n>eindtFrom}" labelFor="eindtFromPicker"/>
+                                    <DatePicker
+                                        id="eindtFromPicker"
+                                        dateValue="{view>/filters/eindtFrom}"
+                                        displayFormat="yyyy-MM-dd"
+                                        valueFormat="yyyy-MM-dd"/>
+                                </VBox>
+
+                                <VBox class="dpmFilterItem">
+                                    <Label text="{i18n>eindtTo}" labelFor="eindtToPicker"/>
+                                    <DatePicker
+                                        id="eindtToPicker"
+                                        dateValue="{view>/filters/eindtTo}"
+                                        displayFormat="yyyy-MM-dd"
+                                        valueFormat="yyyy-MM-dd"/>
+                                </VBox>
+
+                                <VBox class="dpmFilterItem">
+                                    <Label text="{i18n>werks}" labelFor="werksInput"/>
+                                    <Input
+                                        id="werksInput"
+                                        value="{view>/filters/werks}"
+                                        maxLength="6"
+                                        placeholder="{i18n>allPlaceholder}"/>
+                                </VBox>
+
+                                <VBox class="dpmFilterItemWide">
+                                    <Label text="{i18n>status}" labelFor="statusMultiCombo"/>
+                                    <MultiComboBox
+                                        id="statusMultiCombo"
+                                        selectedKeys="{view>/filters/statusCodes}"
+                                        width="100%">
+                                        <core:Item key="O" text="{i18n>statusO}"/>
+                                        <core:Item key="D" text="{i18n>statusD}"/>
+                                        <core:Item key="P" text="{i18n>statusP}"/>
+                                        <core:Item key="L" text="{i18n>statusL}"/>
+                                        <core:Item key="C" text="{i18n>statusC}"/>
+                                    </MultiComboBox>
+                                </VBox>
+
+                                <VBox class="dpmFilterItem dpmCheckItem">
+                                    <Label text=" "/>
+                                    <CheckBox
+                                        text="{i18n>excludeCompleted}"
+                                        selected="{view>/filters/excludeCompleted}"/>
+                                </VBox>
+                            </FlexBox>
+
+                            <FlexBox
+                                wrap="Wrap"
+                                renderType="Bare"
+                                class="dpmFilterBar"
+                                visible="{view>/advancedVisible}">
+                                <VBox class="dpmFilterItem">
+                                    <Label text="{i18n>bukrs}" labelFor="bukrsInput"/>
+                                    <Input id="bukrsInput" value="{view>/filters/bukrs}" maxLength="4"/>
+                                </VBox>
+
+                                <VBox class="dpmFilterItem">
+                                    <Label text="{i18n>ebeln}" labelFor="ebelnInput"/>
+                                    <Input id="ebelnInput" value="{view>/filters/ebeln}" maxLength="10"/>
+                                </VBox>
+
+                                <VBox class="dpmFilterItem">
+                                    <Label text="{i18n>lifnr}" labelFor="lifnrInput"/>
+                                    <Input id="lifnrInput" value="{view>/filters/lifnr}" maxLength="6"/>
+                                </VBox>
+
+                                <VBox class="dpmFilterItemWide">
+                                    <Label text="{i18n>name1}" labelFor="name1Input"/>
+                                    <Input id="name1Input" value="{view>/filters/name1}"/>
+                                </VBox>
+
+                                <VBox class="dpmFilterItem">
+                                    <Label text="{i18n>matnr}" labelFor="matnrInput"/>
+                                    <Input id="matnrInput" value="{view>/filters/matnr}" maxLength="10"/>
+                                </VBox>
+
+                                <VBox class="dpmFilterItemWide">
+                                    <Label text="{i18n>maktx}" labelFor="maktxInput"/>
+                                    <Input id="maktxInput" value="{view>/filters/maktx}"/>
+                                </VBox>
+                            </FlexBox>
+
+                            <Toolbar class="dpmActionToolbar">
+                                <ToolbarSpacer/>
+                                <Button
+                                    text="{= ${view>/advancedVisible} ? ${i18n>hideAdvancedSearch} : ${i18n>showAdvancedSearch} }"
+                                    icon="sap-icon://filter"
+                                    type="Transparent"
+                                    press=".onToggleAdvanced"/>
+                                <Button
+                                    text="{i18n>reset}"
+                                    icon="sap-icon://reset"
+                                    type="Transparent"
+                                    press=".onReset"/>
+                                <Button
+                                    text="{i18n>search}"
+                                    icon="sap-icon://search"
+                                    type="Emphasized"
+                                    press=".onSearch"/>
+                            </Toolbar>
+                        </VBox>
+                    </content>
+                </Panel>
+
+                <VBox class="dpmSection">
+                    <HBox alignItems="Center" class="dpmSectionHeader">
+                        <Title text="{i18n>kpiSectionTitle}" level="H2"/>
+                        <ObjectStatus
+                            text="{i18n>kpiScopeText}"
+                            icon="sap-icon://hint"
+                            state="Information"
+                            class="sapUiSmallMarginBegin"/>
+                    </HBox>
+
+                    <FlexBox wrap="Wrap" renderType="Bare" class="dpmKpiBox">
+                        <GenericTile header="{i18n>kpiOpenPoItem}" class="dpmKpiTile">
+                            <TileContent>
+                                <NumericContent
+                                    value="{kpi>/OpenPoItemCnt}"
+                                    icon="sap-icon://shipping-status"
+                                    valueColor="Neutral"/>
+                            </TileContent>
+                        </GenericTile>
+
+                        <GenericTile header="{i18n>kpiDelayedItem}" class="dpmKpiTile">
+                            <TileContent>
+                                <NumericContent
+                                    value="{kpi>/DelayedItemCnt}"
+                                    icon="sap-icon://lateness"
+                                    valueColor="Critical"/>
+                            </TileContent>
+                        </GenericTile>
+
+                        <GenericTile header="{i18n>kpiNoReceiptDelay}" class="dpmKpiTile">
+                            <TileContent>
+                                <NumericContent
+                                    value="{kpi>/NoReceiptDelayCnt}"
+                                    icon="sap-icon://error"
+                                    valueColor="Error"/>
+                            </TileContent>
+                        </GenericTile>
+
+                        <GenericTile header="{i18n>kpiDelayedVendor}" class="dpmKpiTile">
+                            <TileContent>
+                                <NumericContent
+                                    value="{kpi>/DelayedVendorCnt}"
+                                    icon="sap-icon://supplier"
+                                    valueColor="Neutral"/>
+                            </TileContent>
+                        </GenericTile>
+                    </FlexBox>
+                </VBox>
+
+                <Table
+                    id="delayedPoTable"
+                    items="{view>/items}"
+                    busy="{view>/tableBusy}"
+                    growing="true"
+                    growingThreshold="20"
+                    sticky="ColumnHeaders,HeaderToolbar"
+                    mode="None"
+                    >
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="{i18n>resultTableTitle}" level="H2"/>
+                            <ObjectStatus
+                                text="{= ${view>/tableCount} + ' ' + ${i18n>countUnit} }"
+                                state="Information"/>
+                            <ToolbarSpacer/>
+                            <Button
+                                icon="sap-icon://refresh"
+                                tooltip="{i18n>refresh}"
+                                type="Transparent"
+                                press=".onSearch"/>
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <columns>
+                        <Column width="8rem"><Text text="{i18n>colStatus}"/></Column>
+                        <Column width="6rem" hAlign="End"><Text text="{i18n>colDelayDays}"/></Column>
+                        <Column width="7rem"><Text text="{i18n>colEindt}"/></Column>
+                        <Column width="9rem"><Text text="{i18n>colEbeln}"/></Column>
+                        <Column width="6rem"><Text text="{i18n>colEbelp}"/></Column>
+                        <Column width="7rem"><Text text="{i18n>colLifnr}"/></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colName1}"/></Column>
+                        <Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colMatnr}"/></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colMaktx}"/></Column>
+                        <Column width="8rem" hAlign="End"><Text text="{i18n>colPoQty}"/></Column>
+                        <Column width="8rem" hAlign="End"><Text text="{i18n>colGrQty}"/></Column>
+                        <Column width="8rem" hAlign="End"><Text text="{i18n>colOpenQty}"/></Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem type="Active" press=".onItemPress">
+                            <cells>
+                                <ObjectStatus
+                                    text="{view>StatusText}"
+                                    state="{view>StatusState}"/>
+                                <Text
+                                    text="{path: 'view>DelayDays', formatter: '.formatter.formatDelayDays'}"
+                                    textAlign="End"/>
+                                <Text text="{path: 'view>Eindt', formatter: '.formatter.formatDate'}"/>
+                                <ObjectIdentifier title="{view>Ebeln}"/>
+                                <Text text="{view>Ebelp}"/>
+                                <Text text="{view>Lifnr}"/>
+                                <Text text="{view>Name1}"/>
+                                <Text text="{view>Matnr}"/>
+                                <Text text="{view>Maktx}"/>
+                                <ObjectNumber
+                                    number="{path: 'view>PoQty', formatter: '.formatter.formatQuantity'}"
+                                    unit="{view>Meins}"/>
+                                <ObjectNumber
+                                    number="{path: 'view>GrQty', formatter: '.formatter.formatQuantity'}"
+                                    unit="{view>Meins}"/>
+                                <ObjectNumber
+                                    number="{path: 'view>OpenQty', formatter: '.formatter.formatQuantity'}"
+                                    unit="{view>Meins}"/>
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </VBox>
+        </content>
     </Page>
 </mvc:View>

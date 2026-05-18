@@ -1,0 +1,148 @@
+<mvc:View
+    controllerName="code.t0.ui5.review4.controller.List"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+    xmlns:core="sap.ui.core"
+    core:require="{formatMessage: 'sap/base/strings/formatMessage'}"
+>
+    <!-- <Page id="page" title="{i18n>title}">
+    </Page> -->
+
+    <!-- Dynamic Page는 Flexible Column Layout과 함께 사용되는 경우가 많지만, 단독으로도 사용할 수 있다. -->
+    <f:DynamicPage
+        id="idMainDynamicPage"
+        showFooter="true"
+    >
+        <!-- Aggregation title은 상단 영역에서 제목과 액션을 포함한다. -->
+        <f:title>
+            <f:DynamicPageTitle>
+                <f:heading>
+                    <VBox>
+                        <!-- /CarrierSet 데이터 수신 후 Controller에서 계산한 건수 텍스트를 view 모델에 저장한다. -->
+                        <Text text="{view>/carrierCountText}" />
+                        <Text
+                            text="{ 
+                                parts: ['i18n>title', 'view>/carrierCount'],
+                                formatter: 'formatMessage'
+                            }"
+                        />
+                    </VBox>
+                </f:heading>
+                <f:actions>
+                    <!-- view 모델의 bFullScreen 값을 Formatter로 변환해 아이콘을 결정한다. -->
+                    <Button
+                        icon="{ path:'view>/bFullScreen', formatter: '.formatter.formatListButtonIcon' }"
+                        tooltip="{i18n>fullScreen}"
+                        press=".onButtonFullScreenPress"
+                    />
+                </f:actions>
+            </f:DynamicPageTitle>
+        </f:title>
+
+        <!-- Aggregation header는 헤더 영역을 포함한다. -->
+        <f:header>
+            <f:DynamicPageHeader>
+                <VBox>
+                    <ObjectStatus
+                        text="{i18n>mainHeaderText}"
+                        state="Success"
+                    />
+                </VBox>
+            </f:DynamicPageHeader>
+        </f:header>
+
+        <f:content>
+            <VBox fitContainer="true">
+                <OverflowToolbar class="sapFDynamicPageAlignContent">
+                    <ToolbarSpacer />
+                    <SearchField
+                        search=".onSearch"
+                        width="17.5rem"
+                    />
+                    <OverflowToolbarButton
+                        icon="sap-icon://add"
+                        text="{i18n>buttonAdd}"
+                        type="Transparent"
+                        press=".onAdd"
+                    />
+                    <OverflowToolbarButton
+                        icon="sap-icon://sort"
+                        text="{i18n>buttonSort}"
+                        type="Transparent"
+                        press=".onSort"
+                    />
+                </OverflowToolbar>
+                <!-- 기본 OData 모델의 /CarrierSet 컬렉션을 Table의 items aggregation에 바인딩한다. -->
+                <Table
+                    id="idCarrierSetTable"
+                    items="{path: '/CarrierSet'}"
+                    class="sapFDynamicPageAlignContent"
+                    width="auto"
+                >
+                    <columns>
+                        <Column>
+                            <Text text="{i18n>columnCarrier}" />
+                        </Column>
+                        <Column
+                            demandPopin="true"
+                            minScreenWidth="Tablet"
+                        >
+                            <Text text="{i18n>columnCurrency}" />
+                        </Column>
+                        <Column
+                            demandPopin="true"
+                            minScreenWidth="Desktop"
+                        >
+                            <Text text="{i18n>columnUrl}" />
+                        </Column>
+                        <Column>
+                            <Text text="{i18n>columnConnectionCount}" />
+                        </Column>
+                    </columns>
+                    <items>
+                        <!-- 행을 누르면 Controller에서 현재 행의 Binding Context를 읽어 RouteDetail로 이동한다. -->
+                        <ColumnListItem
+                            type="Navigation"
+                            press=".onColumnListItemPress"
+                            highlight="{ path: 'ConnectionCount', formatter: '.formatter.formatConnectionCountHighlight' }"
+                        >
+                            <cells>
+                                <ObjectIdentifier
+                                    title="{Carrname}"
+                                    text="{Carrid}"
+                                />
+                                <Text text="{Currcode}" />
+                                <Text text="{Url}" />
+                                <ObjectNumber
+                                    number="{   
+                                        path: 'ConnectionCount',
+                                        type:'sap.ui.model.type.Integer'
+                                    }"
+                                    unit="{i18n>unitConnections}"
+                                />
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </VBox>
+        </f:content>
+
+        <!-- DynamicPage Footer -->
+        <f:footer>
+            <OverflowToolbar>
+                <ToolbarSpacer />
+                <Button
+                    type="Accept"
+                    text="{i18n>buttonAccept}"
+                    press=".onAccept"
+                />
+                <Button
+                    type="Reject"
+                    text="{i18n>buttonReject}"
+                    press=".onReject"
+                />
+            </OverflowToolbar>
+        </f:footer>
+    </f:DynamicPage>
+</mvc:View>
