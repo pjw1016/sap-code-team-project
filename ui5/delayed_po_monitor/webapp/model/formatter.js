@@ -87,6 +87,29 @@ sap.ui.define([], function () {
             }
 
             return sValue.replace(/^0+/, "") || "0";
+        },
+
+        formatItemLabel: function (sLabel, vItemNo) {
+            var sValue = String(vItemNo || "");
+            var sItemNo;
+
+            if (!sValue) {
+                return sLabel || "";
+            }
+
+            sItemNo = sValue.replace(/^0+/, "") || "0";
+
+            return (sLabel || "항목") + " " + sItemNo;
+        },
+
+        formatSignedQtyState: function (vValue) {
+            var fValue = Number(vValue);
+
+            if (isNaN(fValue) || fValue === 0) {
+                return "None";
+            }
+
+            return fValue > 0 ? "Success" : "Error";
         }
     };
 });

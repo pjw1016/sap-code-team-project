@@ -227,7 +227,11 @@
                             <Column width="" hAlign="End"><Text text="{i18n>colOpenQty}"/></Column>
                         </columns>
                         <items>
-                            <ColumnListItem type="Active" press=".onItemPress">
+                            <ColumnListItem
+                                type="Active"
+                                press=".onItemPress"
+                                highlight="{view>StatusState}"
+                                highlightText="{view>StatusText}">
                                 <cells>
                                     <ObjectStatus
                                         text="{view>StatusText}"

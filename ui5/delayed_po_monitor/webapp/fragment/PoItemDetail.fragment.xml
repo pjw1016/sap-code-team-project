@@ -11,7 +11,7 @@
         stretchOnPhone="true">
         <content>
             <VBox class="sapUiSmallMargin">
-                <HBox alignItems="Center" class="dpmDialogHeader">
+                <!-- <HBox alignItems="Center" class="dpmDialogHeader">
                     <ObjectIdentifier
                         title="{detail>/Ebeln}"
                         text="{= ${i18n>detailItemLabel} + ' ' + ${detail>/Ebelp} }"/>
@@ -19,6 +19,28 @@
                     <ObjectStatus
                         text="{detail>/StatusText}"
                         state="{detail>/StatusState}"/>
+                </HBox> -->
+
+                <HBox alignItems="Start" class="dpmDialogHeader">
+                    <VBox>
+                        <HBox alignItems="Center">
+                            <Title
+                                text="{detail>/Ebeln}"
+                                level="H2"
+                                class="sapUiTinyMarginEnd"/>
+
+                            <ObjectStatus
+                                text="{detail>/StatusText}"
+                                state="{detail>/StatusState}"/>
+                        </HBox>
+
+                        <Text
+                            text="{parts: [
+                                    {path: 'i18n>detailItemLabel'},
+                                    {path: 'detail>/Ebelp'}
+                                ],
+                                formatter: '.formatter.formatItemLabel'}"/>
+                    </VBox>
                 </HBox>
 
                 <Panel headerText="{i18n>detailBasicInfo}" class="dpmDialogSection">
@@ -119,11 +141,15 @@
                         <Column width="8rem"><Text text="{i18n>histSignText}"/></Column>
                     </columns>
                     <items>
-                        <ColumnListItem>
+                        <ColumnListItem
+                            highlight="{path: 'grHistory>SignedQty', formatter: '.formatter.formatSignedQtyState'}"
+                            highlightText="{grHistory>SignText}">
                             <cells>
                                 <Text text="{grHistory>Mblnr}"/>
                                 <Text text="{grHistory>Mjahr}"/>
-                                <Text text="{grHistory>Zeile}"/>
+                                <Text
+                                    text="{path: 'grHistory>Zeile', formatter: '.formatter.formatItemNo'}"
+                                    wrapping="false"/>
                                 <Text text="{grHistory>Bwart}"/>
                                 <Text text="{grHistory>BwartText}"/>
                                 <Text text="{path: 'grHistory>Budat', formatter: '.formatter.formatDate'}"/>
@@ -133,7 +159,8 @@
                                     unit="{grHistory>Meins}"/>
                                 <ObjectNumber
                                     number="{path: 'grHistory>SignedQty', formatter: '.formatter.formatSignedQuantity'}"
-                                    unit="{grHistory>Meins}"/>
+                                    unit="{grHistory>Meins}"
+                                    state="{path: 'grHistory>SignedQty', formatter: '.formatter.formatSignedQtyState'}"/>
                                 <Text text="{grHistory>SignText}"/>
                             </cells>
                         </ColumnListItem>
