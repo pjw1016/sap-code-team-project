@@ -97,6 +97,26 @@
                                 <Label text="{i18n>colGrQty}"/>
                                 <ObjectNumber number="{path: 'detail>/GrQty', formatter: '.formatter.formatQuantity'}" unit="{detail>/Meins}"/>
                             </VBox>
+                            <VBox class="dpmReceiptRateItem">
+                                <Label text="{i18n>receiptRate}"/>
+                                <ProgressIndicator
+                                    percentValue="{parts: [
+                                            {path: 'detail>/PoQty'},
+                                            {path: 'detail>/GrQty'}
+                                        ],
+                                        formatter: '.formatter.formatReceiptRatePercent'}"
+                                    displayValue="{parts: [
+                                            {path: 'detail>/PoQty'},
+                                            {path: 'detail>/GrQty'}
+                                        ],
+                                        formatter: '.formatter.formatReceiptRateText'}"
+                                    state="{parts: [
+                                            {path: 'detail>/PoQty'},
+                                            {path: 'detail>/GrQty'}
+                                        ],
+                                        formatter: '.formatter.formatReceiptRateState'}"
+                                    showValue="true"/>
+                            </VBox>
                             <VBox class="dpmInfoItem">
                                 <Label text="{i18n>colOpenQty}"/>
                                 <ObjectNumber number="{path: 'detail>/OpenQty', formatter: '.formatter.formatQuantity'}" unit="{detail>/Meins}"/>

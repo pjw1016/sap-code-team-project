@@ -43,6 +43,17 @@ sap.ui.define([], function () {
         return sValue;
     }
 
+    function getReceiptRate(vPoQty, vGrQty) {
+        var fPoQty = Number(vPoQty);
+        var fGrQty = Number(vGrQty);
+
+        if (!fPoQty || isNaN(fPoQty) || fPoQty <= 0 || isNaN(fGrQty)) {
+            return 0;
+        }
+
+        return Math.max((fGrQty / fPoQty) * 100, 0);
+    }
+
     return {
         formatDate: function (vValue) {
             var oDate = parseDate(vValue);
@@ -110,6 +121,28 @@ sap.ui.define([], function () {
             }
 
             return fValue > 0 ? "Success" : "Error";
+        },
+
+        formatReceiptRatePercent: function (vPoQty, vGrQty) {
+            return Math.min(Math.round(getReceiptRate(vPoQty, vGrQty)), 100);
+        },
+
+        formatReceiptRateText: function (vPoQty, vGrQty) {
+            return Math.round(getReceiptRate(vPoQty, vGrQty)) + "%";
+        },
+
+        formatReceiptRateState: function (vPoQty, vGrQty) {
+            var fRate = getReceiptRate(vPoQty, vGrQty);
+
+            if (fRate >= 100) {
+                return "Success";
+            }
+
+            if (fRate > 0) {
+                return "Information";
+            }
+
+            return "None";
         }
     };
 });

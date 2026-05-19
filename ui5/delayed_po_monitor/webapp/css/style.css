@@ -63,11 +63,16 @@
     width: 18rem;
 }
 
+.dpmReceiptRateItem {
+    width: 18rem;
+}
+
 @media (max-width: 600px) {
     .dpmFilterItem,
     .dpmFilterItemWide,
     .dpmInfoItem,
     .dpmInfoItemWide,
+    .dpmReceiptRateItem,
     .dpmKpiTile {
         width: 100%;
         flex-basis: 100%;
