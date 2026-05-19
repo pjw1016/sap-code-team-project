@@ -2,7 +2,10 @@
     controllerName="code.d3.delayedpomonitor.controller.Main"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:core="sap.ui.core">
+    xmlns:core="sap.ui.core"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:viz.data="sap.viz.ui5.data"
+    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds">
     <Page id="page" title="{i18n>title}">
         <content>
             <VBox class="dpmPage sapUiResponsiveContentPadding">
@@ -175,6 +178,52 @@
                         </GenericTile>
                     </FlexBox>
                 </VBox>
+
+                <Panel
+                    headerText="{i18n>statusChartTitle}"
+                    class="dpmSection dpmChartPanel">
+                    <content>
+                        <viz:VizFrame
+                            id="statusDistributionChart"
+                            width="100%"
+                            height="24rem"
+                            uiConfig="{applicationSet:'fiori'}"
+                            vizProperties="{
+                                title: { visible: false },
+                                legend: { visible: true },
+                                plotArea: {
+                                    colorPalette: ['#6a6d70', '#bb0000', '#0a6ed1', '#e9730c', '#107e3e'],
+                                    drawingEffect: 'normal'
+                                }
+                            }"
+                            vizType="donut">
+                            <viz:dataset>
+                                <viz.data:FlattenedDataset data="{chart>/statusDistribution}">
+                                    <viz.data:dimensions>
+                                        <viz.data:DimensionDefinition
+                                            name="Status"
+                                            value="{chart>StatusText}"/>
+                                    </viz.data:dimensions>
+                                    <viz.data:measures>
+                                        <viz.data:MeasureDefinition
+                                            name="Count"
+                                            value="{chart>Count}"/>
+                                    </viz.data:measures>
+                                </viz.data:FlattenedDataset>
+                            </viz:dataset>
+                            <viz:feeds>
+                                <viz.feeds:FeedItem
+                                    uid="size"
+                                    type="Measure"
+                                    values="Count"/>
+                                <viz.feeds:FeedItem
+                                    uid="color"
+                                    type="Dimension"
+                                    values="Status"/>
+                            </viz:feeds>
+                        </viz:VizFrame>
+                    </content>
+                </Panel>
 
                 <Table
                     id="delayedPoTable"

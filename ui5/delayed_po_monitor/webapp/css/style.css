@@ -43,6 +43,10 @@
     max-width: none;
 }
 
+.dpmChartPanel {
+    width: 100%;
+}
+
 .dpmDialogHeader {
     margin-bottom: 0.75rem;
 }

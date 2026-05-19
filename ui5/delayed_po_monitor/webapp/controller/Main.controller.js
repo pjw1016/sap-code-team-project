@@ -82,6 +82,7 @@ sap.ui.define([
         _initModels: function () {
             this.getView().setModel(new JSONModel(this._createInitialViewState()), "view");
             this.getView().setModel(new JSONModel(this._createEmptyKpi()), "kpi");
+            this.getView().setModel(new JSONModel(this._createEmptyChart()), "chart");
             this.getView().setModel(new JSONModel({}), "detail");
             this.getView().setModel(new JSONModel({
                 items: [],
@@ -126,6 +127,13 @@ sap.ui.define([
             };
         },
 
+        _createEmptyChart: function () {
+            return {
+                statusDistribution: [],
+                totalCount: 0
+            };
+        },
+
         _buildFilters: function () {
             var oFilterData = this.getView().getModel("view").getProperty("/filters");
             var aFilters = [];
@@ -152,13 +160,15 @@ sap.ui.define([
             return this._readEntitySet("/DelayedPoSet", aFilters).then(function (aResults) {
                 oViewModel.setProperty("/items", aResults);
                 oViewModel.setProperty("/tableCount", aResults.length);
-            }).catch(function (oError) {
+                this._updateStatusChart(aResults);
+            }.bind(this)).catch(function (oError) {
                 oViewModel.setProperty("/items", []);
                 oViewModel.setProperty("/tableCount", 0);
+                this.getView().getModel("chart").setData(this._createEmptyChart());
                 MessageToast.show(this._getErrorMessage(oError, "mainLoadError"));
             }.bind(this)).finally(function () {
                 oViewModel.setProperty("/tableBusy", false);
-            });
+            }.bind(this));
         },
 
         _loadKpiData: function (aFilters) {
@@ -207,6 +217,39 @@ sap.ui.define([
                     },
                     error: reject
                 });
+            });
+        },
+
+        _updateStatusChart: function (aItems) {
+            var oChartModel = this.getView().getModel("chart");
+            var mCounts = {};
+            var aStatusConfig = [
+                { code: "O", text: this._text("statusO") },
+                { code: "D", text: this._text("statusD") },
+                { code: "P", text: this._text("statusP") },
+                { code: "L", text: this._text("statusL") },
+                { code: "C", text: this._text("statusC") }
+            ];
+            var aDistribution;
+
+            (aItems || []).forEach(function (oItem) {
+                var sCode = oItem.StatusCode || "";
+                mCounts[sCode] = (mCounts[sCode] || 0) + 1;
+            });
+
+            aDistribution = aStatusConfig.map(function (oStatus) {
+                return {
+                    StatusCode: oStatus.code,
+                    StatusText: oStatus.text,
+                    Count: mCounts[oStatus.code] || 0
+                };
+            }).filter(function (oStatus) {
+                return oStatus.Count > 0;
+            });
+
+            oChartModel.setData({
+                statusDistribution: aDistribution,
+                totalCount: (aItems || []).length
             });
         },
 
