@@ -3,10 +3,11 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
+    "sap/ui/model/Sorter",
     "sap/ui/core/Fragment",
     "sap/m/MessageToast",
     "code/d3/delayedpomonitor/model/formatter"
-], function (Controller, JSONModel, Filter, FilterOperator, Fragment, MessageToast, formatter) {
+], function (Controller, JSONModel, Filter, FilterOperator, Sorter, Fragment, MessageToast, formatter) {
     "use strict";
 
     return Controller.extend("code.d3.delayedpomonitor.controller.Main", {
@@ -79,6 +80,55 @@ sap.ui.define([
                     oDialog.close();
                 });
             }
+        },
+
+        onOpenTableSettings: function () {
+            var oView = this.getView();
+
+            if (!this._pTableSettingsDialog) {
+                this._pTableSettingsDialog = Fragment.load({
+                    id: oView.getId(),
+                    name: "code.d3.delayedpomonitor.fragment.TableSettings",
+                    controller: this
+                }).then(function (oDialog) {
+                    oView.addDependent(oDialog);
+                    return oDialog;
+                });
+            }
+
+            this._pTableSettingsDialog.then(function (oDialog) {
+                oDialog.open();
+            });
+        },
+
+        onTableSettingsConfirm: function (oEvent) {
+            var oTable = this.byId("delayedPoTable");
+            var oBinding = oTable && oTable.getBinding("items");
+            var oSortItem = oEvent.getParameter("sortItem");
+            var oGroupItem = oEvent.getParameter("groupItem");
+            var sSortKey = oSortItem && oSortItem.getKey();
+            var sGroupKey = oGroupItem && oGroupItem.getKey();
+            var bSortDescending = oEvent.getParameter("sortDescending");
+            var bGroupDescending = oEvent.getParameter("groupDescending");
+            var aSorters = [];
+
+            if (!oBinding) {
+                return;
+            }
+
+            if (sGroupKey) {
+                aSorters.push(new Sorter(
+                    sGroupKey,
+                    bGroupDescending,
+                    this._getTableGroup.bind(this, sGroupKey)
+                ));
+            }
+
+            if (sSortKey && sSortKey !== sGroupKey) {
+                aSorters.push(new Sorter(sSortKey, bSortDescending));
+            }
+
+            oBinding.sort(aSorters);
         },
 
         onStatusChartSelect: function (oEvent) {
@@ -286,6 +336,70 @@ sap.ui.define([
             mStatusCodeByText[this._text("statusC")] = "C";
 
             return mStatusCodeByText[sStatusText] || "";
+        },
+
+        _getTableGroup: function (sProperty, oContext) {
+            var oItem = oContext && oContext.getObject ? oContext.getObject() : {};
+            var sKey;
+            var sText;
+
+            if (sProperty === "StatusCode") {
+                sKey = oItem.StatusCode || "";
+                sText = oItem.StatusText || this._text("notAvailable");
+                return {
+                    key: sKey,
+                    text: this._text("colStatus") + ": " + sText
+                };
+            }
+
+            if (sProperty === "Lifnr") {
+                sKey = oItem.Lifnr || "";
+                sText = sKey || this._text("notAvailable");
+
+                if (oItem.Name1) {
+                    sText += " - " + oItem.Name1;
+                }
+
+                return {
+                    key: sKey,
+                    text: this._text("colLifnr") + ": " + sText
+                };
+            }
+
+            if (sProperty === "Ebeln") {
+                sText = oItem.Ebeln || this._text("notAvailable");
+                return {
+                    key: oItem.Ebeln || "",
+                    text: this._text("colEbeln") + ": " + sText
+                };
+            }
+
+            if (sProperty === "Matnr") {
+                sKey = oItem.Matnr || "";
+                sText = sKey || this._text("notAvailable");
+
+                if (oItem.Maktx) {
+                    sText += " - " + oItem.Maktx;
+                }
+
+                return {
+                    key: sKey,
+                    text: this._text("colMatnr") + ": " + sText
+                };
+            }
+
+            if (sProperty === "Eindt") {
+                sText = formatter.formatDate(oItem.Eindt);
+                return {
+                    key: sText,
+                    text: this._text("colEindt") + ": " + sText
+                };
+            }
+
+            return {
+                key: oItem[sProperty] || "",
+                text: oItem[sProperty] || this._text("notAvailable")
+            };
         },
 
         _openDetailDialog: function () {

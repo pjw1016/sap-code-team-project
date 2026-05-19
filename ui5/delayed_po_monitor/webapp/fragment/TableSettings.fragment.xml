@@ -1,0 +1,30 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <ViewSettingsDialog
+        id="tableSettingsDialog"
+        title="{i18n>tableSettingsTitle}"
+        sortDescending="true"
+        confirm=".onTableSettingsConfirm">
+        <sortItems>
+            <ViewSettingsItem key="StatusText" text="{i18n>colStatus}"/>
+            <ViewSettingsItem key="DelayDays" text="{i18n>colDelayDays}" selected="true"/>
+            <ViewSettingsItem key="Eindt" text="{i18n>colEindt}"/>
+            <ViewSettingsItem key="Ebeln" text="{i18n>colEbeln}"/>
+            <ViewSettingsItem key="Lifnr" text="{i18n>colLifnr}"/>
+            <ViewSettingsItem key="Name1" text="{i18n>colName1}"/>
+            <ViewSettingsItem key="Matnr" text="{i18n>colMatnr}"/>
+            <ViewSettingsItem key="Maktx" text="{i18n>colMaktx}"/>
+            <ViewSettingsItem key="PoQty" text="{i18n>colPoQty}"/>
+            <ViewSettingsItem key="GrQty" text="{i18n>colGrQty}"/>
+            <ViewSettingsItem key="OpenQty" text="{i18n>colOpenQty}"/>
+        </sortItems>
+        <groupItems>
+            <ViewSettingsItem key="StatusCode" text="{i18n>colStatus}"/>
+            <ViewSettingsItem key="Eindt" text="{i18n>colEindt}"/>
+            <ViewSettingsItem key="Ebeln" text="{i18n>colEbeln}"/>
+            <ViewSettingsItem key="Lifnr" text="{i18n>colLifnr}"/>
+            <ViewSettingsItem key="Matnr" text="{i18n>colMatnr}"/>
+        </groupItems>
+    </ViewSettingsDialog>
+</core:FragmentDefinition>

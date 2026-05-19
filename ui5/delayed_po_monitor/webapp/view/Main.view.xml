@@ -244,6 +244,11 @@
                                     state="Information"/>
                                 <ToolbarSpacer/>
                                 <Button
+                                    icon="sap-icon://sort"
+                                    tooltip="{i18n>tableSettingsTitle}"
+                                    type="Transparent"
+                                    press=".onOpenTableSettings"/>
+                                <Button
                                     icon="sap-icon://refresh"
                                     tooltip="{i18n>refresh}"
                                     type="Transparent"
