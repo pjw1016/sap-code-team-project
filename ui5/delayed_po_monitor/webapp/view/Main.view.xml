@@ -196,7 +196,8 @@
                                     drawingEffect: 'normal'
                                 }
                             }"
-                            vizType="donut">
+                            vizType="donut"
+                            selectData=".onStatusChartSelect">
                             <viz:dataset>
                                 <viz.data:FlattenedDataset data="{chart>/statusDistribution}">
                                     <viz.data:dimensions>

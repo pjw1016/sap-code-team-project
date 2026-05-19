@@ -30,10 +30,12 @@ sap.ui.define([
         },
 
         onSearch: function () {
-            var aFilters = this._buildFilters();
+            var aTableFilters = this._buildFilters(true);
+            var aChartFilters = this._buildFilters(false);
 
-            this._loadMainTable(aFilters);
-            this._loadKpiData(aFilters);
+            this._loadMainTable(aTableFilters);
+            this._loadKpiData(aTableFilters);
+            this._loadStatusChart(aChartFilters);
         },
 
         onReset: function () {
@@ -77,6 +79,20 @@ sap.ui.define([
                     oDialog.close();
                 });
             }
+        },
+
+        onStatusChartSelect: function (oEvent) {
+            var aSelectedData = oEvent.getParameter("data") || [];
+            var oSelectedData = aSelectedData[0] && aSelectedData[0].data;
+            var sStatusText = oSelectedData && oSelectedData.Status;
+            var sStatusCode = this._getStatusCodeByText(sStatusText);
+
+            if (!sStatusCode) {
+                return;
+            }
+
+            this.getView().getModel("view").setProperty("/filters/statusCodes", [sStatusCode]);
+            this.onSearch();
         },
 
         _initModels: function () {
@@ -134,7 +150,7 @@ sap.ui.define([
             };
         },
 
-        _buildFilters: function () {
+        _buildFilters: function (bIncludeStatusFilter) {
             var oFilterData = this.getView().getModel("view").getProperty("/filters");
             var aFilters = [];
 
@@ -147,7 +163,10 @@ sap.ui.define([
             this._addTextFilter(aFilters, "Name1", oFilterData.name1);
             this._addTextFilter(aFilters, "Matnr", oFilterData.matnr);
             this._addTextFilter(aFilters, "Maktx", oFilterData.maktx);
-            this._addStatusFilters(aFilters, oFilterData.statusCodes);
+
+            if (bIncludeStatusFilter !== false) {
+                this._addStatusFilters(aFilters, oFilterData.statusCodes);
+            }
 
             return aFilters;
         },
@@ -160,14 +179,20 @@ sap.ui.define([
             return this._readEntitySet("/DelayedPoSet", aFilters).then(function (aResults) {
                 oViewModel.setProperty("/items", aResults);
                 oViewModel.setProperty("/tableCount", aResults.length);
-                this._updateStatusChart(aResults);
             }.bind(this)).catch(function (oError) {
                 oViewModel.setProperty("/items", []);
                 oViewModel.setProperty("/tableCount", 0);
-                this.getView().getModel("chart").setData(this._createEmptyChart());
                 MessageToast.show(this._getErrorMessage(oError, "mainLoadError"));
             }.bind(this)).finally(function () {
                 oViewModel.setProperty("/tableBusy", false);
+            }.bind(this));
+        },
+
+        _loadStatusChart: function (aFilters) {
+            return this._readEntitySet("/DelayedPoSet", aFilters).then(function (aResults) {
+                this._updateStatusChart(aResults);
+            }.bind(this)).catch(function () {
+                this.getView().getModel("chart").setData(this._createEmptyChart());
             }.bind(this));
         },
 
@@ -243,14 +268,24 @@ sap.ui.define([
                     StatusText: oStatus.text,
                     Count: mCounts[oStatus.code] || 0
                 };
-            }).filter(function (oStatus) {
-                return oStatus.Count > 0;
             });
 
             oChartModel.setData({
                 statusDistribution: aDistribution,
                 totalCount: (aItems || []).length
             });
+        },
+
+        _getStatusCodeByText: function (sStatusText) {
+            var mStatusCodeByText = {};
+
+            mStatusCodeByText[this._text("statusO")] = "O";
+            mStatusCodeByText[this._text("statusD")] = "D";
+            mStatusCodeByText[this._text("statusP")] = "P";
+            mStatusCodeByText[this._text("statusL")] = "L";
+            mStatusCodeByText[this._text("statusC")] = "C";
+
+            return mStatusCodeByText[sStatusText] || "";
         },
 
         _openDetailDialog: function () {
