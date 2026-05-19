@@ -1,0 +1,37 @@
+<mvc:View xmlns:f="sap.f" controllerName="code.d3.productionanalysis.controller.Main"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Page id="page" title="{i18n>title}">
+
+        <f:FlexibleColumnLayout id="idFlexibleColumnLayout"
+            layout="TwoColumnsMidExpanded"
+        >
+            <!-- 생산량 집계 테이블 -->
+            <f:beginColumnPages>
+                <Page id="idBeginPage">
+                    <content>
+                        <core:Fragment id="idProductFragment"
+                            fragmentName="code.d3.productionanalysis.view.ProductTable"
+                            type="XML"
+                        />
+                    </content>
+                </Page>
+            </f:beginColumnPages>
+
+            <!-- 해당 생산량에 대한 Detail -->
+            <f:midColumnPages>
+                <Page id="idEndPage">
+                    <content>
+                        <core:Fragment id="idDetailFragment"
+                            fragmentName="code.d3.productionanalysis.view.Detail"
+                            type="XML"
+                        /> 
+                    </content>
+                </Page>
+            </f:midColumnPages>
+
+        </f:FlexibleColumnLayout>
+
+    </Page>
+</mvc:View>

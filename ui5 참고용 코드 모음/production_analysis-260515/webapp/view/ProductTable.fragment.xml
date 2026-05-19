@@ -1,0 +1,97 @@
+<core:FragmentDefinition
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m">
+
+    <Panel id="idProductPanel" 
+        class="sapResponsiveMargin"
+        width="auto"
+    >
+        <Toolbar id="idProductToolbar">
+            <Title id="idProductToolbarTitle" 
+                text="생산량 집계 테이블"
+            />
+            <ToolbarSpacer id="idProductToolbarSpacer"/>
+            <SegmentedButton id="idAggStandard"
+                selectedKey="week"
+            >
+                <items>
+                    <SegmentedButtonItem id="idButtonItemMonth"
+                        text="월" key="month"
+                    />
+                    <SegmentedButtonItem id="idButtonItemWeek"
+                        text="주" key="week"
+                    />
+                </items>
+            </SegmentedButton>
+        </Toolbar>
+        <Table id="idProductTable"
+            items="{/ProductOrderAggSet}"
+            class="sapResponsiveMargin"
+            width="auto"
+        >
+            <columns>
+                <Column id="idYear" 
+                    mergeDuplicates="true"
+                    width="5rem"
+                >
+                    <Text id="idColumnYear" text="연도" />
+                </Column>
+                <Column id="idMnth" 
+                    mergeDuplicates="true"
+                    width="5rem"
+                >
+                    <Text id="idColumnMnth" text="월" />
+                </Column>
+                <Column id="idWeek" 
+                    mergeDuplicates="true"
+                    width="5rem"
+                >
+                    <Text id="idColumnWeek" text="주차" />
+                </Column>
+                <Column 
+                    id="idMatnr"
+                    width="10rem"
+                >
+                    <Text id="idColumnMatnr" text="제품" />
+                </Column>
+                <Column 
+                    id="idWerks"
+                    width="5rem"
+                >
+                    <Text id="idColumnWerks" text="플랜트" />
+                </Column>
+                <Column id="idActqtOut"
+                    hAlign="End"
+                >
+                    <Text id="idColumnActqtOut" text="생산량" />
+                </Column>
+            </columns>
+            <items>
+                <ColumnListItem id="idProductListItem"
+                    type="Navigation"
+                    press=".onProductListItemPress"
+                >
+                    <cells>
+                        <Text id="idCellYear"     text="{Year}" />
+                        <Text id="idCellMnth"     text="{Mnth}" />
+                        <Text id="idCellWeek"     text="{Week}" />
+
+                        <ObjectIdentifier id="idObjectMatnr"
+                            title="{Maktx}"
+                            text="{Matnr}"
+                        />
+
+                        <Text id="idCellWerks"     text="{Werks}" />
+
+                        <ObjectNumber id="idCellActqtOut"
+                            number="{ActqtOut}"
+                            unit="{Meins}"
+                        />
+                    </cells>
+                </ColumnListItem>
+            </items>
+
+        </Table>
+    </Panel>
+
+</core:FragmentDefinition>
