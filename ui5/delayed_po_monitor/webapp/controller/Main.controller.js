@@ -75,6 +75,8 @@ sap.ui.define([
             //      '전체 미입고/지연 현황 요약'이라는 의미가 약해진다.
             var aSummaryFilters = this._buildFilters(false);
 
+            this._updateTableStateSummary();
+
             /*
              * 각 조회 메소드는 Promise를 반환한다.
              * 일반 조회 버튼에서는 반환값을 사용하지 않아도 되지만,
@@ -312,7 +314,13 @@ sap.ui.define([
                 advancedVisible: false,
                 tableBusy: false,
                 items: [],
-                tableCount: 0
+                tableCount: 0,
+                tableSortKey: "",
+                tableSortDescending: false,
+                tableGroupKey: "",
+                tableGroupDescending: false,
+                tableStatusSummary: "",
+                tableSortGroupSummary: ""
             };
         },
 
@@ -788,6 +796,8 @@ sap.ui.define([
             var oBinding = oTable && oTable.getBinding("items");
             var aSorters = [];
 
+            this._setTableSortGroupState(sSortKey, bSortDescending, sGroupKey, bGroupDescending);
+
             if (!oBinding) {
                 return;
             }
@@ -807,6 +817,126 @@ sap.ui.define([
             }
 
             oBinding.sort(aSorters);
+        },
+
+        _setTableSortGroupState: function (sSortKey, bSortDescending, sGroupKey, bGroupDescending) {
+            var oViewModel = this.getView().getModel("view");
+
+            if (!oViewModel) {
+                return;
+            }
+
+            oViewModel.setProperty("/tableSortKey", sSortKey || "");
+            oViewModel.setProperty("/tableSortDescending", !!bSortDescending);
+            oViewModel.setProperty("/tableGroupKey", sGroupKey || "");
+            oViewModel.setProperty("/tableGroupDescending", !!bGroupDescending);
+
+            this._updateTableStateSummary();
+        },
+
+        _updateTableStateSummary: function () {
+            var oViewModel = this.getView().getModel("view");
+
+            if (!oViewModel) {
+                return;
+            }
+
+            oViewModel.setProperty("/tableStatusSummary", this._getStatusFilterSummary());
+            oViewModel.setProperty("/tableSortGroupSummary", this._getSortGroupSummary());
+        },
+
+        _getStatusFilterSummary: function () {
+            var aStatusCodes = this.getView().getModel("view").getProperty("/filters/statusCodes") || [];
+            var aDefaultCodes = this._getDefaultProblemStatusCodes();
+            var aAllCodes = ["O", "D", "P", "L", "C"];
+            var aStatusTexts;
+
+            if (!aStatusCodes.length || this._isSameStatusSet(aStatusCodes, aAllCodes)) {
+                return this._text("tableStatusSummaryAll");
+            }
+
+            if (this._isSameStatusSet(aStatusCodes, aDefaultCodes)) {
+                return this._text("tableStatusSummaryDefault");
+            }
+
+            aStatusTexts = aStatusCodes.map(function (sCode) {
+                return this._getStatusTextByCode(sCode);
+            }.bind(this)).filter(Boolean);
+
+            return this._text("tableStatusSummaryPrefix") + ": " + (aStatusTexts.join(", ") || this._text("notAvailable"));
+        },
+
+        _getSortGroupSummary: function () {
+            var oViewModel = this.getView().getModel("view");
+            var aParts = [];
+            var sSortKey = oViewModel.getProperty("/tableSortKey");
+            var sGroupKey = oViewModel.getProperty("/tableGroupKey");
+
+            if (sSortKey) {
+                aParts.push(
+                    this._text("tableSortSummaryPrefix")
+                    + ": "
+                    + this._getTableSettingLabel(sSortKey)
+                    + " "
+                    + this._getOrderText(oViewModel.getProperty("/tableSortDescending"))
+                );
+            }
+
+            if (sGroupKey) {
+                aParts.push(
+                    this._text("tableGroupSummaryPrefix")
+                    + ": "
+                    + this._getTableSettingLabel(sGroupKey)
+                    + " "
+                    + this._getOrderText(oViewModel.getProperty("/tableGroupDescending"))
+                );
+            }
+
+            return aParts.length ? aParts.join(" / ") : this._text("tableSortGroupSummaryDefault");
+        },
+
+        _getTableSettingLabel: function (sKey) {
+            var mLabelKeyByProperty = {
+                StatusText: "colStatus",
+                StatusCode: "colStatus",
+                DelayDays: "colDelayDays",
+                Eindt: "colEindt",
+                Ebeln: "colEbeln",
+                Lifnr: "colLifnr",
+                Name1: "colName1",
+                Matnr: "colMatnr",
+                Maktx: "colMaktx",
+                PoQty: "colPoQty",
+                GrQty: "colGrQty",
+                OpenQty: "colOpenQty"
+            };
+
+            return mLabelKeyByProperty[sKey] ? this._text(mLabelKeyByProperty[sKey]) : sKey;
+        },
+
+        _getOrderText: function (bDescending) {
+            return bDescending ? this._text("sortDescending") : this._text("sortAscending");
+        },
+
+        _getStatusTextByCode: function (sStatusCode) {
+            var mStatusTextKeyByCode = {
+                O: "statusO",
+                D: "statusD",
+                P: "statusP",
+                L: "statusL",
+                C: "statusC"
+            };
+
+            return mStatusTextKeyByCode[sStatusCode] ? this._text(mStatusTextKeyByCode[sStatusCode]) : "";
+        },
+
+        _isSameStatusSet: function (aLeftCodes, aRightCodes) {
+            var aLeft = (aLeftCodes || []).slice().sort();
+            var aRight = (aRightCodes || []).slice().sort();
+
+            return aLeft.length === aRight.length && aLeft.every(function (sCode, iIndex) {
+                return sCode === aRight[iIndex];
+            });
         },
 
         _getTableGroup: function (sProperty, oContext) {

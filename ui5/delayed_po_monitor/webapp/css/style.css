@@ -51,6 +51,10 @@
     width: 100%;
 }
 
+.dpmTableCountText {
+    color: var(--sapTextColor);
+}
+
 .dpmDialogHeader {
     margin-bottom: 0.75rem;
 }

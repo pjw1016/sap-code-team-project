@@ -304,10 +304,18 @@
                         <headerToolbar>
                             <OverflowToolbar>
                                 <Title text="{i18n>resultTableTitle}" level="H2"/>
-                                <ObjectStatus
-                                    text="{= ${view>/tableCount} + ' ' + ${i18n>countUnit} }"
-                                    state="Information"/>
+                                <Text
+                                    text="{= '(' + ${view>/tableCount} + ')' }"
+                                    class="dpmTableCountText"/>
                                 <ToolbarSpacer/>
+                                <ObjectStatus
+                                    text="{view>/tableStatusSummary}"
+                                    icon="sap-icon://filter"
+                                    state="Information"/>
+                                <ObjectStatus
+                                    text="{view>/tableSortGroupSummary}"
+                                    icon="sap-icon://sort"
+                                    state="None"/>
                                 <!-- 정렬/그룹 설정 Dialog를 여는 버튼이다. -->
                                 <Button
                                     icon="sap-icon://sort"
