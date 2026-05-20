@@ -13,7 +13,7 @@
         <sortItems>
             <!-- 정렬 기준. 실제 정렬은 JSONModel의 Property명을 key로 사용한다. -->
             <ViewSettingsItem key="StatusText" text="{i18n>colStatus}"/>
-            <ViewSettingsItem key="DelayDays" text="{i18n>colDelayDays}" selected="true"/>
+            <ViewSettingsItem key="DelayDays" text="{i18n>colDelayDays}"/>
             <ViewSettingsItem key="Eindt" text="{i18n>colEindt}"/>
             <ViewSettingsItem key="Ebeln" text="{i18n>colEbeln}"/>
             <ViewSettingsItem key="Lifnr" text="{i18n>colLifnr}"/>

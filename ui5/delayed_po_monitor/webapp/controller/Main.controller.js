@@ -89,14 +89,26 @@ sap.ui.define([
         },
 
         onReset: function () {
-            // 검색조건, KPI, 입고 이력을 초기 상태로 되돌린 뒤 즉시 다시 조회한다.
+            // 검색조건, KPI, 차트, 입고 이력과 화면 선택 상태를 초기 상태로 되돌린 뒤 즉시 다시 조회한다.
             this.getView().getModel("view").setData(this._createInitialViewState());
             this.getView().getModel("kpi").setData(this._createEmptyKpi());
+            this.getView().getModel("chart").setData(this._createEmptyChart());
             this.getView().getModel("grHistory").setData({
                 items: [],
                 busy: false
             });
-            this.onSearch();
+
+            this._clearStatusChartSelection();
+            this._resetTableSettings();
+
+            this.onSearch().then(function () {
+                /*
+                 * 차트는 재조회 후 다시 렌더링되므로, 조회 완료 뒤 한 번 더 선택 상태를 지운다.
+                 * 이렇게 해야 사용자가 차트 조각을 선택한 상태에서 초기화해도 파란 선택 테두리/회색 강조가 남지 않는다.
+                 */
+                this._clearStatusChartSelection();
+                this._resetTableSettings();
+            }.bind(this));
         },
 
         onToggleAdvanced: function () {
@@ -218,6 +230,10 @@ sap.ui.define([
              * 기존 구현은 선택 배열의 첫 번째 값만 읽어서 단건 필터처럼 동작했다.
              * 이제는 현재 선택된 모든 상태를 읽어 MultiComboBox의 상태 배열과 동일한 방식으로 반영한다.
              */
+            if (this._bSuppressChartSelectionEvent) {
+                return;
+            }
+
             var aStatusCodes = this._getStatusCodesFromChartSelection(oEvent);
 
             this.getView().getModel("view").setProperty("/filters/statusCodes", aStatusCodes);
@@ -624,6 +640,70 @@ sap.ui.define([
 
             this.getView().addDependent(this._oStatusChartPopover);
             this._oStatusChartPopover.connect(oChart.getVizUid());
+        },
+
+        _clearStatusChartSelection: function () {
+            /*
+             * VizFrame 선택 상태를 화면에서 제거한다.
+             * 차트 선택은 필터 값(view>/filters/statusCodes)과 별개로 VizFrame 내부에도 남기 때문에
+             * 초기화 시 내부 선택도 함께 지워야 사용자가 "완전히 초기화됐다"고 느낀다.
+             *
+             * vizSelection으로 선택을 지울 때 deselectData 이벤트가 같이 발생할 수 있다.
+             * 그 이벤트가 onStatusChartSelect를 다시 타면 초기화 중 상태 필터가 빈 배열로 바뀔 수 있으므로
+             * 내부 초기화 중에는 차트 선택 이벤트를 잠깐 무시한다.
+             */
+            var oChart = this.byId("statusDistributionChart");
+
+            if (!oChart || typeof oChart.vizSelection !== "function") {
+                return;
+            }
+
+            this._bSuppressChartSelectionEvent = true;
+
+            try {
+                oChart.vizSelection([], {
+                    clearSelection: true
+                });
+            } catch (oError) {
+                // 일부 UI5/VizFrame 버전에서 선택 해제 API가 다르게 동작해도 초기화 흐름은 계속 진행한다.
+            } finally {
+                setTimeout(function () {
+                    this._bSuppressChartSelectionEvent = false;
+                }.bind(this), 0);
+            }
+        },
+
+        _resetTableSettings: function () {
+            // 테이블 바인딩의 정렬/그룹을 제거하고, Dialog가 이미 생성되어 있으면 선택 상태도 초기화한다.
+            this._applyTableSorters("", false, "", false);
+            this._resetTableSettingsDialog();
+        },
+
+        _resetTableSettingsDialog: function () {
+            var oDialog = this.byId("tableSettingsDialog");
+
+            if (!oDialog) {
+                return;
+            }
+
+            if (typeof oDialog.setSortDescending === "function") {
+                oDialog.setSortDescending(false);
+            }
+
+            if (typeof oDialog.setGroupDescending === "function") {
+                oDialog.setGroupDescending(false);
+            }
+
+            this._clearViewSettingsItems(oDialog.getSortItems && oDialog.getSortItems());
+            this._clearViewSettingsItems(oDialog.getGroupItems && oDialog.getGroupItems());
+        },
+
+        _clearViewSettingsItems: function (aItems) {
+            (aItems || []).forEach(function (oItem) {
+                if (oItem && typeof oItem.setSelected === "function") {
+                    oItem.setSelected(false);
+                }
+            });
         },
 
         _getChartStatusTextFromPopoverData: function (oPopoverData) {
