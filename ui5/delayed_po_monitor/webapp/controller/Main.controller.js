@@ -64,9 +64,17 @@ sap.ui.define([
             //      '전체 미입고/지연 현황 요약'이라는 의미가 약해진다.
             var aSummaryFilters = this._buildFilters(false);
 
-            this._loadMainTable(aTableFilters);
-            this._loadKpiData(aSummaryFilters);
-            this._loadStatusChart(aSummaryFilters);
+            /*
+             * 각 조회 메소드는 Promise를 반환한다.
+             * 일반 조회 버튼에서는 반환값을 사용하지 않아도 되지만,
+             * KPI 클릭 기능에서는 "조회가 끝난 뒤 정렬/그룹을 적용"해야 하므로
+             * Promise.all 결과를 반환해 후속 처리가 가능하게 둔다.
+             */
+            return Promise.all([
+                this._loadMainTable(aTableFilters),
+                this._loadKpiData(aSummaryFilters),
+                this._loadStatusChart(aSummaryFilters)
+            ]);
         },
 
         onReset: function () {
@@ -143,35 +151,54 @@ sap.ui.define([
              * ViewSettingsDialog에서 선택한 정렬/그룹 조건을 sap.m.Table 바인딩에 적용한다.
              * UI5 Table의 sort/group은 바인딩 Sorter 배열을 바꿔주는 방식으로 처리한다.
              */
-            var oTable = this.byId("delayedPoTable");
-            var oBinding = oTable && oTable.getBinding("items");
             var oSortItem = oEvent.getParameter("sortItem");
             var oGroupItem = oEvent.getParameter("groupItem");
             var sSortKey = oSortItem && oSortItem.getKey();
             var sGroupKey = oGroupItem && oGroupItem.getKey();
             var bSortDescending = oEvent.getParameter("sortDescending");
             var bGroupDescending = oEvent.getParameter("groupDescending");
-            var aSorters = [];
 
-            if (!oBinding) {
+            this._applyTableSorters(sSortKey, bSortDescending, sGroupKey, bGroupDescending);
+        },
+
+        onKpiPress: function (oEvent) {
+            /*
+             * KPI 카드를 단순 숫자 표시가 아니라 "빠른 필터 버튼"처럼 사용한다.
+             * 예:
+             * - 미입고 지연 건수 클릭 → 상태 필터를 D로 바꾸고 테이블 재조회
+             * - 지연 공급업체 수 클릭 → D/L 상태로 조회한 뒤 공급업체별 그룹 적용
+             */
+            var oTile = oEvent.getSource();
+            var sAction = oTile && oTile.data("kpiAction");
+            var oConfig = this._getKpiQuickActionConfig(sAction);
+            var oViewModel = this.getView().getModel("view");
+
+            if (!oConfig) {
+                MessageToast.show(this._text("kpiQuickFilterUnknown"));
                 return;
             }
 
-            if (sGroupKey) {
-                // 그룹을 선택하면 첫 번째 Sorter에 group function을 넣어 그룹 헤더 텍스트를 만든다.
-                aSorters.push(new Sorter(
-                    sGroupKey,
-                    bGroupDescending,
-                    this._getTableGroup.bind(this, sGroupKey)
-                ));
-            }
+            /*
+             * 상태 MultiComboBox는 view>/filters/statusCodes에 바인딩되어 있다.
+             * 여기 값을 바꾸면 화면의 선택값도 같이 바뀌고, _buildFilters(true)가
+             * 다음 조회에서 해당 상태조건을 OData $filter로 만든다.
+             */
+            oViewModel.setProperty("/filters/statusCodes", oConfig.statusCodes.slice());
 
-            if (sSortKey && sSortKey !== sGroupKey) {
-                // 그룹 필드와 정렬 필드가 다를 때만 두 번째 Sorter를 추가해 중복 정렬을 피한다.
-                aSorters.push(new Sorter(sSortKey, bSortDescending));
-            }
+            this.onSearch().then(function () {
+                /*
+                 * JSONModel Table은 데이터가 view>/items에 들어온 뒤 binding.sort를 적용해야
+                 * 사용자가 실제로 보는 행 순서와 그룹 헤더가 갱신된다.
+                 */
+                this._applyTableSorters(
+                    oConfig.sortKey,
+                    oConfig.sortDescending,
+                    oConfig.groupKey,
+                    oConfig.groupDescending
+                );
 
-            oBinding.sort(aSorters);
+                MessageToast.show(this._text(oConfig.messageKey));
+            }.bind(this));
         },
 
         onStatusChartSelect: function (oEvent) {
@@ -398,6 +425,84 @@ sap.ui.define([
             mStatusCodeByText[this._text("statusC")] = "C";
 
             return mStatusCodeByText[sStatusText] || "";
+        },
+
+        _getKpiQuickActionConfig: function (sAction) {
+            /*
+             * KPI 카드별 빠른 필터 정책을 한 곳에 모아둔다.
+             * 이렇게 분리하면 나중에 "미입고 PO Item은 납기일순이 아니라 지연일수순으로 보자"처럼
+             * 업무 기준이 바뀌어도 XML을 건드리지 않고 이 설정만 바꾸면 된다.
+             */
+            var mConfig = {
+                OPEN_PO_ITEM: {
+                    // C(입고완료)를 제외한 문제/관심 상태 전체를 보여준다.
+                    statusCodes: ["O", "D", "P", "L"],
+                    sortKey: "Eindt",
+                    sortDescending: false,
+                    groupKey: "",
+                    groupDescending: false,
+                    messageKey: "kpiQuickFilterOpenPoItem"
+                },
+                DELAYED_ITEM: {
+                    // 납기 지연은 미입고 지연(D)과 부분입고 지연(L)을 함께 본다.
+                    statusCodes: ["D", "L"],
+                    sortKey: "DelayDays",
+                    sortDescending: true,
+                    groupKey: "",
+                    groupDescending: false,
+                    messageKey: "kpiQuickFilterDelayedItem"
+                },
+                NO_RECEIPT_DELAY: {
+                    // 입고수량이 0 이하이고 납기가 지난 D 상태만 집중해서 본다.
+                    statusCodes: ["D"],
+                    sortKey: "DelayDays",
+                    sortDescending: true,
+                    groupKey: "",
+                    groupDescending: false,
+                    messageKey: "kpiQuickFilterNoReceiptDelay"
+                },
+                DELAYED_VENDOR: {
+                    // 공급업체 대응 목적이므로 D/L 상태를 공급업체별로 묶어서 보여준다.
+                    statusCodes: ["D", "L"],
+                    sortKey: "DelayDays",
+                    sortDescending: true,
+                    groupKey: "Lifnr",
+                    groupDescending: false,
+                    messageKey: "kpiQuickFilterDelayedVendor"
+                }
+            };
+
+            return mConfig[sAction];
+        },
+
+        _applyTableSorters: function (sSortKey, bSortDescending, sGroupKey, bGroupDescending) {
+            /*
+             * sap.ui.model.Sorter는 Table/List Binding에 정렬 기준을 전달하는 객체다.
+             * 세 번째 파라미터에 function을 넘기면 그룹 헤더 텍스트를 직접 만들 수 있다.
+             */
+            var oTable = this.byId("delayedPoTable");
+            var oBinding = oTable && oTable.getBinding("items");
+            var aSorters = [];
+
+            if (!oBinding) {
+                return;
+            }
+
+            if (sGroupKey) {
+                // 그룹은 항상 첫 번째 Sorter로 넣어야 같은 그룹끼리 모여서 표시된다.
+                aSorters.push(new Sorter(
+                    sGroupKey,
+                    bGroupDescending,
+                    this._getTableGroup.bind(this, sGroupKey)
+                ));
+            }
+
+            if (sSortKey && sSortKey !== sGroupKey) {
+                // 그룹 필드와 정렬 필드가 다를 때만 두 번째 Sorter를 추가해 중복 정렬을 피한다.
+                aSorters.push(new Sorter(sSortKey, bSortDescending));
+            }
+
+            oBinding.sort(aSorters);
         },
 
         _getTableGroup: function (sProperty, oContext) {

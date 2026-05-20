@@ -151,7 +151,17 @@
                     </HBox>
 
                     <FlexBox wrap="Wrap" renderType="Bare" class="dpmKpiBox">
-                        <GenericTile header="{i18n>kpiOpenPoItem}" class="dpmKpiTile">
+                        <GenericTile
+                            header="{i18n>kpiOpenPoItem}"
+                            class="dpmKpiTile"
+                            press=".onKpiPress">
+                            <customData>
+                                <!--
+                                    KPI 타일 클릭 시 Controller에서 어떤 빠른 필터를 적용할지 구분하는 값.
+                                    CustomData는 화면에는 보이지 않고, press 이벤트에서 data("kpiAction")으로 읽는다.
+                                -->
+                                <core:CustomData key="kpiAction" value="OPEN_PO_ITEM"/>
+                            </customData>
                             <TileContent>
                                 <NumericContent
                                     value="{kpi>/OpenPoItemCnt}"
@@ -160,7 +170,13 @@
                             </TileContent>
                         </GenericTile>
 
-                        <GenericTile header="{i18n>kpiDelayedItem}" class="dpmKpiTile">
+                        <GenericTile
+                            header="{i18n>kpiDelayedItem}"
+                            class="dpmKpiTile"
+                            press=".onKpiPress">
+                            <customData>
+                                <core:CustomData key="kpiAction" value="DELAYED_ITEM"/>
+                            </customData>
                             <TileContent>
                                 <NumericContent
                                     value="{kpi>/DelayedItemCnt}"
@@ -169,7 +185,13 @@
                             </TileContent>
                         </GenericTile>
 
-                        <GenericTile header="{i18n>kpiNoReceiptDelay}" class="dpmKpiTile">
+                        <GenericTile
+                            header="{i18n>kpiNoReceiptDelay}"
+                            class="dpmKpiTile"
+                            press=".onKpiPress">
+                            <customData>
+                                <core:CustomData key="kpiAction" value="NO_RECEIPT_DELAY"/>
+                            </customData>
                             <TileContent>
                                 <NumericContent
                                     value="{kpi>/NoReceiptDelayCnt}"
@@ -178,7 +200,13 @@
                             </TileContent>
                         </GenericTile>
 
-                        <GenericTile header="{i18n>kpiDelayedVendor}" class="dpmKpiTile">
+                        <GenericTile
+                            header="{i18n>kpiDelayedVendor}"
+                            class="dpmKpiTile"
+                            press=".onKpiPress">
+                            <customData>
+                                <core:CustomData key="kpiAction" value="DELAYED_VENDOR"/>
+                            </customData>
                             <TileContent>
                                 <NumericContent
                                     value="{kpi>/DelayedVendorCnt}"
