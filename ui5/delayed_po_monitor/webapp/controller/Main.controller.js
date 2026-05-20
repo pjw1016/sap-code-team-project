@@ -558,29 +558,12 @@ sap.ui.define([
              * 초급자가 디버깅하기 쉽도록 두 가지 형태를 모두 방어적으로 처리한다.
              */
             var vData = oDataPoint && oDataPoint.data;
-            var oDimensionData;
 
             if (!vData) {
                 return "";
             }
 
-            if (typeof vData.Status === "string") {
-                return vData.Status;
-            }
-
-            if (Array.isArray(vData)) {
-                oDimensionData = vData.find(function (oEntry) {
-                    return oEntry && (
-                        oEntry.name === "Status"
-                        || oEntry.type === "Dimension"
-                        || oEntry.ctx && oEntry.ctx.type === "Dimension"
-                    );
-                });
-
-                return oDimensionData && (oDimensionData.val || oDimensionData.value) || "";
-            }
-
-            return "";
+            return this._extractStatusTextFromVizData(vData);
         },
 
         _getUniqueStatusCodes: function (aStatusCodes) {
@@ -755,26 +738,123 @@ sap.ui.define([
         _getChartStatusTextFromPopoverData: function (oPopoverData) {
             /*
              * Popover가 넘기는 데이터 구조는 VizFrame 내부 구조라 UI5 버전/차트 타입에 따라 조금 달라질 수 있다.
-             * 그래서 현재 앱에서 사용하는 5개 상태명을 JSON 문자열 안에서 찾아 가장 안정적으로 매칭한다.
+             * 문자열 전체 검색(JSON.stringify)에 기대지 않고, 구조 안의 Status 차원 값을 우선 찾아 매칭한다.
              */
-            var aStatusTexts = [
-                this._text("statusO"),
-                this._text("statusD"),
-                this._text("statusP"),
-                this._text("statusL"),
-                this._text("statusC")
-            ];
-            var sPopoverData = "";
+            return this._extractStatusTextFromVizData(oPopoverData);
+        },
 
-            try {
-                sPopoverData = JSON.stringify(oPopoverData || {});
-            } catch (oError) {
-                sPopoverData = "";
+        _extractStatusTextFromVizData: function (vData) {
+            /*
+             * VizFrame 이벤트/Popover 데이터에서 상태 텍스트를 꺼내는 공통 헬퍼다.
+             * 우선 명확한 차원명(Status) 값을 찾고, 그래도 없으면 알려진 상태 텍스트와 정확히 같은 문자열만 찾는다.
+             */
+            var sStatusText = this._extractNamedVizValue(vData, [
+                "Status",
+                "StatusText",
+                this._text("chartStatusDimension")
+            ]);
+
+            if (sStatusText) {
+                return sStatusText;
             }
 
-            return aStatusTexts.find(function (sStatusText) {
-                return sPopoverData.indexOf(sStatusText) > -1;
-            }) || "";
+            return this._findKnownStatusTextInVizData(vData);
+        },
+
+        _extractNamedVizValue: function (vData, aNames, iDepth, aVisited) {
+            var sName;
+            var vValue;
+            var aKeys;
+            var sFoundValue;
+
+            if (!vData || iDepth > 8) {
+                return "";
+            }
+
+            if (typeof vData !== "object") {
+                return "";
+            }
+
+            aVisited = aVisited || [];
+            if (aVisited.indexOf(vData) > -1) {
+                return "";
+            }
+            aVisited.push(vData);
+
+            if (Array.isArray(vData)) {
+                vData.some(function (vEntry) {
+                    sFoundValue = this._extractNamedVizValue(vEntry, aNames, (iDepth || 0) + 1, aVisited);
+                    return !!sFoundValue;
+                }.bind(this));
+                return sFoundValue || "";
+            }
+
+            sName = vData.name || vData.label || vData.key || vData.ctx && (vData.ctx.name || vData.ctx.path);
+            if (aNames.indexOf(sName) > -1) {
+                vValue = vData.val || vData.value || vData.rawValue || vData.text;
+                if (typeof vValue === "string") {
+                    return vValue;
+                }
+            }
+
+            sFoundValue = aNames.reduce(function (sResult, sFieldName) {
+                if (sResult) {
+                    return sResult;
+                }
+
+                return typeof vData[sFieldName] === "string" ? vData[sFieldName] : "";
+            }, "");
+
+            if (sFoundValue) {
+                return sFoundValue;
+            }
+
+            aKeys = Object.keys(vData);
+            aKeys.some(function (sKey) {
+                sFoundValue = this._extractNamedVizValue(vData[sKey], aNames, (iDepth || 0) + 1, aVisited);
+                return !!sFoundValue;
+            }.bind(this));
+
+            return sFoundValue || "";
+        },
+
+        _findKnownStatusTextInVizData: function (vData, iDepth, aVisited) {
+            var sFoundText = "";
+            var aKeys;
+
+            if (!vData || iDepth > 8) {
+                return "";
+            }
+
+            if (typeof vData === "string") {
+                return this._getStatusCodeByText(vData) ? vData : "";
+            }
+
+            if (typeof vData !== "object") {
+                return "";
+            }
+
+            aVisited = aVisited || [];
+            if (aVisited.indexOf(vData) > -1) {
+                return "";
+            }
+            aVisited.push(vData);
+
+            if (Array.isArray(vData)) {
+                vData.some(function (vEntry) {
+                    sFoundText = this._findKnownStatusTextInVizData(vEntry, (iDepth || 0) + 1, aVisited);
+                    return !!sFoundText;
+                }.bind(this));
+                return sFoundText;
+            }
+
+            aKeys = Object.keys(vData);
+            aKeys.some(function (sKey) {
+                sFoundText = this._findKnownStatusTextInVizData(vData[sKey], (iDepth || 0) + 1, aVisited);
+                return !!sFoundText;
+            }.bind(this));
+
+            return sFoundText;
         },
 
         _getChartTooltipTextByStatusText: function (sStatusText) {
