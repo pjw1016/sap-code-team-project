@@ -222,9 +222,19 @@
                     DelayedPoSet 결과를 클라이언트에서 O/D/P/L/C 상태별로 집계해 도넛 차트로 표시한다.
                     차트 조각을 클릭하면 해당 상태가 메인 테이블 필터로 적용된다.
                 -->
-                <Panel
-                    headerText="{i18n>statusChartTitle}"
-                    class="dpmSection dpmChartPanel">
+                <Panel class="dpmSection dpmChartPanel">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="{i18n>statusChartTitle}" level="H2"/>
+                            <ToolbarSpacer/>
+                            <Button
+                                text="{i18n>clearChartFilter}"
+                                icon="sap-icon://clear-filter"
+                                tooltip="{i18n>clearChartFilter}"
+                                type="Transparent"
+                                press=".onClearChartFilter"/>
+                        </OverflowToolbar>
+                    </headerToolbar>
                     <content>
                         <viz:VizFrame
                             id="statusDistributionChart"

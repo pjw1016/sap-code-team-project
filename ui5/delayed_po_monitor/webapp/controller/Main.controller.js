@@ -260,6 +260,21 @@ sap.ui.define([
             }
         },
 
+        onClearChartFilter: function () {
+            /*
+             * 차트 패널의 명시적 필터 해제 버튼이다.
+             * 전체 초기화와 달리 검색조건/테이블 정렬/그룹은 유지하고,
+             * 차트 선택 상태와 상태 필터만 기본 문제건 O/D/P/L로 되돌린다.
+             */
+            this._clearStatusChartSelection();
+            this.getView().getModel("view").setProperty("/filters/statusCodes", this._getDefaultProblemStatusCodes());
+
+            this.onSearch().then(function () {
+                this._clearStatusChartSelection();
+                this._showToast(this._text("chartFilterCleared"));
+            }.bind(this));
+        },
+
         _initModels: function () {
             // OData 결과는 화면에서 바로 쓰기 편하도록 JSONModel에 복사해서 관리한다.
             this.getView().setModel(new JSONModel(this._createInitialViewState()), "view");
