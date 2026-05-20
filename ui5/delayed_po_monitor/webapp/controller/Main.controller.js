@@ -30,13 +30,28 @@ sap.ui.define([
             }
         },
 
+        // onSearch: function () {
+        //     var aTableFilters = this._buildFilters(true);
+        //     var aChartFilters = this._buildFilters(false);
+
+        //     this._loadMainTable(aTableFilters);
+        //     this._loadKpiData(aTableFilters);
+        //     this._loadStatusChart(aChartFilters);
+        // },
+
         onSearch: function () {
+            // 메인 테이블은 사용자가 선택한 상태 필터까지 적용한다.
+            // 예: 상태를 '미입고 지연(D)'만 선택하면 테이블도 D만 표시한다.
             var aTableFilters = this._buildFilters(true);
-            var aChartFilters = this._buildFilters(false);
+
+            // KPI와 상태 차트는 상태 필터를 제외한 검색조건 기준으로 계산한다.
+            // 이유: 상태 필터까지 적용하면 KPI 카드가 선택한 상태 기준으로만 줄어들어
+            //      '전체 미입고/지연 현황 요약'이라는 의미가 약해진다.
+            var aSummaryFilters = this._buildFilters(false);
 
             this._loadMainTable(aTableFilters);
-            this._loadKpiData(aTableFilters);
-            this._loadStatusChart(aChartFilters);
+            this._loadKpiData(aSummaryFilters);
+            this._loadStatusChart(aSummaryFilters);
         },
 
         onReset: function () {
