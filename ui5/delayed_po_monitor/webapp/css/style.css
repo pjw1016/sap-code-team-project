@@ -72,6 +72,23 @@
     width: 18rem;
 }
 
+/*
+ * MessageToast 폭 보정
+ *
+ * SAPUI5 SDK 기준으로 sap.m.MessageToast.show에는 width 옵션이 있다.
+ * 다만 MessageToast는 View 안의 일반 컨트롤이 아니라 UI5 Popup 영역에 동적으로 생성된다.
+ * 그래서 테마 CSS나 팝업 렌더링 상황에 따라 컨트롤러에서 넘긴 width 값이
+ * 화면에서 기대한 만큼 넓게 보이지 않을 수 있다.
+ *
+ * 이 앱에서는 한국어 안내 문구가 2~3줄로 잘리는 것을 줄이기 위해
+ * MessageToast의 실제 DOM 클래스인 .sapMMessageToast에 폭을 한 번 더 지정한다.
+ * !important는 UI5 테마가 같은 클래스에 폭을 지정하는 경우에도 앱 기준 폭을 우선하기 위해 사용한다.
+ */
+.sapMMessageToast {
+    width: 30rem !important;
+    max-width: calc(100vw - 2rem) !important;
+}
+
 /* 모바일 폭에서는 각 입력/정보/KPI 항목을 한 줄 전체 폭으로 표시한다. */
 @media (max-width: 600px) {
     .dpmFilterItem,
@@ -82,5 +99,13 @@
     .dpmKpiTile {
         width: 100%;
         flex-basis: 100%;
+    }
+
+    /*
+     * 모바일에서는 26rem이 화면 폭보다 클 수 있으므로,
+     * 좌우 여백 1rem씩만 남기고 화면 안에 맞춘다.
+     */
+    .sapMMessageToast {
+        width: calc(100vw - 2rem) !important;
     }
 }

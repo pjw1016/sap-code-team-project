@@ -233,14 +233,22 @@
                             uiConfig="{applicationSet:'fiori'}"
                             vizProperties="{
                                 title: { visible: false },
+                                tooltip: { visible: true },
                                 legend: { visible: true },
                                 plotArea: {
                                     colorPalette: ['#6a6d70', '#bb0000', '#0a6ed1', '#e9730c', '#107e3e'],
-                                    drawingEffect: 'normal'
+                                    drawingEffect: 'normal',
+                                    dataLabel: {
+                                        visible: true,
+                                        type: 'value',
+                                        formatString: '#,##0건',
+                                        hideWhenOverlap: true
+                                    }
                                 }
                             }"
                             vizType="donut"
-                            selectData=".onStatusChartSelect">
+                            selectData=".onStatusChartSelect"
+                            deselectData=".onStatusChartSelect">
                             <viz:dataset>
                                 <viz.data:FlattenedDataset data="{chart>/statusDistribution}">
                                     <viz.data:dimensions>

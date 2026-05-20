@@ -5,9 +5,11 @@ sap.ui.define([
     "sap/ui/model/FilterOperator",
     "sap/ui/model/Sorter",
     "sap/ui/core/Fragment",
+    "sap/viz/ui5/controls/Popover",
+    "sap/m/Text",
     "sap/m/MessageToast",
     "code/d3/delayedpomonitor/model/formatter"
-], function (Controller, JSONModel, Filter, FilterOperator, Sorter, Fragment, MessageToast, formatter) {
+], function (Controller, JSONModel, Filter, FilterOperator, Sorter, Fragment, ChartPopover, Text, MessageToast, formatter) {
     "use strict";
 
     /*
@@ -27,16 +29,25 @@ sap.ui.define([
             // 상세 팝업은 처음부터 만들지 않고, 사용자가 행을 누를 때 1번만 로드해서 재사용한다.
             this._pDetailDialog = null;
             this._initModels();
+            this._initStatusChartPopover();
 
             // OData metadata가 준비된 뒤 조회해야 EntitySet/Property 정보가 안정적으로 잡힌다.
             if (oODataModel && oODataModel.metadataLoaded) {
                 oODataModel.metadataLoaded().then(function () {
                     this.onSearch();
                 }.bind(this)).catch(function () {
-                    MessageToast.show(this._text("metadataLoadError"));
+                    this._showToast(this._text("metadataLoadError"));
                 }.bind(this));
             } else {
                 this.onSearch();
+            }
+        },
+
+        onExit: function () {
+            // Controller가 종료될 때 동적으로 만든 VizFrame Popover도 같이 정리한다.
+            if (this._oStatusChartPopover) {
+                this._oStatusChartPopover.destroy();
+                this._oStatusChartPopover = null;
             }
         },
 
@@ -97,7 +108,7 @@ sap.ui.define([
         onBaseDateChange: function (oEvent) {
             // DatePicker가 파싱하지 못한 날짜는 조회 전에 사용자에게 알려준다.
             if (!oEvent.getParameter("valid")) {
-                MessageToast.show(this._text("invalidDate"));
+                this._showToast(this._text("invalidDate"));
             }
         },
 
@@ -174,7 +185,7 @@ sap.ui.define([
             var oViewModel = this.getView().getModel("view");
 
             if (!oConfig) {
-                MessageToast.show(this._text("kpiQuickFilterUnknown"));
+                this._showToast(this._text("kpiQuickFilterUnknown"));
                 return;
             }
 
@@ -197,23 +208,26 @@ sap.ui.define([
                     oConfig.groupDescending
                 );
 
-                MessageToast.show(this._text(oConfig.messageKey));
+                this._showToast(this._text(oConfig.messageKey));
             }.bind(this));
         },
 
         onStatusChartSelect: function (oEvent) {
-            // 도넛 차트 조각을 클릭하면 해당 상태코드만 메인 테이블 필터로 세팅한다.
-            var aSelectedData = oEvent.getParameter("data") || [];
-            var oSelectedData = aSelectedData[0] && aSelectedData[0].data;
-            var sStatusText = oSelectedData && oSelectedData.Status;
-            var sStatusCode = this._getStatusCodeByText(sStatusText);
+            /*
+             * VizFrame 도넛 차트는 기본적으로 여러 조각을 선택할 수 있다.
+             * 기존 구현은 선택 배열의 첫 번째 값만 읽어서 단건 필터처럼 동작했다.
+             * 이제는 현재 선택된 모든 상태를 읽어 MultiComboBox의 상태 배열과 동일한 방식으로 반영한다.
+             */
+            var aStatusCodes = this._getStatusCodesFromChartSelection(oEvent);
 
-            if (!sStatusCode) {
-                return;
-            }
-
-            this.getView().getModel("view").setProperty("/filters/statusCodes", [sStatusCode]);
+            this.getView().getModel("view").setProperty("/filters/statusCodes", aStatusCodes);
             this.onSearch();
+
+            if (aStatusCodes.length > 0) {
+                this._showToast(this._text("chartFilterApplied"));
+            } else {
+                this._showToast(this._text("chartFilterCleared"));
+            }
         },
 
         _initModels: function () {
@@ -314,7 +328,7 @@ sap.ui.define([
             }.bind(this)).catch(function (oError) {
                 oViewModel.setProperty("/items", []);
                 oViewModel.setProperty("/tableCount", 0);
-                MessageToast.show(this._getErrorMessage(oError, "mainLoadError"));
+                this._showToast(this._getErrorMessage(oError, "mainLoadError"));
             }.bind(this)).finally(function () {
                 oViewModel.setProperty("/tableBusy", false);
             }.bind(this));
@@ -337,7 +351,7 @@ sap.ui.define([
                 oKpiModel.setData(aResults[0] || this._createEmptyKpi());
             }.bind(this)).catch(function (oError) {
                 oKpiModel.setData(this._createEmptyKpi());
-                MessageToast.show(this._getErrorMessage(oError, "kpiLoadError"));
+                this._showToast(this._getErrorMessage(oError, "kpiLoadError"));
             }.bind(this));
         },
 
@@ -355,7 +369,7 @@ sap.ui.define([
                 oHistoryModel.setProperty("/items", aResults);
             }).catch(function (oError) {
                 oHistoryModel.setProperty("/items", []);
-                MessageToast.show(this._getErrorMessage(oError, "historyLoadError"));
+                this._showToast(this._getErrorMessage(oError, "historyLoadError"));
             }.bind(this)).finally(function () {
                 oHistoryModel.setProperty("/busy", false);
             });
@@ -393,6 +407,7 @@ sap.ui.define([
                 { code: "C", text: this._text("statusC") }
             ];
             var aDistribution;
+            var iTotalCount = (aItems || []).length;
 
             (aItems || []).forEach(function (oItem) {
                 // StatusCode별 건수를 단순 누적한다.
@@ -401,16 +416,26 @@ sap.ui.define([
             });
 
             aDistribution = aStatusConfig.map(function (oStatus) {
+                var iCount = mCounts[oStatus.code] || 0;
+                var fPercent = iTotalCount > 0 ? (iCount / iTotalCount) * 100 : 0;
+                var sPercentText = fPercent.toFixed(2) + "%";
+                var sSummaryText = oStatus.text + " " + iCount + this._text("countUnit") + "(" + sPercentText + ")";
+
                 return {
                     StatusCode: oStatus.code,
                     StatusText: oStatus.text,
-                    Count: mCounts[oStatus.code] || 0
+                    Count: iCount,
+                    Percent: fPercent,
+                    PercentText: sPercentText,
+                    SummaryText: sSummaryText,
+                    TooltipText: sSummaryText,
+                    StatusState: this._getStatusStateByCode(oStatus.code)
                 };
-            });
+            }.bind(this));
 
             oChartModel.setData({
                 statusDistribution: aDistribution,
-                totalCount: (aItems || []).length
+                totalCount: iTotalCount
             });
         },
 
@@ -425,6 +450,102 @@ sap.ui.define([
             mStatusCodeByText[this._text("statusC")] = "C";
 
             return mStatusCodeByText[sStatusText] || "";
+        },
+
+        _getStatusCodesFromChartSelection: function (oEvent) {
+            /*
+             * VizFrame의 selectData/deselectData 이벤트에서 현재 선택된 상태코드 배열을 만든다.
+             *
+             * 핵심 포인트:
+             * - oEvent.getParameter("data")는 이벤트가 발생한 데이터 포인트를 준다.
+             * - 다중 선택 상태 전체를 보려면 가능하면 VizFrame의 vizSelection() 결과를 우선 사용한다.
+             * - 시스템/버전에 따라 vizSelection()이 배열을 반환하지 않을 수 있어 이벤트 data를 보조로 사용한다.
+             */
+            var oChart = oEvent.getSource();
+            var vCurrentSelection = oChart && typeof oChart.vizSelection === "function" ? oChart.vizSelection() : [];
+            var bDeselectEvent = oEvent.getId && oEvent.getId() === "deselectData";
+            var aSelectedData = Array.isArray(vCurrentSelection) ? vCurrentSelection : [];
+            var aStatusCodes = [];
+
+            /*
+             * deselectData에서 현재 선택 배열이 비었다는 것은 사용자가 모든 선택을 해제했다는 뜻이다.
+             * 이때 이벤트 data로 fallback하면 방금 해제한 항목이 다시 필터로 들어가므로 fallback하지 않는다.
+             */
+            if (aSelectedData.length === 0 && !bDeselectEvent) {
+                aSelectedData = oEvent.getParameter("data") || [];
+            }
+
+            aSelectedData.forEach(function (oDataPoint) {
+                var sStatusText = this._getChartDataPointStatusText(oDataPoint);
+                var sStatusCode = this._getStatusCodeByText(sStatusText);
+
+                if (sStatusCode) {
+                    aStatusCodes.push(sStatusCode);
+                }
+            }.bind(this));
+
+            return this._getUniqueStatusCodes(aStatusCodes);
+        },
+
+        _getChartDataPointStatusText: function (oDataPoint) {
+            /*
+             * 현재 프로젝트의 VizFrame 이벤트는 보통 아래처럼 값을 넘긴다.
+             *   oDataPoint.data.Status = "미입고 지연"
+             *
+             * 다만 VizFrame 계열은 버전/차트 타입에 따라 data가 배열로 올 수도 있으므로,
+             * 초급자가 디버깅하기 쉽도록 두 가지 형태를 모두 방어적으로 처리한다.
+             */
+            var vData = oDataPoint && oDataPoint.data;
+            var oDimensionData;
+
+            if (!vData) {
+                return "";
+            }
+
+            if (typeof vData.Status === "string") {
+                return vData.Status;
+            }
+
+            if (Array.isArray(vData)) {
+                oDimensionData = vData.find(function (oEntry) {
+                    return oEntry && (
+                        oEntry.name === "Status"
+                        || oEntry.type === "Dimension"
+                        || oEntry.ctx && oEntry.ctx.type === "Dimension"
+                    );
+                });
+
+                return oDimensionData && (oDimensionData.val || oDimensionData.value) || "";
+            }
+
+            return "";
+        },
+
+        _getUniqueStatusCodes: function (aStatusCodes) {
+            // 같은 차트 조각이 중복으로 들어와도 OData 필터는 한 번만 만들도록 중복을 제거한다.
+            var mSeen = {};
+
+            return (aStatusCodes || []).filter(function (sStatusCode) {
+                if (mSeen[sStatusCode]) {
+                    return false;
+                }
+
+                mSeen[sStatusCode] = true;
+                return true;
+            });
+        },
+
+        _getStatusStateByCode: function (sStatusCode) {
+            // 차트 아래 요약 ObjectStatus의 색상도 메인 테이블 상태와 같은 의미로 맞춘다.
+            var mStateByCode = {
+                O: "None",
+                D: "Error",
+                P: "Information",
+                L: "Warning",
+                C: "Success"
+            };
+
+            return mStateByCode[sStatusCode] || "None";
         },
 
         _getKpiQuickActionConfig: function (sAction) {
@@ -473,6 +594,71 @@ sap.ui.define([
             };
 
             return mConfig[sAction];
+        },
+
+        _initStatusChartPopover: function () {
+            /*
+             * VizFrame의 기본 tooltip 대신 차트 전용 Popover를 연결한다.
+             * 사용자가 도넛 조각에 마우스를 올리면 "미입고 예정 12건(27.91%)"처럼
+             * 상태명, 건수, 비율을 한 줄로 보여주기 위한 처리다.
+             */
+            var oChart = this.byId("statusDistributionChart");
+
+            if (!oChart || this._oStatusChartPopover) {
+                return;
+            }
+
+            this._oStatusChartPopover = new ChartPopover({
+                // 기본 Popover의 숫자 행에도 "건" 단위가 붙도록 포맷을 지정한다.
+                formatString: "#,##0건",
+                customDataControl: function (oPopoverData) {
+                    var sStatusText = this._getChartStatusTextFromPopoverData(oPopoverData);
+                    var sTooltipText = this._getChartTooltipTextByStatusText(sStatusText);
+
+                    return new Text({
+                        text: sTooltipText || this._text("notAvailable"),
+                        wrapping: false
+                    });
+                }.bind(this)
+            });
+
+            this.getView().addDependent(this._oStatusChartPopover);
+            this._oStatusChartPopover.connect(oChart.getVizUid());
+        },
+
+        _getChartStatusTextFromPopoverData: function (oPopoverData) {
+            /*
+             * Popover가 넘기는 데이터 구조는 VizFrame 내부 구조라 UI5 버전/차트 타입에 따라 조금 달라질 수 있다.
+             * 그래서 현재 앱에서 사용하는 5개 상태명을 JSON 문자열 안에서 찾아 가장 안정적으로 매칭한다.
+             */
+            var aStatusTexts = [
+                this._text("statusO"),
+                this._text("statusD"),
+                this._text("statusP"),
+                this._text("statusL"),
+                this._text("statusC")
+            ];
+            var sPopoverData = "";
+
+            try {
+                sPopoverData = JSON.stringify(oPopoverData || {});
+            } catch (oError) {
+                sPopoverData = "";
+            }
+
+            return aStatusTexts.find(function (sStatusText) {
+                return sPopoverData.indexOf(sStatusText) > -1;
+            }) || "";
+        },
+
+        _getChartTooltipTextByStatusText: function (sStatusText) {
+            // 차트 모델에 이미 계산해 둔 TooltipText를 상태명으로 찾아 반환한다.
+            var aDistribution = this.getView().getModel("chart").getProperty("/statusDistribution") || [];
+            var oMatchedStatus = aDistribution.find(function (oStatus) {
+                return oStatus.StatusText === sStatusText;
+            });
+
+            return oMatchedStatus && oMatchedStatus.TooltipText || "";
         },
 
         _applyTableSorters: function (sSortKey, bSortDescending, sGroupKey, bGroupDescending) {
@@ -689,6 +875,27 @@ sap.ui.define([
         _text: function (sKey) {
             // 컨트롤러에서 i18n 문구를 짧게 가져오기 위한 헬퍼다.
             return this.getOwnerComponent().getModel("i18n").getResourceBundle().getText(sKey);
+        },
+
+        _showToast: function (sMessage) {
+            /*
+             * MessageToast를 화면 곳곳에서 직접 호출하면 폭/시간/위치 같은 표시 규칙이 흩어진다.
+             * 그래서 이 앱에서는 토스트 표시를 이 헬퍼 하나로 모은다.
+             *
+             * width를 기본값보다 넓게 잡은 이유:
+             * - 한국어 문장은 기본 MessageToast 폭에서 2~3줄로 쉽게 줄바꿈된다.
+             * - 26rem 정도면 데스크톱 화면에서 대부분의 안내 문구가 1~2줄 안에 들어온다.
+             * - SAPUI5 SDK 기준으로 MessageToast.show의 width 옵션은 공식 지원된다.
+             *
+             * 주의:
+             * MessageToast는 View 안에 직접 그려지는 컨트롤이 아니라 UI5 Popup으로 생성된다.
+             * 그래서 테마 CSS 영향으로 브라우저에서 기대보다 좁게 보일 수 있다.
+             * 이 앱에서는 width 옵션을 넘기고, css/style.css에서도 같은 폭을 한 번 더 보강한다.
+             * 실제 화면 폭을 바꾸려면 css/style.css의 .sapMMessageToast width 값도 같이 확인한다.
+             */
+            MessageToast.show(sMessage, {
+                width: "26rem"
+            });
         }
     });
 });
