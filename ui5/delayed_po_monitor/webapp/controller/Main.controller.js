@@ -235,14 +235,28 @@ sap.ui.define([
             }
 
             var aStatusCodes = this._getStatusCodesFromChartSelection(oEvent);
+            var bDeselectEvent = oEvent.getId && oEvent.getId() === "deselectData";
+            var bSelectionCleared = bDeselectEvent && aStatusCodes.length === 0;
+
+            if (!bSelectionCleared && aStatusCodes.length === 0) {
+                return;
+            }
+
+            if (bSelectionCleared) {
+                /*
+                 * 차트 선택을 모두 해제한 경우에는 상태 필터를 완전히 비우지 않는다.
+                 * 이 앱의 기본 조회 목적은 문제건 중심 모니터링이므로 기본 상태 O/D/P/L로 되돌린다.
+                 */
+                aStatusCodes = this._getDefaultProblemStatusCodes();
+            }
 
             this.getView().getModel("view").setProperty("/filters/statusCodes", aStatusCodes);
             this.onSearch();
 
-            if (aStatusCodes.length > 0) {
-                this._showToast(this._text("chartFilterApplied"));
-            } else {
+            if (bSelectionCleared) {
                 this._showToast(this._text("chartFilterCleared"));
+            } else {
+                this._showToast(this._text("chartFilterApplied"));
             }
         },
 
@@ -271,7 +285,7 @@ sap.ui.define([
                     eindtTo: oEindtTo,
                     werks: "",
                     // 기본 상태는 문제건 중심으로 설정한다. C(입고완료)는 사용자가 필요할 때 선택한다.
-                    statusCodes: ["O", "D", "P", "L"],
+                    statusCodes: this._getDefaultProblemStatusCodes(),
                     // excludeCompleted: true,  "입고완료 제외" 체크박스 더이상 사용 안 함
                     bukrs: "",
                     ebeln: "",
@@ -468,6 +482,15 @@ sap.ui.define([
             return mStatusCodeByText[sStatusText] || "";
         },
 
+        _getDefaultProblemStatusCodes: function () {
+            /*
+             * 앱의 기본 조회 상태다.
+             * 입고완료(C)는 사용자가 직접 보고 싶을 때만 선택하고,
+             * 기본 화면/초기화/차트 선택 해제는 문제건 중심인 O/D/P/L로 복귀한다.
+             */
+            return ["O", "D", "P", "L"];
+        },
+
         _getStatusCodesFromChartSelection: function (oEvent) {
             /*
              * VizFrame의 selectData/deselectData 이벤트에서 현재 선택된 상태코드 배열을 만든다.
@@ -573,7 +596,7 @@ sap.ui.define([
             var mConfig = {
                 OPEN_PO_ITEM: {
                     // C(입고완료)를 제외한 문제/관심 상태 전체를 보여준다.
-                    statusCodes: ["O", "D", "P", "L"],
+                    statusCodes: this._getDefaultProblemStatusCodes(),
                     sortKey: "Eindt",
                     sortDescending: false,
                     groupKey: "",
