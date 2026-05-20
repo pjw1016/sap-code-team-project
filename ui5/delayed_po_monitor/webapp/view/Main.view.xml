@@ -9,6 +9,11 @@
     <Page id="page" title="{i18n>title}">
         <content>
             <VBox class="dpmPage sapUiResponsiveContentPadding">
+                <!--
+                    검색조건 영역.
+                    기준일/납기일/플랜트/상태는 기본 조건이고,
+                    회사코드/PO/공급업체/자재 조건은 상세조건으로 접어둔다.
+                -->
                 <Panel headerText="{i18n>searchPanelTitle}" class="dpmSection" expandable="true" expanded="true">
                     <content>
                         <VBox class="sapUiSmallMargin">
@@ -130,6 +135,11 @@
                     </content>
                 </Panel>
 
+                <!--
+                    KPI 요약 영역.
+                    KPI는 "현재 검색조건 기준"이지만 상태 필터는 제외하고 계산한다.
+                    그래서 사용자가 상태 D만 선택해도 전체 지연/미입고 요약을 유지한다.
+                -->
                 <VBox class="dpmSection">
                     <HBox alignItems="Center" class="dpmSectionHeader">
                         <Title text="{i18n>kpiSectionTitle}" level="H2"/>
@@ -179,6 +189,11 @@
                     </FlexBox>
                 </VBox>
 
+                <!--
+                    상태 분포 차트.
+                    DelayedPoSet 결과를 클라이언트에서 O/D/P/L/C 상태별로 집계해 도넛 차트로 표시한다.
+                    차트 조각을 클릭하면 해당 상태가 메인 테이블 필터로 적용된다.
+                -->
                 <Panel
                     headerText="{i18n>statusChartTitle}"
                     class="dpmSection dpmChartPanel">
@@ -226,6 +241,10 @@
                     </content>
                 </Panel>
 
+                <!--
+                    메인 결과 테이블.
+                    PO Item 1건이 한 행이며, 행 클릭 시 PoItemDetail.fragment.xml 상세 팝업을 연다.
+                -->
                 <Table
                     id="delayedPoTable"
                     width="100%"
@@ -243,11 +262,13 @@
                                     text="{= ${view>/tableCount} + ' ' + ${i18n>countUnit} }"
                                     state="Information"/>
                                 <ToolbarSpacer/>
+                                <!-- 정렬/그룹 설정 Dialog를 여는 버튼이다. -->
                                 <Button
                                     icon="sap-icon://sort"
                                     tooltip="{i18n>tableSettingsTitle}"
                                     type="Transparent"
                                     press=".onOpenTableSettings"/>
+                                <!-- 현재 검색조건으로 테이블/KPI/차트를 다시 조회한다. -->
                                 <Button
                                     icon="sap-icon://refresh"
                                     tooltip="{i18n>refresh}"
@@ -256,6 +277,7 @@
                             </OverflowToolbar>
                         </headerToolbar>
                         <columns>
+                            <!-- 기본 표시 컬럼. 숨김/표시 전환은 2차 개발에서 별도 기능으로 확장할 수 있다. -->
                             <Column width=""><Text text="{i18n>colStatus}"/></Column>
                             <Column width="" hAlign="End"><Text text="{i18n>colDelayDays}"/></Column>
                             <Column width=""><Text text="{i18n>colEindt}"/></Column>
@@ -288,6 +310,7 @@
                                 highlight="{view>StatusState}"
                                 highlightText="{view>StatusText}">
                                 <cells>
+                                    <!-- StatusState는 Gateway에서 UI5 ObjectStatus 값으로 내려온다. -->
                                     <ObjectStatus
                                         text="{view>StatusText}"
                                         state="{view>StatusState}"/>

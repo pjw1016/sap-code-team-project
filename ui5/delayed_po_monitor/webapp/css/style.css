@@ -1,3 +1,4 @@
+/* 전체 페이지/섹션 레이아웃 */
 .dpmPage {
     gap: 1rem;
 }
@@ -10,6 +11,7 @@
     margin-bottom: 0.5rem;
 }
 
+/* 검색조건, KPI, 상세정보를 FlexBox로 배치할 때 공통 간격 */
 .dpmFilterBar,
 .dpmKpiBox,
 .dpmInfoGrid {
@@ -20,6 +22,7 @@
     width: 100%;
 }
 
+/* 검색조건 입력 컨트롤의 기본 폭 */
 .dpmFilterItem {
     width: 12rem;
 }
@@ -37,6 +40,7 @@
     padding-right: 0;
 }
 
+/* KPI 카드는 화면 폭에 맞춰 균등하게 늘어나고, 너무 작아지지 않도록 최소 폭을 둔다. */
 .dpmKpiTile {
     flex: 1 1 14rem;
     min-width: 14rem;
@@ -55,6 +59,7 @@
     margin-bottom: 0.75rem;
 }
 
+/* 상세 팝업의 기본정보/수량정보 항목 폭 */
 .dpmInfoItem {
     width: 11rem;
 }
@@ -67,6 +72,7 @@
     width: 18rem;
 }
 
+/* 모바일 폭에서는 각 입력/정보/KPI 항목을 한 줄 전체 폭으로 표시한다. */
 @media (max-width: 600px) {
     .dpmFilterItem,
     .dpmFilterItemWide,

@@ -21,6 +21,7 @@
                         state="{detail>/StatusState}"/>
                 </HBox> -->
 
+                <!-- 상세 팝업 헤더. 선택한 PO번호와 현재 입고 상태를 가장 위에서 보여준다. -->
                 <HBox alignItems="Start" class="dpmDialogHeader">
                     <VBox>
                         <HBox alignItems="Center">
@@ -43,6 +44,7 @@
                     </VBox>
                 </HBox>
 
+                <!-- 선택한 PO Item의 기본 master/detail 정보 영역이다. -->
                 <Panel headerText="{i18n>detailBasicInfo}" class="dpmDialogSection">
                     <content>
                         <FlexBox wrap="Wrap" renderType="Bare" class="dpmInfoGrid">
@@ -78,6 +80,10 @@
                     </content>
                 </Panel>
 
+                <!--
+                    수량 및 상태 요약 영역.
+                    101/102 수량, 실제 입고수량, 미입고수량, 기준일, 지연일수를 함께 보여준다.
+                -->
                 <Panel headerText="{i18n>detailQtyInfo}" class="dpmDialogSection">
                     <content>
                         <FlexBox wrap="Wrap" renderType="Bare" class="dpmInfoGrid">
@@ -99,6 +105,7 @@
                             </VBox>
                             <VBox class="dpmReceiptRateItem">
                                 <Label text="{i18n>receiptRate}"/>
+                                <!-- 입고율 = 입고수량 / 발주수량. 초과입고는 표시 텍스트에서 100% 이상으로 보일 수 있다. -->
                                 <ProgressIndicator
                                     percentValue="{parts: [
                                             {path: 'detail>/PoQty'},
@@ -133,6 +140,10 @@
                     </content>
                 </Panel>
 
+                <!--
+                    101/102 개별 입고 이력 테이블.
+                    수량 자체는 원문 MENGE이고, 계산반영수량은 Gateway에서 101은 +, 102는 -로 계산한다.
+                -->
                 <Table
                     id="grHistoryTable"
                     items="{grHistory>/items}"
@@ -165,6 +176,7 @@
                             highlight="{path: 'grHistory>SignedQty', formatter: '.formatter.formatSignedQtyState'}"
                             highlightText="{grHistory>SignText}">
                             <cells>
+                                <!-- 자재문서 Key 및 이동유형 정보 -->
                                 <Text text="{grHistory>Mblnr}"/>
                                 <Text text="{grHistory>Mjahr}"/>
                                 <Text
@@ -177,6 +189,7 @@
                                 <ObjectNumber
                                     number="{path: 'grHistory>Menge', formatter: '.formatter.formatQuantity'}"
                                     unit="{grHistory>Meins}"/>
+                                <!-- 102 취소는 음수로 표시해 실제 입고수량 계산 방향을 분명하게 보여준다. -->
                                 <ObjectNumber
                                     number="{path: 'grHistory>SignedQty', formatter: '.formatter.formatSignedQuantity'}"
                                     unit="{grHistory>Meins}"

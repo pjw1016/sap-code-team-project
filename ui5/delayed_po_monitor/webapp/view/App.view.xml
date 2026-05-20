@@ -2,6 +2,10 @@
     displayBlock="true"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
+    <!--
+        App.view.xml은 앱의 root 컨테이너다.
+        manifest.json의 routing 설정에 따라 Main.view.xml이 이 App 컨트롤 안에 표시된다.
+    -->
     <App id="app">
     </App>
 </mvc:View>
