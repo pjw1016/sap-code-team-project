@@ -1003,7 +1003,7 @@ sap.ui.define([
 
             if (sGroupKey) {
                 // 그룹은 항상 첫 번째 Sorter로 넣어야 같은 그룹끼리 모여서 표시된다.
-                aSorters.push(new Sorter(
+                aSorters.push(this._createTableSorter(
                     sGroupKey,
                     bGroupDescending,
                     this._getTableGroup.bind(this, sGroupKey)
@@ -1012,10 +1012,75 @@ sap.ui.define([
 
             if (sSortKey && sSortKey !== sGroupKey) {
                 // 그룹 필드와 정렬 필드가 다를 때만 두 번째 Sorter를 추가해 중복 정렬을 피한다.
-                aSorters.push(new Sorter(sSortKey, bSortDescending));
+                aSorters.push(this._createTableSorter(sSortKey, bSortDescending));
             }
 
             oBinding.sort(aSorters);
+        },
+
+        _createTableSorter: function (sKey, bDescending, vGroup) {
+            /*
+             * sap.ui.model.Sorter 생성 공통 함수다.
+             *
+             * 왜 별도 함수로 뺐는가?
+             * - 일반 문자열/날짜 필드는 UI5 기본 Sorter 비교 방식으로 충분하다.
+             * - 하지만 OData V2의 Edm.Decimal 값은 JSONModel에 문자열 형태로 들어오는 경우가 많다.
+             * - 예를 들어 미입고수량이 "9", "50", "6"처럼 문자열이면 기본 비교에서는
+             *   숫자 크기가 아니라 문자 순서로 비교되어 9가 50보다 앞에 오는 문제가 생긴다.
+             *
+             * SAPUI5 Sorter는 네 번째 파라미터로 comparator 함수를 받을 수 있다.
+             * 그래서 수량 필드만 Number(...) 기준의 숫자 비교 함수를 연결한다.
+             */
+            var fnComparator = this._isQuantitySortKey(sKey) ? this._compareNumericValues.bind(this) : undefined;
+
+            return new Sorter(sKey, bDescending, vGroup, fnComparator);
+        },
+
+        _isQuantitySortKey: function (sKey) {
+            /*
+             * 숫자 비교가 꼭 필요한 테이블 정렬 필드 목록이다.
+             *
+             * 발주수량/입고수량/미입고수량은 화면에는 "20 EA"처럼 보이지만,
+             * 실제 정렬 대상 값은 PoQty/GrQty/OpenQty다.
+             * 이 값들은 OData Decimal 특성상 문자열로 들어올 수 있으므로
+             * 반드시 숫자로 바꿔 비교해야 한다.
+             */
+            return [
+                "PoQty",
+                "GrQty",
+                "OpenQty"
+            ].indexOf(sKey) > -1;
+        },
+
+        _compareNumericValues: function (vA, vB) {
+            /*
+             * Sorter comparator는 오름차순 기준으로 -1, 0, 1을 반환한다.
+             * 내림차순 처리는 Sorter의 bDescending 값이 담당하므로,
+             * 여기서는 순수하게 숫자 크기만 비교한다.
+             *
+             * Number(...)로 바꿀 수 없는 값은 0으로 보정한다.
+             * 이번 앱의 수량 필드는 값이 비어 있으면 업무적으로도 0에 가깝게 보이는 것이 자연스럽다.
+             */
+            var fA = Number(vA);
+            var fB = Number(vB);
+
+            if (isNaN(fA)) {
+                fA = 0;
+            }
+
+            if (isNaN(fB)) {
+                fB = 0;
+            }
+
+            if (fA < fB) {
+                return -1;
+            }
+
+            if (fA > fB) {
+                return 1;
+            }
+
+            return 0;
         },
 
         _setTableSortGroupState: function (sSortKey, bSortDescending, sGroupKey, bGroupDescending) {
