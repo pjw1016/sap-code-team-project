@@ -8,8 +8,9 @@ sap.ui.define([
     "sap/viz/ui5/controls/Popover",
     "sap/m/Text",
     "sap/m/MessageToast",
+    "code/d3/delayedpomonitor/model/chartHelper",
     "code/d3/delayedpomonitor/model/formatter"
-], function (Controller, JSONModel, Filter, FilterOperator, Sorter, Fragment, ChartPopover, Text, MessageToast, formatter) {
+], function (Controller, JSONModel, Filter, FilterOperator, Sorter, Fragment, ChartPopover, Text, MessageToast, chartHelper, formatter) {
     "use strict";
 
     /*
@@ -707,14 +708,17 @@ sap.ui.define([
              * 상태명, 건수, 비율을 한 줄로 보여주기 위한 처리다.
              */
             var oChart = this.byId("statusDistributionChart");
+            var sCountFormat = this._text("chartCountFormat");
 
             if (!oChart || this._oStatusChartPopover) {
                 return;
             }
 
+            this._applyStatusChartProperties(oChart, sCountFormat);
+
             this._oStatusChartPopover = new ChartPopover({
                 // 기본 Popover의 숫자 행에도 "건" 단위가 붙도록 포맷을 지정한다.
-                formatString: "#,##0건",
+                formatString: sCountFormat,
                 customDataControl: function (oPopoverData) {
                     var sStatusCode = this._getChartStatusCodeFromPopoverData(oPopoverData);
                     var sTooltipText = this._getChartTooltipTextByStatusCode(sStatusCode);
@@ -728,6 +732,29 @@ sap.ui.define([
 
             this.getView().addDependent(this._oStatusChartPopover);
             this._oStatusChartPopover.connect(oChart.getVizUid());
+        },
+
+        _applyStatusChartProperties: function (oChart, sCountFormat) {
+            /*
+             * 차트 숫자 라벨의 "건" 표시를 i18n 기준으로 적용한다.
+             *
+             * 이유:
+             * - VizFrame의 vizProperties는 XML에서 object literal 형태로 작성되어 있다.
+             * - 이 형태 안에 i18n 바인딩을 직접 섞으면 UI5 버전/파서에 따라 해석이 불안정할 수 있다.
+             * - SAPUI5 SDK에서 VizFrame은 setVizProperties로 속성을 동적으로 변경할 수 있으므로,
+             *   컨트롤러에서 ResourceBundle 값을 읽어 formatString만 명확하게 덮어쓴다.
+             */
+            if (!oChart || typeof oChart.setVizProperties !== "function") {
+                return;
+            }
+
+            oChart.setVizProperties({
+                plotArea: {
+                    dataLabel: {
+                        formatString: sCountFormat
+                    }
+                }
+            });
         },
 
         _clearStatusChartSelection: function () {
@@ -818,7 +845,7 @@ sap.ui.define([
              * 내부 필터는 O/D/P/L/C 코드가 더 안정적이다.
              * 따라서 데이터 구조 안에 StatusCode 또는 code 성격의 값이 있으면 그것을 우선 사용한다.
              */
-            var sStatusCode = this._extractNamedVizValue(vData, [
+            var sStatusCode = chartHelper.extractNamedValue(vData, [
                 "StatusCode",
                 "Status Code",
                 "code"
@@ -832,7 +859,7 @@ sap.ui.define([
              * VizFrame 이벤트/Popover 데이터에서 상태 텍스트를 꺼내는 공통 헬퍼다.
              * 우선 명확한 차원명(Status) 값을 찾고, 그래도 없으면 알려진 상태 텍스트와 정확히 같은 문자열만 찾는다.
              */
-            var sStatusText = this._extractNamedVizValue(vData, [
+            var sStatusText = chartHelper.extractNamedValue(vData, [
                 "Status",
                 "StatusText",
                 this._text("chartStatusDimension")
@@ -842,103 +869,9 @@ sap.ui.define([
                 return sStatusText;
             }
 
-            return this._findKnownStatusTextInVizData(vData);
-        },
-
-        _extractNamedVizValue: function (vData, aNames, iDepth, aVisited) {
-            var sName;
-            var vValue;
-            var aKeys;
-            var sFoundValue;
-
-            if (!vData || iDepth > 8) {
-                return "";
-            }
-
-            if (typeof vData !== "object") {
-                return "";
-            }
-
-            aVisited = aVisited || [];
-            if (aVisited.indexOf(vData) > -1) {
-                return "";
-            }
-            aVisited.push(vData);
-
-            if (Array.isArray(vData)) {
-                vData.some(function (vEntry) {
-                    sFoundValue = this._extractNamedVizValue(vEntry, aNames, (iDepth || 0) + 1, aVisited);
-                    return !!sFoundValue;
-                }.bind(this));
-                return sFoundValue || "";
-            }
-
-            sName = vData.name || vData.label || vData.key || vData.ctx && (vData.ctx.name || vData.ctx.path);
-            if (aNames.indexOf(sName) > -1) {
-                vValue = vData.val || vData.value || vData.rawValue || vData.text;
-                if (typeof vValue === "string") {
-                    return vValue;
-                }
-            }
-
-            sFoundValue = aNames.reduce(function (sResult, sFieldName) {
-                if (sResult) {
-                    return sResult;
-                }
-
-                return typeof vData[sFieldName] === "string" ? vData[sFieldName] : "";
-            }, "");
-
-            if (sFoundValue) {
-                return sFoundValue;
-            }
-
-            aKeys = Object.keys(vData);
-            aKeys.some(function (sKey) {
-                sFoundValue = this._extractNamedVizValue(vData[sKey], aNames, (iDepth || 0) + 1, aVisited);
-                return !!sFoundValue;
+            return chartHelper.findKnownText(vData, function (sText) {
+                return !!this._getStatusCodeByText(sText);
             }.bind(this));
-
-            return sFoundValue || "";
-        },
-
-        _findKnownStatusTextInVizData: function (vData, iDepth, aVisited) {
-            var sFoundText = "";
-            var aKeys;
-
-            if (!vData || iDepth > 8) {
-                return "";
-            }
-
-            if (typeof vData === "string") {
-                return this._getStatusCodeByText(vData) ? vData : "";
-            }
-
-            if (typeof vData !== "object") {
-                return "";
-            }
-
-            aVisited = aVisited || [];
-            if (aVisited.indexOf(vData) > -1) {
-                return "";
-            }
-            aVisited.push(vData);
-
-            if (Array.isArray(vData)) {
-                vData.some(function (vEntry) {
-                    sFoundText = this._findKnownStatusTextInVizData(vEntry, (iDepth || 0) + 1, aVisited);
-                    return !!sFoundText;
-                }.bind(this));
-                return sFoundText;
-            }
-
-            aKeys = Object.keys(vData);
-            aKeys.some(function (sKey) {
-                sFoundText = this._findKnownStatusTextInVizData(vData[sKey], (iDepth || 0) + 1, aVisited);
-                return !!sFoundText;
-            }.bind(this));
-
-            return sFoundText;
         },
 
         _getChartTooltipTextByStatusCode: function (sStatusCode) {

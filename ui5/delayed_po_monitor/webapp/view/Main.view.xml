@@ -251,7 +251,6 @@
                                     dataLabel: {
                                         visible: true,
                                         type: 'value',
-                                        formatString: '#,##0건',
                                         hideWhenOverlap: true
                                     }
                                 }
