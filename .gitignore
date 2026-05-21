@@ -8,6 +8,7 @@ dist/
 coverage/
 .ui5/
 ui5/내가 개발한 ui5 코드 모음/
+ui5 참고용 코드 모음/
 
 # Environment and local machine files
 .env
