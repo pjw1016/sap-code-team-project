@@ -460,5 +460,24 @@
                 </Table>
             </VBox>
         </content>
+        <footer>
+            <OverflowToolbar visible="{= ${messages>/count} > 0 }">
+                <!--
+                    조회조건 유효성 검증 메시지 버튼.
+                    오류가 있을 때만 화면 좌측 하단 footer에 표시하고,
+                    버튼을 누르면 MessagePopover로 누적 오류 목록을 보여준다.
+                -->
+                <Button
+                    id="messagePopoverBtn"
+                    icon="{messages>/buttonIcon}"
+                    type="{messages>/buttonType}"
+                    text="{messages>/buttonText}"
+                    tooltip="{i18n>validationMessageButtonTooltip}"
+                    visible="{= ${messages>/count} > 0 }"
+                    press=".onMessagePopoverPress"
+                    ariaHasPopup="Dialog"/>
+                <ToolbarSpacer/>
+            </OverflowToolbar>
+        </footer>
     </Page>
 </mvc:View>
