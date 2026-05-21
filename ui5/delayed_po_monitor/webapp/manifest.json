@@ -30,6 +30,41 @@
           "localUri": "localService/mainService/metadata.xml",
           "odataVersion": "2.0"
         }
+      },
+      "plantHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0012_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "vendorHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0013_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "materialHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0014_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "poHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0015_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "companyHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0016_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
       }
     }
   },
@@ -76,6 +111,46 @@
       },
       "": {
         "dataSource": "mainService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "plantHelp": {
+        "dataSource": "plantHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "vendorHelp": {
+        "dataSource": "vendorHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "materialHelp": {
+        "dataSource": "materialHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "poHelp": {
+        "dataSource": "poHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "companyHelp": {
+        "dataSource": "companyHelpService",
         "preload": true,
         "settings": {
           "useBatch": false,
