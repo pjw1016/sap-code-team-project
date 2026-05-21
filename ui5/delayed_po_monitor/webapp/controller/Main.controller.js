@@ -343,6 +343,58 @@ sap.ui.define([
             };
         },
 
+        _getStatusConfig: function () {
+            /*
+             * 납기상태 코드의 기준 정보를 한 곳에 모아둔다.
+             *
+             * 왜 필요한가?
+             * - 기존에는 O/D/P/L/C 상태코드, 상태명 i18n key, UI5 State 값이 여러 메소드에 흩어져 있었다.
+             * - 상태명이 바뀌거나 새로운 상태가 추가되면 여러 곳을 동시에 고쳐야 해서 누락 위험이 생긴다.
+             * - 이제 차트, KPI 빠른 필터, 테이블 요약, 상태 텍스트 변환은 이 설정을 기준으로 동작한다.
+             *
+             * 필드 의미:
+             * - code: Gateway/OData에서 내려오는 상태코드
+             * - textKey: i18n.properties의 상태명 key
+             * - state: ObjectStatus 등에서 사용하는 UI5 상태값
+             * - defaultProblem: 초기 조회/초기화 시 기본으로 선택할 문제건 상태 여부
+             * - delayed: 납기 지연 KPI에서 함께 보는 상태 여부
+             * - noReceiptDelay: 미입고 지연 KPI에서 보는 상태 여부
+             */
+            return [
+                { code: "O", textKey: "statusO", state: "None", defaultProblem: true, delayed: false, noReceiptDelay: false },
+                { code: "D", textKey: "statusD", state: "Error", defaultProblem: true, delayed: true, noReceiptDelay: true },
+                { code: "P", textKey: "statusP", state: "Information", defaultProblem: true, delayed: false, noReceiptDelay: false },
+                { code: "L", textKey: "statusL", state: "Warning", defaultProblem: true, delayed: true, noReceiptDelay: false },
+                { code: "C", textKey: "statusC", state: "Success", defaultProblem: false, delayed: false, noReceiptDelay: false }
+            ];
+        },
+
+        _getStatusCodesByFlag: function (sFlagName) {
+            /*
+             * 상태 설정에서 특정 flag가 true인 상태코드만 추출한다.
+             * 예: defaultProblem이 true인 상태만 모으면 기본 문제건 O/D/P/L이 된다.
+             */
+            return this._getStatusConfig().filter(function (oStatus) {
+                return !!oStatus[sFlagName];
+            }).map(function (oStatus) {
+                return oStatus.code;
+            });
+        },
+
+        _getAllStatusCodes: function () {
+            // 상태 전체 선택 여부를 비교할 때 사용하는 전체 상태코드 목록이다.
+            return this._getStatusConfig().map(function (oStatus) {
+                return oStatus.code;
+            });
+        },
+
+        _getStatusConfigByCode: function (sStatusCode) {
+            // 상태코드 하나에 해당하는 설정을 찾는다. 없으면 undefined가 반환된다.
+            return this._getStatusConfig().find(function (oStatus) {
+                return oStatus.code === sStatusCode;
+            });
+        },
+
         _buildFilters: function (bIncludeStatusFilter) {
             /*
              * 화면 검색조건(JSONModel)을 ODataModel.read에서 사용할 Filter 배열로 변환한다.
@@ -451,14 +503,8 @@ sap.ui.define([
         _updateStatusChart: function (aItems) {
             var oChartModel = this.getView().getModel("chart");
             var mCounts = {};
-            // 차트는 항상 5개 상태를 같은 순서로 보여준다. 데이터가 없어도 Count 0으로 표시한다.
-            var aStatusConfig = [
-                { code: "O", text: this._text("statusO") },
-                { code: "D", text: this._text("statusD") },
-                { code: "P", text: this._text("statusP") },
-                { code: "L", text: this._text("statusL") },
-                { code: "C", text: this._text("statusC") }
-            ];
+            // 차트는 공통 상태 설정 순서대로 O/D/P/L/C를 보여준다. 데이터가 없어도 Count 0으로 표시한다.
+            var aStatusConfig = this._getStatusConfig();
             var aDistribution;
             var iTotalCount = (aItems || []).length;
 
@@ -472,17 +518,18 @@ sap.ui.define([
                 var iCount = mCounts[oStatus.code] || 0;
                 var fPercent = iTotalCount > 0 ? (iCount / iTotalCount) * 100 : 0;
                 var sPercentText = fPercent.toFixed(2) + "%";
-                var sSummaryText = oStatus.text + " " + iCount + this._text("countUnit") + "(" + sPercentText + ")";
+                var sStatusText = this._text(oStatus.textKey);
+                var sSummaryText = sStatusText + " " + iCount + this._text("countUnit") + "(" + sPercentText + ")";
 
                 return {
                     StatusCode: oStatus.code,
-                    StatusText: oStatus.text,
+                    StatusText: sStatusText,
                     Count: iCount,
                     Percent: fPercent,
                     PercentText: sPercentText,
                     SummaryText: sSummaryText,
                     TooltipText: sSummaryText,
-                    StatusState: this._getStatusStateByCode(oStatus.code)
+                    StatusState: oStatus.state
                 };
             }.bind(this));
 
@@ -494,15 +541,11 @@ sap.ui.define([
 
         _getStatusCodeByText: function (sStatusText) {
             // 차트 이벤트는 표시 텍스트를 넘겨주므로, 다시 상태코드 O/D/P/L/C로 변환한다.
-            var mStatusCodeByText = {};
+            var oMatchedStatus = this._getStatusConfig().find(function (oStatus) {
+                return this._text(oStatus.textKey) === sStatusText;
+            }.bind(this));
 
-            mStatusCodeByText[this._text("statusO")] = "O";
-            mStatusCodeByText[this._text("statusD")] = "D";
-            mStatusCodeByText[this._text("statusP")] = "P";
-            mStatusCodeByText[this._text("statusL")] = "L";
-            mStatusCodeByText[this._text("statusC")] = "C";
-
-            return mStatusCodeByText[sStatusText] || "";
+            return oMatchedStatus ? oMatchedStatus.code : "";
         },
 
         _getDefaultProblemStatusCodes: function () {
@@ -511,7 +554,7 @@ sap.ui.define([
              * 입고완료(C)는 사용자가 직접 보고 싶을 때만 선택하고,
              * 기본 화면/초기화/차트 선택 해제는 문제건 중심인 O/D/P/L로 복귀한다.
              */
-            return ["O", "D", "P", "L"];
+            return this._getStatusCodesByFlag("defaultProblem");
         },
 
         _getStatusCodesFromChartSelection: function (oEvent) {
@@ -580,19 +623,6 @@ sap.ui.define([
             });
         },
 
-        _getStatusStateByCode: function (sStatusCode) {
-            // 차트 아래 요약 ObjectStatus의 색상도 메인 테이블 상태와 같은 의미로 맞춘다.
-            var mStateByCode = {
-                O: "None",
-                D: "Error",
-                P: "Information",
-                L: "Warning",
-                C: "Success"
-            };
-
-            return mStateByCode[sStatusCode] || "None";
-        },
-
         _getKpiQuickActionConfig: function (sAction) {
             /*
              * KPI 카드별 빠른 필터 정책을 한 곳에 모아둔다.
@@ -611,7 +641,7 @@ sap.ui.define([
                 },
                 DELAYED_ITEM: {
                     // 납기 지연은 미입고 지연(D)과 부분입고 지연(L)을 함께 본다.
-                    statusCodes: ["D", "L"],
+                    statusCodes: this._getStatusCodesByFlag("delayed"),
                     sortKey: "DelayDays",
                     sortDescending: true,
                     groupKey: "",
@@ -620,7 +650,7 @@ sap.ui.define([
                 },
                 NO_RECEIPT_DELAY: {
                     // 입고수량이 0 이하이고 납기가 지난 D 상태만 집중해서 본다.
-                    statusCodes: ["D"],
+                    statusCodes: this._getStatusCodesByFlag("noReceiptDelay"),
                     sortKey: "DelayDays",
                     sortDescending: true,
                     groupKey: "",
@@ -629,7 +659,7 @@ sap.ui.define([
                 },
                 DELAYED_VENDOR: {
                     // 공급업체 대응 목적이므로 D/L 상태를 공급업체별로 묶어서 보여준다.
-                    statusCodes: ["D", "L"],
+                    statusCodes: this._getStatusCodesByFlag("delayed"),
                     sortKey: "DelayDays",
                     sortDescending: true,
                     groupKey: "Lifnr",
@@ -928,7 +958,7 @@ sap.ui.define([
         _getStatusFilterSummary: function () {
             var aStatusCodes = this.getView().getModel("view").getProperty("/filters/statusCodes") || [];
             var aDefaultCodes = this._getDefaultProblemStatusCodes();
-            var aAllCodes = ["O", "D", "P", "L", "C"];
+            var aAllCodes = this._getAllStatusCodes();
             var aStatusTexts;
 
             if (!aStatusCodes.length || this._isSameStatusSet(aStatusCodes, aAllCodes)) {
@@ -999,15 +1029,9 @@ sap.ui.define([
         },
 
         _getStatusTextByCode: function (sStatusCode) {
-            var mStatusTextKeyByCode = {
-                O: "statusO",
-                D: "statusD",
-                P: "statusP",
-                L: "statusL",
-                C: "statusC"
-            };
+            var oStatus = this._getStatusConfigByCode(sStatusCode);
 
-            return mStatusTextKeyByCode[sStatusCode] ? this._text(mStatusTextKeyByCode[sStatusCode]) : "";
+            return oStatus ? this._text(oStatus.textKey) : "";
         },
 
         _isSameStatusSet: function (aLeftCodes, aRightCodes) {
