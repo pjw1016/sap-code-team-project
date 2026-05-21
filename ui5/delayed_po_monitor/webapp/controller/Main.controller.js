@@ -292,8 +292,14 @@ sap.ui.define([
         onClearChartFilter: function () {
             /*
              * 요약 패널의 명시적 필터 해제 버튼이다.
-             * 전체 초기화와 달리 검색조건/테이블 정렬/그룹은 유지하고,
-             * 차트 선택 상태와 상태 필터만 기본 문제건 O/D/P/L로 되돌린다.
+             * 전체 초기화와 달리 검색조건과 테이블 정렬은 유지하고,
+             * 차트 선택 상태, 상태 필터, 테이블 그룹만 기본 상태로 되돌린다.
+             *
+             * 그룹까지 같이 해제하는 이유:
+             * - "지연 공급업체 수" KPI는 공급업체별 그룹을 자동으로 건다.
+             * - 사용자가 필터 해제를 눌렀는데 공급업체 그룹이 그대로 남아 있으면
+             *   화면상으로는 아직 KPI 조건 일부가 남아 있는 것처럼 보인다.
+             * - 따라서 필터 해제 버튼은 상태 필터와 KPI/차트가 만든 그룹을 함께 풀어준다.
              *
              * 이 버튼은 "해제"가 목적이므로 KPI/차트 클릭과 다르게 테이블로 자동 스크롤하지 않는다.
              * 사용자가 요약 영역에 머문 상태에서 필터가 풀렸는지 확인할 수 있게 두는 것이 자연스럽다.
@@ -311,7 +317,8 @@ sap.ui.define([
 
             this.onSearch().then(function () {
                 this._clearStatusChartSelection(true);
-                this._showToast(this._text("chartFilterCleared"));
+                this._clearTableGrouping();
+                this._showToast(this._text("summaryFilterCleared"));
             }.bind(this)).finally(function () {
                 /*
                  * 일부 VizFrame 버전은 vizSelection([]) 직후 deselectData 이벤트를 조금 늦게 발생시킨다.
@@ -888,6 +895,33 @@ sap.ui.define([
             this._resetTableSettingsDialog();
         },
 
+        _clearTableGrouping: function () {
+            /*
+             * 테이블에 적용된 그룹만 제거하고, 기존 정렬은 유지한다.
+             *
+             * 왜 _resetTableSettings를 그대로 쓰지 않는가?
+             * - _resetTableSettings는 정렬과 그룹을 모두 초기화한다.
+             * - 필터 해제 버튼의 목적은 KPI/차트가 남긴 그룹을 지우는 것이지,
+             *   사용자가 직접 선택한 정렬 기준까지 없애는 것이 아니다.
+             * - 그래서 현재 view 모델에 저장된 정렬 기준은 다시 넘기고,
+             *   그룹 기준만 빈 값으로 넘겨 sap.m.Table 바인딩을 다시 정렬한다.
+             */
+            var oViewModel = this.getView().getModel("view");
+
+            if (!oViewModel) {
+                return;
+            }
+
+            this._applyTableSorters(
+                oViewModel.getProperty("/tableSortKey"),
+                oViewModel.getProperty("/tableSortDescending"),
+                "",
+                false
+            );
+
+            this._clearTableGroupSettingsDialog();
+        },
+
         _resetTableSettingsDialog: function () {
             var oDialog = this.byId("tableSettingsDialog");
 
@@ -904,6 +938,28 @@ sap.ui.define([
             }
 
             this._clearViewSettingsItems(oDialog.getSortItems && oDialog.getSortItems());
+            this._clearViewSettingsItems(oDialog.getGroupItems && oDialog.getGroupItems());
+        },
+
+        _clearTableGroupSettingsDialog: function () {
+            /*
+             * ViewSettingsDialog가 이미 열린 적이 있으면 내부 선택 상태도 같이 맞춘다.
+             *
+             * sap.m.Table의 실제 그룹은 _applyTableSorters에서 이미 해제된다.
+             * 다만 Dialog 안의 그룹 항목 선택 표시가 남아 있으면,
+             * 다음에 사용자가 정렬/그룹 설정을 열었을 때 화면 상태와 Dialog 상태가 달라 보일 수 있다.
+             * 그래서 그룹 항목만 선택 해제하고, 정렬 항목은 그대로 둔다.
+             */
+            var oDialog = this.byId("tableSettingsDialog");
+
+            if (!oDialog) {
+                return;
+            }
+
+            if (typeof oDialog.setGroupDescending === "function") {
+                oDialog.setGroupDescending(false);
+            }
+
             this._clearViewSettingsItems(oDialog.getGroupItems && oDialog.getGroupItems());
         },
 
