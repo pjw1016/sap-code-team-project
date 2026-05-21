@@ -55,6 +55,15 @@
     color: var(--sapTextColor);
 }
 
+/*
+ * 메인 테이블 헤더의 상태/정렬 요약 텍스트.
+ * 버튼이 아니라 현재 테이블 상태를 설명하는 보조 문구이므로,
+ * 의미색(파랑/초록/빨강)을 쓰지 않고 기본 텍스트 색상으로 통일한다.
+ */
+.dpmTableSummaryText {
+    color: var(--sapTextColor);
+}
+
 .dpmDialogHeader {
     margin-bottom: 0.75rem;
 }

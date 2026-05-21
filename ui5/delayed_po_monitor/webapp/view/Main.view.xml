@@ -308,17 +308,20 @@
                                     text="{= '(' + ${view>/tableCount} + ')' }"
                                     class="dpmTableCountText"/>
                                 <ToolbarSpacer/>
-                                <ObjectStatus
+                                <!--
+                                    테이블 상태/정렬 요약은 정보 표시용 텍스트다.
+                                    사용자가 누르는 액션이 아니므로 아이콘을 빼고, 일반 텍스트 색상으로 차분하게 표시한다.
+                                -->
+                                <Text
                                     text="{view>/tableStatusSummary}"
-                                    icon="sap-icon://filter"
-                                    state="Information"/>
-                                <ObjectStatus
+                                    class="dpmTableSummaryText"/>
+                                <Text
                                     text="{view>/tableSortGroupSummary}"
-                                    icon="sap-icon://sort"
-                                    state="None"/>
+                                    class="dpmTableSummaryText"/>
                                 <!-- 정렬/그룹 설정 Dialog를 여는 버튼이다. -->
                                 <Button
                                     text="{i18n>tableSettingsTitle}"
+                                    icon="sap-icon://sort"
                                     tooltip="{i18n>tableSettingsTitle}"
                                     type="Transparent"
                                     press=".onOpenTableSettings"/>
@@ -328,12 +331,14 @@
                                 -->
                                 <Button
                                     text="{i18n>tableSettingsReset}"
+                                    icon="sap-icon://reset"
                                     tooltip="{i18n>tableSettingsReset}"
                                     type="Transparent"
                                     press=".onResetTableSettingsPress"/>
                                 <!-- 현재 검색조건으로 테이블/KPI/차트를 다시 조회한다. -->
                                 <Button
                                     text="{i18n>refresh}"
+                                    icon="sap-icon://refresh"
                                     tooltip="{i18n>refresh}"
                                     type="Transparent"
                                     press=".onSearch"/>
