@@ -52,7 +52,17 @@
                                         id="werksInput"
                                         value="{view>/filters/werks}"
                                         maxLength="6"
-                                        placeholder="{i18n>allPlaceholder}"/>
+                                        placeholder="{i18n>allPlaceholder}"
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest">
+                                        <customData>
+                                            <!--
+                                                Search Help 공통 핸들러에서 어떤 CDS OData를 열지 구분하는 값이다.
+                                                PLANT는 ZCDS_D3_MM_0012_CDS 모델을 사용한다.
+                                            -->
+                                            <core:CustomData key="helpType" value="PLANT"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox class="dpmFilterItemWide">
@@ -84,17 +94,47 @@
                                 visible="{view>/advancedVisible}">
                                 <VBox class="dpmFilterItem">
                                     <Label text="{i18n>bukrs}" labelFor="bukrsInput"/>
-                                    <Input id="bukrsInput" value="{view>/filters/bukrs}" maxLength="4"/>
+                                    <Input
+                                        id="bukrsInput"
+                                        value="{view>/filters/bukrs}"
+                                        maxLength="4"
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest">
+                                        <customData>
+                                            <!-- 회사코드 Search Help: ZCDS_D3_MM_0016_CDS -->
+                                            <core:CustomData key="helpType" value="COMPANY"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox class="dpmFilterItem">
                                     <Label text="{i18n>ebeln}" labelFor="ebelnInput"/>
-                                    <Input id="ebelnInput" value="{view>/filters/ebeln}" maxLength="10"/>
+                                    <Input
+                                        id="ebelnInput"
+                                        value="{view>/filters/ebeln}"
+                                        maxLength="10"
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest">
+                                        <customData>
+                                            <!-- PO Search Help: ZCDS_D3_MM_0015_CDS -->
+                                            <core:CustomData key="helpType" value="PO"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox class="dpmFilterItem">
                                     <Label text="{i18n>lifnr}" labelFor="lifnrInput"/>
-                                    <Input id="lifnrInput" value="{view>/filters/lifnr}" maxLength="6"/>
+                                    <Input
+                                        id="lifnrInput"
+                                        value="{view>/filters/lifnr}"
+                                        maxLength="6"
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest">
+                                        <customData>
+                                            <!-- 공급업체 Search Help: ZCDS_D3_MM_0013_CDS -->
+                                            <core:CustomData key="helpType" value="VENDOR"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox class="dpmFilterItemWide">
@@ -104,7 +144,20 @@
 
                                 <VBox class="dpmFilterItem">
                                     <Label text="{i18n>matnr}" labelFor="matnrInput"/>
-                                    <Input id="matnrInput" value="{view>/filters/matnr}" maxLength="10"/>
+                                    <Input
+                                        id="matnrInput"
+                                        value="{view>/filters/matnr}"
+                                        maxLength="10"
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest">
+                                        <customData>
+                                            <!--
+                                                자재 Search Help: ZCDS_D3_MM_0014_CDS
+                                                선택 시 자재코드(Matnr)와 자재명(Maktx)을 함께 세팅한다.
+                                            -->
+                                            <core:CustomData key="helpType" value="MATERIAL"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox class="dpmFilterItemWide">

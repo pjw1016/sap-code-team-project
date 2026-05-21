@@ -8,9 +8,12 @@ sap.ui.define([
     "sap/viz/ui5/controls/Popover",
     "sap/m/Text",
     "sap/m/MessageToast",
+    "sap/m/TableSelectDialog",
+    "sap/m/ColumnListItem",
+    "sap/m/Column",
     "code/d3/delayedpomonitor/model/chartHelper",
     "code/d3/delayedpomonitor/model/formatter"
-], function (Controller, JSONModel, Filter, FilterOperator, Sorter, Fragment, ChartPopover, Text, MessageToast, chartHelper, formatter) {
+], function (Controller, JSONModel, Filter, FilterOperator, Sorter, Fragment, ChartPopover, Text, MessageToast, TableSelectDialog, ColumnListItem, Column, chartHelper, formatter) {
     "use strict";
 
     /*
@@ -49,6 +52,12 @@ sap.ui.define([
             if (this._oStatusChartPopover) {
                 this._oStatusChartPopover.destroy();
                 this._oStatusChartPopover = null;
+            }
+
+            // Search Help Dialog는 사용자가 F4를 누를 때 동적으로 만들기 때문에 종료 시 명시적으로 정리한다.
+            if (this._oValueHelpDialog) {
+                this._oValueHelpDialog.destroy();
+                this._oValueHelpDialog = null;
             }
         },
 
@@ -125,6 +134,30 @@ sap.ui.define([
             if (!oEvent.getParameter("valid")) {
                 this._showToast(this._text("invalidDate"));
             }
+        },
+
+        onValueHelpRequest: function (oEvent) {
+            /*
+             * 검색조건 Input의 F4 버튼 공통 진입점이다.
+             *
+             * Main.view.xml의 각 Input에는 helpType CustomData가 들어 있다.
+             * 예:
+             * - PLANT    -> plantHelp 모델 -> ZCDS_D3_MM_0012_CDS
+             * - MATERIAL -> materialHelp 모델 -> ZCDS_D3_MM_0014_CDS
+             *
+             * 이렇게 한 곳에서 처리하면 필드가 늘어나도 Dialog 생성 로직을 복사하지 않고,
+             * _getValueHelpConfig 설정만 추가해서 확장할 수 있다.
+             */
+            var oInput = oEvent.getSource();
+            var sHelpType = oInput && oInput.data("helpType");
+            var oConfig = this._getValueHelpConfig(sHelpType);
+
+            if (!oConfig) {
+                this._showToast(this._text("valueHelpUnknown"));
+                return;
+            }
+
+            this._openValueHelpDialog(oConfig);
         },
 
         onItemPress: function (oEvent) {
@@ -446,6 +479,308 @@ sap.ui.define([
             return this._getStatusConfig().find(function (oStatus) {
                 return oStatus.code === sStatusCode;
             });
+        },
+
+        _getValueHelpConfig: function (sHelpType) {
+            /*
+             * Search Help 설정 테이블이다.
+             *
+             * CDS OData Service 자체는 manifest.json의 named model로 이미 등록되어 있다.
+             * 여기서는 화면에서 어떤 Help Type이 어떤 모델/EntitySet/컬럼/세팅 대상과 연결되는지만 정의한다.
+             *
+             * targetFields 의미:
+             * - key: CDS OData 결과 Property
+             * - value: view JSONModel의 검색조건 경로
+             *
+             * 예: 공급업체를 선택하면 Lifnr은 공급업체코드 Input에, Name1은 공급업체명 Input에 같이 들어간다.
+             */
+            var mConfig = {
+                PLANT: {
+                    model: "plantHelp",
+                    path: "/ZCDS_D3_MM_0012",
+                    title: this._text("valueHelpPlantTitle"),
+                    searchFields: ["Werks", "WerksName"],
+                    columns: [
+                        { label: this._text("werks"), property: "Werks" },
+                        { label: this._text("werksName"), property: "WerksName" }
+                    ],
+                    targetFields: {
+                        Werks: "/filters/werks"
+                    }
+                },
+                COMPANY: {
+                    model: "companyHelp",
+                    path: "/ZCDS_D3_MM_0016",
+                    title: this._text("valueHelpCompanyTitle"),
+                    searchFields: ["Bukrs", "BukrsName", "Waers", "Land1"],
+                    columns: [
+                        { label: this._text("bukrs"), property: "Bukrs" },
+                        { label: this._text("bukrsName"), property: "BukrsName" },
+                        { label: this._text("waers"), property: "Waers" },
+                        { label: this._text("land1"), property: "Land1" }
+                    ],
+                    targetFields: {
+                        Bukrs: "/filters/bukrs"
+                    }
+                },
+                PO: {
+                    model: "poHelp",
+                    path: "/ZCDS_D3_MM_0015",
+                    title: this._text("valueHelpPoTitle"),
+                    searchFields: ["Ebeln", "Lifnr", "Name1", "BukrsName", "EkorgName", "EkgrpName"],
+                    columns: [
+                        { label: this._text("colEbeln"), property: "Ebeln" },
+                        { label: this._text("colLifnr"), property: "Lifnr" },
+                        { label: this._text("colName1"), property: "Name1" },
+                        { label: this._text("bedat"), property: "Bedat", type: "date" },
+                        { label: this._text("bukrs"), property: "Bukrs" },
+                        { label: this._text("bukrsName"), property: "BukrsName" },
+                        { label: this._text("ekorg"), property: "Ekorg" },
+                        { label: this._text("ekorgName"), property: "EkorgName" },
+                        { label: this._text("ekgrp"), property: "Ekgrp" },
+                        { label: this._text("ekgrpName"), property: "EkgrpName" },
+                        { label: this._text("waers"), property: "Waers" }
+                    ],
+                    targetFields: {
+                        Ebeln: "/filters/ebeln"
+                    }
+                },
+                VENDOR: {
+                    model: "vendorHelp",
+                    path: "/ZCDS_D3_MM_0013",
+                    title: this._text("valueHelpVendorTitle"),
+                    searchFields: ["Lifnr", "Name1", "Land1", "Waers"],
+                    columns: [
+                        { label: this._text("lifnr"), property: "Lifnr" },
+                        { label: this._text("name1"), property: "Name1" },
+                        { label: this._text("land1"), property: "Land1" },
+                        { label: this._text("waers"), property: "Waers" }
+                    ],
+                    targetFields: {
+                        Lifnr: "/filters/lifnr",
+                        Name1: "/filters/name1"
+                    }
+                },
+                MATERIAL: {
+                    model: "materialHelp",
+                    path: "/ZCDS_D3_MM_0014",
+                    title: this._text("valueHelpMaterialTitle"),
+                    searchFields: ["Matnr", "Maktx", "Maktg", "Mtart", "MtartName", "Matkl", "MatklName"],
+                    columns: [
+                        { label: this._text("matnr"), property: "Matnr", formatter: "matnrExternal" },
+                        { label: this._text("maktx"), property: "Maktx" },
+                        { label: this._text("mtart"), property: "Mtart" },
+                        { label: this._text("mtartName"), property: "MtartName" },
+                        { label: this._text("matkl"), property: "Matkl" },
+                        { label: this._text("matklName"), property: "MatklName" },
+                        { label: this._text("meins"), property: "Meins" }
+                    ],
+                    targetFields: {
+                        Matnr: "/filters/matnr",
+                        Maktx: "/filters/maktx"
+                    },
+                    alpha: true
+                }
+            };
+
+            return mConfig[sHelpType];
+        },
+
+        _openValueHelpDialog: function (oConfig) {
+            /*
+             * sap.m.TableSelectDialog 기반 공통 Search Help 팝업이다.
+             *
+             * SDK 샘플의 핵심 구조:
+             * - Input의 valueHelpRequest에서 Dialog를 연다.
+             * - Dialog 내부 Table에 데이터를 바인딩한다.
+             * - search 이벤트에서 Binding Filter를 바꾼다.
+             * - confirm 이벤트에서 선택 행 데이터를 화면 Input에 반영한다.
+             *
+             * 이 앱에서는 5개 CDS OData Help를 같은 Dialog 생성 로직으로 처리한다.
+             */
+            var oHelpModel = this.getOwnerComponent().getModel(oConfig.model);
+            var aColumns = oConfig.columns || [];
+            var oTemplate;
+
+            if (!oHelpModel) {
+                this._showToast(this._text("valueHelpModelMissing"));
+                return;
+            }
+
+            if (this._oValueHelpDialog) {
+                this._oValueHelpDialog.destroy();
+                this._oValueHelpDialog = null;
+            }
+
+            oTemplate = new ColumnListItem({
+                cells: aColumns.map(function (oColumnConfig) {
+                    return new Text({
+                        text: {
+                            path: oConfig.model + ">" + oColumnConfig.property,
+                            formatter: this._formatValueHelpCell.bind(this, oColumnConfig)
+                        },
+                        wrapping: false
+                    });
+                }.bind(this))
+            });
+
+            this._oValueHelpDialog = new TableSelectDialog({
+                title: oConfig.title,
+                noDataText: this._text("valueHelpNoData"),
+                growing: true,
+                growingThreshold: 20,
+                multiSelect: false,
+                rememberSelections: false,
+                draggable: true,
+                resizable: true,
+                search: function (oEvent) {
+                    var sSearchValue = oEvent.getParameter("value");
+                    var oBinding = oEvent.getSource().getBinding("items");
+
+                    if (oBinding) {
+                        oBinding.filter(this._buildValueHelpFilters(oConfig, sSearchValue));
+                    }
+                }.bind(this),
+                confirm: function (oEvent) {
+                    this._applySelectedValueHelp(oConfig, oEvent.getParameter("selectedItem"));
+                }.bind(this)
+            });
+
+            aColumns.forEach(function (oColumnConfig) {
+                this._oValueHelpDialog.addColumn(new Column({
+                    header: new Text({
+                        text: oColumnConfig.label
+                    })
+                }));
+            }.bind(this));
+
+            this._oValueHelpDialog.setModel(oHelpModel, oConfig.model);
+            this._oValueHelpDialog.bindAggregation("items", {
+                path: oConfig.model + ">" + oConfig.path,
+                template: oTemplate,
+                templateShareable: false
+            });
+
+            this.getView().addDependent(this._oValueHelpDialog);
+            this._oValueHelpDialog.open();
+        },
+
+        _buildValueHelpFilters: function (oConfig, sSearchValue) {
+            /*
+             * Search Help 팝업 검색어를 CDS OData $filter로 변환한다.
+             *
+             * 여러 필드는 OR 조건으로 묶는다.
+             * 예: 공급업체 Help에서 Korea 입력
+             * -> Lifnr contains 'Korea' OR Name1 contains 'Korea' OR Land1 contains 'Korea' ...
+             *
+             * 자재코드는 내부 ALPHA 값으로 저장되어 있으므로 숫자 검색어는 내부형식 검색 조건도 같이 넣는다.
+             */
+            var sValue = String(sSearchValue || "").trim();
+            var aFilters = [];
+            var sInternalMatnr;
+
+            if (!sValue) {
+                return [];
+            }
+
+            aFilters = (oConfig.searchFields || []).map(function (sProperty) {
+                return new Filter(sProperty, FilterOperator.Contains, sValue);
+            });
+
+            if (oConfig.alpha) {
+                sInternalMatnr = this._toInternalMatnr(sValue);
+
+                if (sInternalMatnr && sInternalMatnr !== sValue) {
+                    aFilters.push(new Filter("Matnr", FilterOperator.Contains, sInternalMatnr));
+                }
+            }
+
+            return aFilters.length ? [new Filter({
+                filters: aFilters,
+                and: false
+            })] : [];
+        },
+
+        _applySelectedValueHelp: function (oConfig, oSelectedItem) {
+            /*
+             * Search Help에서 선택한 행을 검색조건 JSONModel에 반영한다.
+             *
+             * 단일 필드만 채우는 경우:
+             * - 플랜트: Werks
+             * - 회사코드: Bukrs
+             * - PO: Ebeln
+             *
+             * 코드와 명칭을 같이 채우는 경우:
+             * - 공급업체: Lifnr + Name1
+             * - 자재: Matnr + Maktx
+             */
+            var oContext = oSelectedItem && oSelectedItem.getBindingContext(oConfig.model);
+            var oData = oContext && oContext.getObject();
+            var oViewModel = this.getView().getModel("view");
+
+            if (!oData || !oViewModel) {
+                return;
+            }
+
+            Object.keys(oConfig.targetFields || {}).forEach(function (sProperty) {
+                var vValue = oData[sProperty];
+
+                if (oConfig.alpha && sProperty === "Matnr") {
+                    vValue = this._toExternalMatnr(vValue);
+                }
+
+                oViewModel.setProperty(oConfig.targetFields[sProperty], vValue || "");
+            }.bind(this));
+        },
+
+        _formatValueHelpCell: function (oColumnConfig, vValue) {
+            // Search Help Dialog 안에서만 사용하는 표시 보정이다.
+            if (oColumnConfig.formatter === "matnrExternal") {
+                return this._toExternalMatnr(vValue);
+            }
+
+            if (oColumnConfig.type === "date") {
+                return formatter.formatDate(vValue);
+            }
+
+            return vValue || "";
+        },
+
+        _toInternalMatnr: function (sValue) {
+            /*
+             * 자재코드 ALPHA 입력 보정.
+             *
+             * 프로젝트 자재코드는 내부적으로 10자리 ALPHA 형식(예: 0000100001)으로 저장되어 있다.
+             * 사용자는 화면에서 100001처럼 앞의 0을 빼고 입력할 수 있으므로,
+             * OData 검색/검증에는 내부형식으로 바꿔서 보내야 한다.
+             */
+            var sMatnr = String(sValue || "").trim();
+
+            if (!sMatnr) {
+                return "";
+            }
+
+            if (/^\d+$/.test(sMatnr) && sMatnr.length < 10) {
+                return sMatnr.padStart(10, "0");
+            }
+
+            return sMatnr;
+        },
+
+        _toExternalMatnr: function (sValue) {
+            /*
+             * 자재코드 ALPHA 출력 보정.
+             *
+             * CDS OData가 0000100001을 반환하더라도 화면 검색조건에는 사용자가 읽기 쉬운
+             * 100001 형태로 보여주는 것이 자연스럽다.
+             */
+            var sMatnr = String(sValue || "").trim();
+
+            if (!sMatnr) {
+                return "";
+            }
+
+            return sMatnr.replace(/^0+/, "") || "0";
         },
 
         _buildFilters: function (bIncludeStatusFilter) {
