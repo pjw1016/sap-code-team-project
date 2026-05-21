@@ -136,96 +136,20 @@
                 </Panel>
 
                 <!--
-                    KPI 요약 영역.
-                    KPI는 "현재 검색조건 기준"이지만 상태 필터는 제외하고 계산한다.
-                    그래서 사용자가 상태 D만 선택해도 전체 지연/미입고 요약을 유지한다.
+                    요약 영역.
+                    - 왼쪽: 상태별 도넛 차트
+                    - 오른쪽: KPI 카드 4개
+                    KPI와 차트는 모두 "현재 검색조건 기준" 요약 정보이므로 한 영역에 묶어 세로 공간을 줄인다.
                 -->
-                <VBox class="dpmSection">
-                    <HBox alignItems="Center" class="dpmSectionHeader">
-                        <Title text="{i18n>kpiSectionTitle}" level="H2"/>
-                        <ObjectStatus
-                            text="{i18n>kpiScopeText}"
-                            icon="sap-icon://hint"
-                            state="Information"
-                            class="sapUiSmallMarginBegin"/>
-                    </HBox>
-
-                    <FlexBox wrap="Wrap" renderType="Bare" class="dpmKpiBox">
-                        <GenericTile
-                            header="{i18n>kpiOpenPoItem}"
-                            class="dpmKpiTile"
-                            press=".onKpiPress">
-                            <customData>
-                                <!--
-                                    KPI 타일 클릭 시 Controller에서 어떤 빠른 필터를 적용할지 구분하는 값.
-                                    CustomData는 화면에는 보이지 않고, press 이벤트에서 data("kpiAction")으로 읽는다.
-                                -->
-                                <core:CustomData key="kpiAction" value="OPEN_PO_ITEM"/>
-                            </customData>
-                            <TileContent>
-                                <NumericContent
-                                    value="{kpi>/OpenPoItemCnt}"
-                                    icon="sap-icon://shipping-status"
-                                    valueColor="Neutral"/>
-                            </TileContent>
-                        </GenericTile>
-
-                        <GenericTile
-                            header="{i18n>kpiDelayedItem}"
-                            class="dpmKpiTile"
-                            press=".onKpiPress">
-                            <customData>
-                                <core:CustomData key="kpiAction" value="DELAYED_ITEM"/>
-                            </customData>
-                            <TileContent>
-                                <NumericContent
-                                    value="{kpi>/DelayedItemCnt}"
-                                    icon="sap-icon://lateness"
-                                    valueColor="Critical"/>
-                            </TileContent>
-                        </GenericTile>
-
-                        <GenericTile
-                            header="{i18n>kpiNoReceiptDelay}"
-                            class="dpmKpiTile"
-                            press=".onKpiPress">
-                            <customData>
-                                <core:CustomData key="kpiAction" value="NO_RECEIPT_DELAY"/>
-                            </customData>
-                            <TileContent>
-                                <NumericContent
-                                    value="{kpi>/NoReceiptDelayCnt}"
-                                    icon="sap-icon://error"
-                                    valueColor="Error"/>
-                            </TileContent>
-                        </GenericTile>
-
-                        <GenericTile
-                            header="{i18n>kpiDelayedVendor}"
-                            class="dpmKpiTile"
-                            press=".onKpiPress">
-                            <customData>
-                                <core:CustomData key="kpiAction" value="DELAYED_VENDOR"/>
-                            </customData>
-                            <TileContent>
-                                <NumericContent
-                                    value="{kpi>/DelayedVendorCnt}"
-                                    icon="sap-icon://supplier"
-                                    valueColor="Neutral"/>
-                            </TileContent>
-                        </GenericTile>
-                    </FlexBox>
-                </VBox>
-
-                <!--
-                    상태 분포 차트.
-                    DelayedPoSet 결과를 클라이언트에서 O/D/P/L/C 상태별로 집계해 도넛 차트로 표시한다.
-                    차트 조각을 클릭하면 해당 상태가 메인 테이블 필터로 적용된다.
-                -->
-                <Panel class="dpmSection dpmChartPanel">
+                <Panel class="dpmSection dpmSummaryPanel">
                     <headerToolbar>
                         <OverflowToolbar>
-                            <Title text="{i18n>statusChartTitle}" level="H2"/>
+                            <Title text="{i18n>summarySectionTitle}" level="H2"/>
+                            <ObjectStatus
+                                text="{i18n>kpiScopeText}"
+                                icon="sap-icon://hint"
+                                state="Information"
+                                class="sapUiSmallMarginBegin"/>
                             <ToolbarSpacer/>
                             <Button
                                 text="{i18n>clearChartFilter}"
@@ -236,53 +160,132 @@
                         </OverflowToolbar>
                     </headerToolbar>
                     <content>
-                        <viz:VizFrame
-                            id="statusDistributionChart"
-                            width="100%"
-                            height="24rem"
-                            uiConfig="{applicationSet:'fiori'}"
-                            vizProperties="{
-                                title: { visible: false },
-                                tooltip: { visible: true },
-                                legend: { visible: true },
-                                plotArea: {
-                                    colorPalette: ['#6a6d70', '#bb0000', '#0a6ed1', '#e9730c', '#107e3e'],
-                                    drawingEffect: 'normal',
-                                    dataLabel: {
-                                        visible: true,
-                                        type: 'value',
-                                        hideWhenOverlap: true
-                                    }
-                                }
-                            }"
-                            vizType="donut"
-                            selectData=".onStatusChartSelect"
-                            deselectData=".onStatusChartSelect">
-                            <viz:dataset>
-                                <viz.data:FlattenedDataset data="{chart>/statusDistribution}">
-                                    <viz.data:dimensions>
-                                        <viz.data:DimensionDefinition
-                                            name="Status"
-                                            value="{chart>StatusText}"/>
-                                    </viz.data:dimensions>
-                                    <viz.data:measures>
-                                        <viz.data:MeasureDefinition
-                                            name="Count"
-                                            value="{chart>Count}"/>
-                                    </viz.data:measures>
-                                </viz.data:FlattenedDataset>
-                            </viz:dataset>
-                            <viz:feeds>
-                                <viz.feeds:FeedItem
-                                    uid="size"
-                                    type="Measure"
-                                    values="Count"/>
-                                <viz.feeds:FeedItem
-                                    uid="color"
-                                    type="Dimension"
-                                    values="Status"/>
-                            </viz:feeds>
-                        </viz:VizFrame>
+                        <FlexBox wrap="Wrap" renderType="Bare" class="dpmSummaryLayout">
+                            <VBox class="dpmSummaryChartArea">
+                                <Title text="{i18n>statusChartTitle}" level="H3" class="dpmSummarySubTitle"/>
+                                <!--
+                                    상태 분포 차트.
+                                    DelayedPoSet 결과를 클라이언트에서 O/D/P/L/C 상태별로 집계해 도넛 차트로 표시한다.
+                                    차트 조각을 클릭하면 해당 상태가 메인 테이블 필터로 적용된다.
+                                -->
+                                <viz:VizFrame
+                                    id="statusDistributionChart"
+                                    width="100%"
+                                    height="20rem"
+                                    uiConfig="{applicationSet:'fiori'}"
+                                    vizProperties="{
+                                        title: { visible: false },
+                                        tooltip: { visible: true },
+                                        legend: { visible: true },
+                                        plotArea: {
+                                            colorPalette: ['#6a6d70', '#bb0000', '#0a6ed1', '#e9730c', '#107e3e'],
+                                            drawingEffect: 'normal',
+                                            dataLabel: {
+                                                visible: true,
+                                                type: 'value',
+                                                hideWhenOverlap: true
+                                            }
+                                        }
+                                    }"
+                                    vizType="donut"
+                                    selectData=".onStatusChartSelect"
+                                    deselectData=".onStatusChartSelect">
+                                    <viz:dataset>
+                                        <viz.data:FlattenedDataset data="{chart>/statusDistribution}">
+                                            <viz.data:dimensions>
+                                                <viz.data:DimensionDefinition
+                                                    name="Status"
+                                                    value="{chart>StatusText}"/>
+                                            </viz.data:dimensions>
+                                            <viz.data:measures>
+                                                <viz.data:MeasureDefinition
+                                                    name="Count"
+                                                    value="{chart>Count}"/>
+                                            </viz.data:measures>
+                                        </viz.data:FlattenedDataset>
+                                    </viz:dataset>
+                                    <viz:feeds>
+                                        <viz.feeds:FeedItem
+                                            uid="size"
+                                            type="Measure"
+                                            values="Count"/>
+                                        <viz.feeds:FeedItem
+                                            uid="color"
+                                            type="Dimension"
+                                            values="Status"/>
+                                    </viz:feeds>
+                                </viz:VizFrame>
+                            </VBox>
+
+                            <VBox class="dpmSummaryKpiArea">
+                                <Title text="{i18n>kpiSectionTitle}" level="H3" class="dpmSummarySubTitle"/>
+                                <FlexBox wrap="Wrap" renderType="Bare" class="dpmKpiBox dpmKpiBoxCompact">
+                                    <GenericTile
+                                        header="{i18n>kpiOpenPoItem}"
+                                        class="dpmKpiTile dpmKpiTileCompact"
+                                        press=".onKpiPress">
+                                        <customData>
+                                            <!--
+                                                KPI 타일 클릭 시 Controller에서 어떤 빠른 필터를 적용할지 구분하는 값.
+                                                CustomData는 화면에는 보이지 않고, press 이벤트에서 data("kpiAction")으로 읽는다.
+                                            -->
+                                            <core:CustomData key="kpiAction" value="OPEN_PO_ITEM"/>
+                                        </customData>
+                                        <TileContent>
+                                            <NumericContent
+                                                value="{kpi>/OpenPoItemCnt}"
+                                                icon="sap-icon://shipping-status"
+                                                valueColor="Neutral"/>
+                                        </TileContent>
+                                    </GenericTile>
+
+                                    <GenericTile
+                                        header="{i18n>kpiDelayedItem}"
+                                        class="dpmKpiTile dpmKpiTileCompact"
+                                        press=".onKpiPress">
+                                        <customData>
+                                            <core:CustomData key="kpiAction" value="DELAYED_ITEM"/>
+                                        </customData>
+                                        <TileContent>
+                                            <NumericContent
+                                                value="{kpi>/DelayedItemCnt}"
+                                                icon="sap-icon://lateness"
+                                                valueColor="Critical"/>
+                                        </TileContent>
+                                    </GenericTile>
+
+                                    <GenericTile
+                                        header="{i18n>kpiNoReceiptDelay}"
+                                        class="dpmKpiTile dpmKpiTileCompact"
+                                        press=".onKpiPress">
+                                        <customData>
+                                            <core:CustomData key="kpiAction" value="NO_RECEIPT_DELAY"/>
+                                        </customData>
+                                        <TileContent>
+                                            <NumericContent
+                                                value="{kpi>/NoReceiptDelayCnt}"
+                                                icon="sap-icon://error"
+                                                valueColor="Error"/>
+                                        </TileContent>
+                                    </GenericTile>
+
+                                    <GenericTile
+                                        header="{i18n>kpiDelayedVendor}"
+                                        class="dpmKpiTile dpmKpiTileCompact"
+                                        press=".onKpiPress">
+                                        <customData>
+                                            <core:CustomData key="kpiAction" value="DELAYED_VENDOR"/>
+                                        </customData>
+                                        <TileContent>
+                                            <NumericContent
+                                                value="{kpi>/DelayedVendorCnt}"
+                                                icon="sap-icon://supplier"
+                                                valueColor="Neutral"/>
+                                        </TileContent>
+                                    </GenericTile>
+                                </FlexBox>
+                            </VBox>
+                        </FlexBox>
                     </content>
                 </Panel>
 
