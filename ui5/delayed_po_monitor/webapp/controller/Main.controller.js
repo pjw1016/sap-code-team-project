@@ -186,6 +186,21 @@ sap.ui.define([
             this._applyTableSorters(sSortKey, bSortDescending, sGroupKey, bGroupDescending);
         },
 
+        onResetTableSettingsPress: function () {
+            /*
+             * 메인 테이블 툴바의 "정렬/그룹 초기화" 버튼 처리다.
+             *
+             * 검색조건 초기화와 다른 점:
+             * - 검색조건, KPI, 차트, 조회 데이터는 그대로 둔다.
+             * - 현재 sap.m.Table 바인딩에 적용된 정렬/그룹 Sorter만 제거한다.
+             *
+             * 사용자가 공급업체 그룹/지연일수 정렬 등을 잠깐 적용해 본 뒤
+             * 원래 조회 순서로 돌아가고 싶을 때 사용하는 기능이다.
+             */
+            this._resetTableSettings();
+            this._showToast(this._text("tableSettingsResetDone"));
+        },
+
         onKpiPress: function (oEvent) {
             /*
              * KPI 카드를 단순 숫자 표시가 아니라 "빠른 필터 버튼"처럼 사용한다.

@@ -318,13 +318,22 @@
                                     state="None"/>
                                 <!-- 정렬/그룹 설정 Dialog를 여는 버튼이다. -->
                                 <Button
-                                    icon="sap-icon://sort"
+                                    text="{i18n>tableSettingsTitle}"
                                     tooltip="{i18n>tableSettingsTitle}"
                                     type="Transparent"
                                     press=".onOpenTableSettings"/>
+                                <!--
+                                    테이블에 적용된 정렬/그룹만 초기화한다.
+                                    검색조건과 조회 데이터는 유지하고, 사용자가 바꾼 테이블 표시 방식만 되돌린다.
+                                -->
+                                <Button
+                                    text="{i18n>tableSettingsReset}"
+                                    tooltip="{i18n>tableSettingsReset}"
+                                    type="Transparent"
+                                    press=".onResetTableSettingsPress"/>
                                 <!-- 현재 검색조건으로 테이블/KPI/차트를 다시 조회한다. -->
                                 <Button
-                                    icon="sap-icon://refresh"
+                                    text="{i18n>refresh}"
                                     tooltip="{i18n>refresh}"
                                     type="Transparent"
                                     press=".onSearch"/>
