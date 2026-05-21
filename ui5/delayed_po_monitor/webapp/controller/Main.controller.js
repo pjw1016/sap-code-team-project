@@ -581,8 +581,7 @@ sap.ui.define([
             }
 
             aSelectedData.forEach(function (oDataPoint) {
-                var sStatusText = this._getChartDataPointStatusText(oDataPoint);
-                var sStatusCode = this._getStatusCodeByText(sStatusText);
+                var sStatusCode = this._getChartDataPointStatusCode(oDataPoint);
 
                 if (sStatusCode) {
                     aStatusCodes.push(sStatusCode);
@@ -592,21 +591,36 @@ sap.ui.define([
             return this._getUniqueStatusCodes(aStatusCodes);
         },
 
-        _getChartDataPointStatusText: function (oDataPoint) {
+        _getChartDataPointStatusCode: function (oDataPoint) {
             /*
-             * 현재 프로젝트의 VizFrame 이벤트는 보통 아래처럼 값을 넘긴다.
-             *   oDataPoint.data.Status = "미입고 지연"
+             * 차트 선택 이벤트에서 상태코드를 구한다.
              *
-             * 다만 VizFrame 계열은 버전/차트 타입에 따라 data가 배열로 올 수도 있으므로,
-             * 초급자가 디버깅하기 쉽도록 두 가지 형태를 모두 방어적으로 처리한다.
+             * 목표:
+             * - 내부 필터는 화면 문구가 아니라 StatusCode(O/D/P/L/C)를 기준으로 동작하게 한다.
+             * - 상태명 문구가 나중에 바뀌어도 필터 로직이 최대한 흔들리지 않게 한다.
+             *
+             * 실제 VizFrame 이벤트는 차트의 Dimension 값을 중심으로 넘기기 때문에,
+             * 시스템/버전에 따라 StatusCode가 직접 없고 상태명만 있을 수 있다.
+             * 그래서 StatusCode를 먼저 찾고, 없으면 상태명으로 보정한다.
+             *
+             * 현재 프로젝트의 VizFrame 이벤트 예:
+             *   oDataPoint.data.Status = "미입고 지연"
              */
             var vData = oDataPoint && oDataPoint.data;
+            var sStatusCode;
+            var sStatusText;
 
             if (!vData) {
                 return "";
             }
 
-            return this._extractStatusTextFromVizData(vData);
+            sStatusCode = this._extractStatusCodeFromVizData(vData);
+            if (sStatusCode) {
+                return sStatusCode;
+            }
+
+            sStatusText = this._extractStatusTextFromVizData(vData);
+            return this._getStatusCodeByText(sStatusText);
         },
 
         _getUniqueStatusCodes: function (aStatusCodes) {
@@ -687,8 +701,8 @@ sap.ui.define([
                 // 기본 Popover의 숫자 행에도 "건" 단위가 붙도록 포맷을 지정한다.
                 formatString: "#,##0건",
                 customDataControl: function (oPopoverData) {
-                    var sStatusText = this._getChartStatusTextFromPopoverData(oPopoverData);
-                    var sTooltipText = this._getChartTooltipTextByStatusText(sStatusText);
+                    var sStatusCode = this._getChartStatusCodeFromPopoverData(oPopoverData);
+                    var sTooltipText = this._getChartTooltipTextByStatusCode(sStatusCode);
 
                     return new Text({
                         text: sTooltipText || this._text("notAvailable"),
@@ -765,12 +779,37 @@ sap.ui.define([
             });
         },
 
-        _getChartStatusTextFromPopoverData: function (oPopoverData) {
+        _getChartStatusCodeFromPopoverData: function (oPopoverData) {
             /*
              * Popover가 넘기는 데이터 구조는 VizFrame 내부 구조라 UI5 버전/차트 타입에 따라 조금 달라질 수 있다.
-             * 문자열 전체 검색(JSON.stringify)에 기대지 않고, 구조 안의 Status 차원 값을 우선 찾아 매칭한다.
+             * 차트 선택 로직과 마찬가지로 StatusCode를 먼저 찾고, 없으면 상태명으로 상태코드를 보정한다.
              */
-            return this._extractStatusTextFromVizData(oPopoverData);
+            var sStatusCode = this._extractStatusCodeFromVizData(oPopoverData);
+            var sStatusText;
+
+            if (sStatusCode) {
+                return sStatusCode;
+            }
+
+            sStatusText = this._extractStatusTextFromVizData(oPopoverData);
+            return this._getStatusCodeByText(sStatusText);
+        },
+
+        _extractStatusCodeFromVizData: function (vData) {
+            /*
+             * VizFrame 이벤트/Popover 데이터 안에서 StatusCode 값을 우선 추출한다.
+             *
+             * 차트의 화면 Dimension은 사용자가 읽기 쉬운 상태명(Status)이지만,
+             * 내부 필터는 O/D/P/L/C 코드가 더 안정적이다.
+             * 따라서 데이터 구조 안에 StatusCode 또는 code 성격의 값이 있으면 그것을 우선 사용한다.
+             */
+            var sStatusCode = this._extractNamedVizValue(vData, [
+                "StatusCode",
+                "Status Code",
+                "code"
+            ]);
+
+            return this._getStatusConfigByCode(sStatusCode) ? sStatusCode : "";
         },
 
         _extractStatusTextFromVizData: function (vData) {
@@ -887,11 +926,11 @@ sap.ui.define([
             return sFoundText;
         },
 
-        _getChartTooltipTextByStatusText: function (sStatusText) {
-            // 차트 모델에 이미 계산해 둔 TooltipText를 상태명으로 찾아 반환한다.
+        _getChartTooltipTextByStatusCode: function (sStatusCode) {
+            // 차트 모델에 이미 계산해 둔 TooltipText를 상태코드 기준으로 찾아 반환한다.
             var aDistribution = this.getView().getModel("chart").getProperty("/statusDistribution") || [];
             var oMatchedStatus = aDistribution.find(function (oStatus) {
-                return oStatus.StatusText === sStatusText;
+                return oStatus.StatusCode === sStatusCode;
             });
 
             return oMatchedStatus && oMatchedStatus.TooltipText || "";
