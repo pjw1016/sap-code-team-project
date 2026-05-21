@@ -1134,27 +1134,6 @@ sap.ui.define([
             }
         },
 
-        // _addStatusFilters: function (aFilters, aStatusCodes, bExcludeCompleted) {
-        //     var aCodes = Array.isArray(aStatusCodes) ? aStatusCodes.slice() : [];
-
-        //     if (bExcludeCompleted) {
-        //         aCodes = aCodes.length ? aCodes.filter(function (sCode) {
-        //             return sCode !== "C";
-        //         }) : ["O", "D", "P", "L"];
-        //     }
-
-        //     if (!aCodes.length) {
-        //         return;
-        //     }
-
-        //     aFilters.push(new Filter({
-        //         filters: aCodes.map(function (sCode) {
-        //             return new Filter("StatusCode", FilterOperator.EQ, sCode);
-        //         }),
-        //         and: false
-        //     }));
-        // },
-
         _addStatusFilters: function (aFilters, aStatusCodes) {
             var aCodes = Array.isArray(aStatusCodes) ? aStatusCodes.slice() : [];
 
@@ -1212,7 +1191,7 @@ sap.ui.define([
              *
              * width를 기본값보다 넓게 잡은 이유:
              * - 한국어 문장은 기본 MessageToast 폭에서 2~3줄로 쉽게 줄바꿈된다.
-             * - 26rem 정도면 데스크톱 화면에서 대부분의 안내 문구가 1~2줄 안에 들어온다.
+             * - 30rem 정도면 데스크톱 화면에서 대부분의 안내 문구가 1~2줄 안에 들어온다.
              * - SAPUI5 SDK 기준으로 MessageToast.show의 width 옵션은 공식 지원된다.
              *
              * 주의:
@@ -1222,7 +1201,7 @@ sap.ui.define([
              * 실제 화면 폭을 바꾸려면 css/style.css의 .sapMMessageToast width 값도 같이 확인한다.
              */
             MessageToast.show(sMessage, {
-                width: "26rem"
+                width: "30rem"
             });
         }
     });
