@@ -238,6 +238,11 @@ sap.ui.define([
                     oConfig.groupDescending
                 );
 
+                /*
+                 * KPI 카드는 화면 상단의 요약 정보라서, 필터 적용 후 결과 테이블이 바로 보이지 않을 수 있다.
+                 * 조회와 정렬/그룹 적용이 끝난 뒤 테이블 위치로 이동시켜 사용자가 결과를 즉시 확인하게 한다.
+                 */
+                this._scrollToResultTable();
                 this._showToast(this._text(oConfig.messageKey));
             }.bind(this));
         },
@@ -269,27 +274,51 @@ sap.ui.define([
             }
 
             this.getView().getModel("view").setProperty("/filters/statusCodes", aStatusCodes);
-            this.onSearch();
+            this.onSearch().then(function () {
+                /*
+                 * 차트도 요약 영역에 있으므로, 상태 선택 후에는 필터링된 테이블 위치로 내려간다.
+                 * 이렇게 해야 사용자가 스크롤을 직접 내리지 않아도 "무엇이 필터링됐는지" 바로 확인할 수 있다.
+                 */
+                this._scrollToResultTable();
 
-            if (bSelectionCleared) {
-                this._showToast(this._text("chartFilterCleared"));
-            } else {
-                this._showToast(this._text("chartFilterApplied"));
-            }
+                if (bSelectionCleared) {
+                    this._showToast(this._text("chartFilterCleared"));
+                } else {
+                    this._showToast(this._text("chartFilterApplied"));
+                }
+            }.bind(this));
         },
 
         onClearChartFilter: function () {
             /*
-             * 차트 패널의 명시적 필터 해제 버튼이다.
+             * 요약 패널의 명시적 필터 해제 버튼이다.
              * 전체 초기화와 달리 검색조건/테이블 정렬/그룹은 유지하고,
              * 차트 선택 상태와 상태 필터만 기본 문제건 O/D/P/L로 되돌린다.
+             *
+             * 이 버튼은 "해제"가 목적이므로 KPI/차트 클릭과 다르게 테이블로 자동 스크롤하지 않는다.
+             * 사용자가 요약 영역에 머문 상태에서 필터가 풀렸는지 확인할 수 있게 두는 것이 자연스럽다.
              */
-            this._clearStatusChartSelection();
+            /*
+             * _clearStatusChartSelection은 내부적으로 VizFrame의 vizSelection([])을 호출한다.
+             * 이때 UI5/VizFrame은 deselectData 이벤트를 다시 발생시킬 수 있고,
+             * 그 이벤트가 onStatusChartSelect로 들어오면 자동 스크롤이 실행된다.
+             *
+             * 따라서 필터 해제 버튼 흐름에서는 차트 선택 이벤트를 조회 완료 시점까지 억제한다.
+             */
+            this._bSuppressChartSelectionEvent = true;
+            this._clearStatusChartSelection(true);
             this.getView().getModel("view").setProperty("/filters/statusCodes", this._getDefaultProblemStatusCodes());
 
             this.onSearch().then(function () {
-                this._clearStatusChartSelection();
+                this._clearStatusChartSelection(true);
                 this._showToast(this._text("chartFilterCleared"));
+            }.bind(this)).finally(function () {
+                /*
+                 * 일부 VizFrame 버전은 vizSelection([]) 직후 deselectData 이벤트를 조금 늦게 발생시킨다.
+                 * 필터 해제 버튼에서는 그 늦은 이벤트도 자동 스크롤을 만들면 안 되므로,
+                 * 일반 초기화보다 조금 더 늦게 suppress를 해제한다.
+                 */
+                this._releaseChartSelectionSuppression(200);
             }.bind(this));
         },
 
@@ -494,6 +523,49 @@ sap.ui.define([
             }.bind(this)).finally(function () {
                 oHistoryModel.setProperty("/busy", false);
             });
+        },
+
+        _scrollToResultTable: function () {
+            /*
+             * KPI/차트 빠른 필터 적용 후 메인 테이블로 자동 이동한다.
+             *
+             * 왜 필요한가?
+             * - KPI와 차트는 화면 상단 요약 영역에 있다.
+             * - 사용자가 KPI 카드나 차트를 클릭하면 실제 결과는 아래 sap.m.Table에 반영된다.
+             * - 자동 스크롤이 없으면 사용자는 필터가 적용됐는지 확인하려고 직접 아래로 내려가야 한다.
+             *
+             * 구현 기준:
+             * - 현재 화면의 루트 컨테이너는 sap.m.Page(id="page")다.
+             * - SAPUI5 SDK 기준으로 sap.m.Page는 scrollToElement(oElement, iTime)을 제공한다.
+             * - 이 API를 우선 사용하고, 혹시 Page 스크롤 API를 사용할 수 없는 환경이면
+             *   브라우저 표준 DOM scrollIntoView를 보조 수단으로 사용한다.
+             *
+             * setTimeout을 사용하는 이유:
+             * - onSearch()가 끝나면 JSONModel 데이터는 들어왔지만, 브라우저 렌더링은 다음 tick에 반영될 수 있다.
+             * - 한 번 늦춰서 실행하면 테이블 행/그룹 헤더가 화면에 반영된 뒤 안정적으로 스크롤할 수 있다.
+             */
+            var oPage = this.byId("page");
+            var oTable = this.byId("delayedPoTable");
+
+            if (!oTable) {
+                return;
+            }
+
+            setTimeout(function () {
+                var oTableDomRef = oTable.getDomRef && oTable.getDomRef();
+
+                if (oPage && typeof oPage.scrollToElement === "function") {
+                    oPage.scrollToElement(oTable, 450);
+                    return;
+                }
+
+                if (oTableDomRef && typeof oTableDomRef.scrollIntoView === "function") {
+                    oTableDomRef.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start"
+                    });
+                }
+            }, 0);
         },
 
         _readEntitySet: function (sPath, aFilters) {
@@ -757,7 +829,7 @@ sap.ui.define([
             });
         },
 
-        _clearStatusChartSelection: function () {
+        _clearStatusChartSelection: function (bKeepSuppressed) {
             /*
              * VizFrame 선택 상태를 화면에서 제거한다.
              * 차트 선택은 필터 값(view>/filters/statusCodes)과 별개로 VizFrame 내부에도 남기 때문에
@@ -766,6 +838,11 @@ sap.ui.define([
              * vizSelection으로 선택을 지울 때 deselectData 이벤트가 같이 발생할 수 있다.
              * 그 이벤트가 onStatusChartSelect를 다시 타면 초기화 중 상태 필터가 빈 배열로 바뀔 수 있으므로
              * 내부 초기화 중에는 차트 선택 이벤트를 잠깐 무시한다.
+             *
+             * bKeepSuppressed = true:
+             * - 호출자가 여러 비동기 작업을 이어서 처리하는 중이라는 뜻이다.
+             * - 이 경우 이 메소드 안에서 suppress flag를 바로 풀지 않고,
+             *   호출자가 안전한 시점에 _releaseChartSelectionSuppression을 직접 호출한다.
              */
             var oChart = this.byId("statusDistributionChart");
 
@@ -782,10 +859,27 @@ sap.ui.define([
             } catch (oError) {
                 // 일부 UI5/VizFrame 버전에서 선택 해제 API가 다르게 동작해도 초기화 흐름은 계속 진행한다.
             } finally {
-                setTimeout(function () {
-                    this._bSuppressChartSelectionEvent = false;
-                }.bind(this), 0);
+                if (!bKeepSuppressed) {
+                    this._releaseChartSelectionSuppression();
+                }
             }
+        },
+
+        _releaseChartSelectionSuppression: function (iDelay) {
+            /*
+             * 차트 선택 이벤트 억제를 다음 브라우저 tick에서 해제한다.
+             *
+             * 즉시 false로 바꾸지 않는 이유:
+             * - vizSelection([]) 직후 deselectData 이벤트가 비동기로 늦게 들어올 수 있다.
+             * - setTimeout 0으로 한 번 늦추면 같은 렌더링 흐름에서 발생한 선택 해제 이벤트를 더 안전하게 무시할 수 있다.
+             *
+             * iDelay:
+             * - 기본값은 0ms다.
+             * - 필터 해제 버튼처럼 늦게 들어오는 deselectData까지 막아야 하는 경우에는 더 긴 지연 시간을 넘긴다.
+             */
+            setTimeout(function () {
+                this._bSuppressChartSelectionEvent = false;
+            }.bind(this), iDelay || 0);
         },
 
         _resetTableSettings: function () {

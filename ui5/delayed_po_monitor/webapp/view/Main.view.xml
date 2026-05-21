@@ -117,17 +117,17 @@
                                 <ToolbarSpacer/>
                                 <Button
                                     text="{= ${view>/advancedVisible} ? ${i18n>hideAdvancedSearch} : ${i18n>showAdvancedSearch} }"
-                                    icon="sap-icon://filter"
+                                    tooltip="{= ${view>/advancedVisible} ? ${i18n>hideAdvancedSearch} : ${i18n>showAdvancedSearch} }"
                                     type="Transparent"
                                     press=".onToggleAdvanced"/>
                                 <Button
                                     text="{i18n>reset}"
-                                    icon="sap-icon://reset"
+                                    tooltip="{i18n>reset}"
                                     type="Transparent"
                                     press=".onReset"/>
                                 <Button
                                     text="{i18n>search}"
-                                    icon="sap-icon://search"
+                                    tooltip="{i18n>search}"
                                     type="Emphasized"
                                     press=".onSearch"/>
                             </Toolbar>
@@ -152,7 +152,6 @@
                                 class="sapUiSmallMarginBegin"/>
                             <ToolbarSpacer/>
                             <Button
-                                text="{i18n>clearChartFilter}"
                                 icon="sap-icon://clear-filter"
                                 tooltip="{i18n>clearChartFilter}"
                                 type="Transparent"
@@ -322,7 +321,6 @@
                                     class="dpmTableSummaryText"/>
                                 <!-- 정렬/그룹 설정 Dialog를 여는 버튼이다. -->
                                 <Button
-                                    text="{i18n>tableSettingsTitle}"
                                     icon="sap-icon://sort"
                                     tooltip="{i18n>tableSettingsTitle}"
                                     type="Transparent"
@@ -332,14 +330,12 @@
                                     검색조건과 조회 데이터는 유지하고, 사용자가 바꾼 테이블 표시 방식만 되돌린다.
                                 -->
                                 <Button
-                                    text="{i18n>tableSettingsReset}"
                                     icon="sap-icon://reset"
                                     tooltip="{i18n>tableSettingsReset}"
                                     type="Transparent"
                                     press=".onResetTableSettingsPress"/>
                                 <!-- 현재 검색조건으로 테이블/KPI/차트를 다시 조회한다. -->
                                 <Button
-                                    text="{i18n>refresh}"
                                     icon="sap-icon://refresh"
                                     tooltip="{i18n>refresh}"
                                     type="Transparent"
