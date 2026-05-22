@@ -1,0 +1,24 @@
+{
+  "generationParameters": {
+    "generationDate": "Mon May 18 2026 20:35:58 GMT+0900 (한국 표준시)",
+    "generatorPlatform": "Visual Studio Code",
+    "serviceType": "SAP System (ABAP On-Premise)",
+    "metadataFilename": "",
+    "serviceUrl": "http://61.97.134.36:8000/sap/opu/odata/sap/ZGWD3MM0007_SRV",
+    "appName": "delayed_po_monitor",
+    "appTitle": "[MM] 납기 지연 및 미입고 현황 조회",
+    "appDescription": "An SAP Fiori application.",
+    "appNamespace": "code.d3",
+    "ui5Theme": "sap_horizon",
+    "ui5Version": "1.120.23",
+    "enableCodeAssist": false,
+    "enableEslint": false,
+    "enableTypeScript": false,
+    "showMockDataInfo": true,
+    "generatorVersion": "1.19.3",
+    "template": "Basic V2",
+    "generatorName": "SAP Fiori Application Generator",
+    "entityRelatedConfig": [],
+    "launchText": "To launch the generated application, run the following from the generated application root folder:\n\n```\n    npm start\n```"
+  }
+}

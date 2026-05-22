@@ -45,7 +45,12 @@
                 </HBox>
 
                 <!-- 선택한 PO Item의 기본 master/detail 정보 영역이다. -->
-                <Panel headerText="{i18n>detailBasicInfo}" class="dpmDialogSection">
+                <Panel class="dpmDialogSection">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="{i18n>detailBasicInfo}" level="H3"/>
+                        </OverflowToolbar>
+                    </headerToolbar>
                     <content>
                         <FlexBox wrap="Wrap" renderType="Bare" class="dpmInfoGrid">
                             <VBox class="dpmInfoItem">
@@ -72,17 +77,9 @@
                                 <Label text="{i18n>werks}"/>
                                 <Text text="{detail>/Werks}"/>
                             </VBox>
-                            <VBox class="dpmInfoItemWide">
-                                <Label text="{i18n>werksName}"/>
-                                <Text text="{detail>/WerksName}"/>
-                            </VBox>
                             <VBox class="dpmInfoItem">
                                 <Label text="{i18n>lgort}"/>
                                 <Text text="{detail>/Lgort}"/>
-                            </VBox>
-                            <VBox class="dpmInfoItemWide">
-                                <Label text="{i18n>lgortName}"/>
-                                <Text text="{detail>/LgortName}"/>
                             </VBox>
                         </FlexBox>
                     </content>
@@ -92,7 +89,12 @@
                     수량 및 상태 요약 영역.
                     101/102 수량, 실제 입고수량, 미입고수량, 기준일, 지연일수를 함께 보여준다.
                 -->
-                <Panel headerText="{i18n>detailQtyInfo}" class="dpmDialogSection">
+                <Panel class="dpmDialogSection">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="{i18n>detailQtyInfo}" level="H3"/>
+                        </OverflowToolbar>
+                    </headerToolbar>
                     <content>
                         <FlexBox wrap="Wrap" renderType="Bare" class="dpmInfoGrid">
                             <VBox class="dpmInfoItem">
@@ -208,7 +210,7 @@
             </VBox>
         </content>
         <endButton>
-            <Button text="{i18n>close}" press=".onCloseDetailDialog"/>
+            <Button text="{i18n>close}" type="Transparent" press=".onCloseDetailDialog"/>
         </endButton>
     </Dialog>
 </core:FragmentDefinition>

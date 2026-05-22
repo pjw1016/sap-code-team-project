@@ -1,0 +1,36 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <!--
+        메인 테이블 정렬/그룹 설정 Dialog.
+        선택 결과는 Main.controller.js의 onTableSettingsConfirm에서 Sorter 배열로 변환된다.
+    -->
+    <ViewSettingsDialog
+        id="tableSettingsDialog"
+        title="{i18n>tableSettingsTitle}"
+        sortDescending="true"
+        confirm=".onTableSettingsConfirm">
+        <sortItems>
+            <!-- 정렬 기준. 실제 정렬은 JSONModel의 Property명을 key로 사용한다. -->
+            <ViewSettingsItem key="StatusText" text="{i18n>colStatus}"/>
+            <ViewSettingsItem key="DelayDays" text="{i18n>colDelayDays}"/>
+            <ViewSettingsItem key="Eindt" text="{i18n>colEindt}"/>
+            <ViewSettingsItem key="Ebeln" text="{i18n>colEbeln}"/>
+            <ViewSettingsItem key="Lifnr" text="{i18n>colLifnr}"/>
+            <ViewSettingsItem key="Name1" text="{i18n>colName1}"/>
+            <ViewSettingsItem key="Matnr" text="{i18n>colMatnr}"/>
+            <ViewSettingsItem key="Maktx" text="{i18n>colMaktx}"/>
+            <ViewSettingsItem key="PoQty" text="{i18n>colPoQty}"/>
+            <ViewSettingsItem key="GrQty" text="{i18n>colGrQty}"/>
+            <ViewSettingsItem key="OpenQty" text="{i18n>colOpenQty}"/>
+        </sortItems>
+        <groupItems>
+            <!-- 그룹 기준. 그룹 헤더 문구는 _getTableGroup에서 업무용 텍스트로 가공한다. -->
+            <ViewSettingsItem key="StatusCode" text="{i18n>colStatus}"/>
+            <ViewSettingsItem key="Eindt" text="{i18n>colEindt}"/>
+            <ViewSettingsItem key="Ebeln" text="{i18n>colEbeln}"/>
+            <ViewSettingsItem key="Lifnr" text="{i18n>colLifnr}"/>
+            <ViewSettingsItem key="Matnr" text="{i18n>colMatnr}"/>
+        </groupItems>
+    </ViewSettingsDialog>
+</core:FragmentDefinition>

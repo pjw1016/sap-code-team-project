@@ -14,7 +14,12 @@
                     기준일/납기일/플랜트/상태는 기본 조건이고,
                     회사코드/PO/공급업체/자재 조건은 상세조건으로 접어둔다.
                 -->
-                <Panel headerText="{i18n>searchPanelTitle}" class="dpmSection" expandable="true" expanded="true">
+                <Panel class="dpmSection" expandable="true" expanded="true">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="{i18n>searchPanelTitle}" level="H2"/>
+                        </OverflowToolbar>
+                    </headerToolbar>
                     <content>
                         <VBox class="sapUiSmallMargin">
                             <FlexBox wrap="Wrap" renderType="Bare" class="dpmFilterBar">
@@ -70,8 +75,7 @@
                                     <MultiComboBox
                                         id="statusMultiCombo"
                                         selectedKeys="{view>/filters/statusCodes}"
-                                        placeholder="{i18n>allPlaceholder}"
-                                        width="100%">
+                                        width="auto">
                                         <core:Item key="O" text="{i18n>statusO}"/>
                                         <core:Item key="D" text="{i18n>statusD}"/>
                                         <core:Item key="P" text="{i18n>statusP}"/>
@@ -79,13 +83,6 @@
                                         <core:Item key="C" text="{i18n>statusC}"/>
                                     </MultiComboBox>
                                 </VBox>
-
-                                <!-- <VBox class="dpmFilterItem dpmCheckItem">
-                                    <Label text=" "/>
-                                    <CheckBox
-                                        text="{i18n>excludeCompleted}"
-                                        selected="{view>/filters/excludeCompleted}"/>
-                                </VBox> -->  <!--"입고완료 제외" 체크박스 사용 안 함-->
                             </FlexBox>
 
                             <FlexBox
@@ -234,7 +231,7 @@
                                 -->
                                 <viz:VizFrame
                                     id="statusDistributionChart"
-                                    width="100%"
+                                    width="auto"
                                     height="23rem"
                                     uiConfig="{applicationSet:'fiori'}"
                                     vizProperties="{
@@ -242,7 +239,7 @@
                                         tooltip: { visible: false },
                                         legend: { visible: true },
                                         plotArea: {
-                                            colorPalette: ['#6a6d70', '#bb0000', '#0a6ed1', '#e9730c', '#107e3e'],
+                                            colorPalette: ['#8b95a1', '#f04452', '#3182f6', '#fe9800', '#03b26c'],
                                             drawingEffect: 'normal',
                                             dataLabel: {
                                                 visible: true,
@@ -359,7 +356,7 @@
                 -->
                 <Table
                     id="delayedPoTable"
-                    width="100%"
+                    width="auto"
                     contextualWidth="Auto"
                     items="{view>/items}"
                     busy="{view>/tableBusy}"
@@ -430,7 +427,7 @@
                                 <Text text="{i18n>colMaktx}"/>
                             </Column>
                             <Column width="auto" hAlign="End" importance="High"><Text text="{i18n>colPoQty}"/></Column>
-                            <Column width="auto" hAlign="End" minScreenWidth="600px" demandPopin="true" importance="High"><Text text="{i18n>colGrQty}"/></Column>
+                            <Column width="auto" hAlign="End" importance="High"><Text text="{i18n>colGrQty}"/></Column>
                             <Column width="auto" hAlign="End" importance="High"><Text text="{i18n>colOpenQty}"/></Column>
                         </columns>
                         <items>

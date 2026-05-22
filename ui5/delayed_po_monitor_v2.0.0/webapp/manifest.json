@@ -1,0 +1,203 @@
+{
+  "_version": "1.60.0",
+  "sap.app": {
+    "id": "code.d3.delayedpomonitor",
+    "type": "application",
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [
+        ""
+      ],
+      "fallbackLocale": ""
+    },
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:basic",
+      "version": "1.19.3",
+      "toolsId": "e5dea381-6cc2-493b-aaef-b6f8f5a86638"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/sap/opu/odata/sap/ZGWD3MM0007_SRV/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "localUri": "localService/mainService/metadata.xml",
+          "odataVersion": "2.0"
+        }
+      },
+      "plantHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0012_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "vendorHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0013_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "materialHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0014_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "poHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0015_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "companyHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0016_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.120.23",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.viz": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "code.d3.delayedpomonitor.i18n.i18n",
+          "supportedLocales": [
+            ""
+          ],
+          "fallbackLocale": ""
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "plantHelp": {
+        "dataSource": "plantHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "vendorHelp": {
+        "dataSource": "vendorHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "materialHelp": {
+        "dataSource": "materialHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "poHelp": {
+        "dataSource": "poHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "companyHelp": {
+        "dataSource": "companyHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      }
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "controlAggregation": "pages",
+        "controlId": "app",
+        "transition": "slide",
+        "type": "View",
+        "viewType": "XML",
+        "path": "code.d3.delayedpomonitor.view",
+        "async": true,
+        "viewPath": "code.d3.delayedpomonitor.view"
+      },
+      "routes": [
+        {
+          "name": "RouteMain",
+          "pattern": ":?query:",
+          "target": [
+            "TargetMain"
+          ]
+        }
+      ],
+      "targets": {
+        "TargetMain": {
+          "id": "Main",
+          "name": "Main"
+        }
+      }
+    },
+    "rootView": {
+      "viewName": "code.d3.delayedpomonitor.view.App",
+      "type": "XML",
+      "id": "App",
+      "async": true
+    }
+  }
+}

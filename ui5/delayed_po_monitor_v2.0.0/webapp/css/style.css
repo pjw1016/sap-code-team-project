@@ -1,0 +1,367 @@
+/* Toss Design System Variables */
+:root {
+    /* Primary Colors */
+    --toss-blue: #3182f6;
+    --toss-blue-hover: #2272eb;
+    --toss-blue-light: #e8f3ff;
+    --toss-white: #ffffff;
+    --toss-charcoal: #191f28;
+
+    /* Semantic Colors */
+    --toss-red: #f04452;
+    --toss-green: #03b26c;
+    --toss-orange: #fe9800;
+    --toss-yellow: #ffc342;
+    --toss-teal: #18a5a5;
+    --toss-purple: #a234c7;
+
+    /* Neutral Scale */
+    --toss-grey-50: #f9fafb;
+    --toss-grey-100: #f2f4f6;
+    --toss-grey-200: #e5e8eb;
+    --toss-grey-300: #d1d6db;
+    --toss-grey-400: #b0b8c1;
+    --toss-grey-500: #8b95a1;
+    --toss-grey-600: #6b7684;
+    --toss-grey-700: #4e5968;
+    --toss-grey-800: #333d4b;
+    --toss-grey-900: #191f28;
+
+    /* Surface & Borders */
+    --toss-border-default: var(--toss-grey-200);
+    --toss-border-strong: var(--toss-grey-300);
+    --toss-bg-page: var(--toss-grey-50);
+    --toss-bg-card: var(--toss-white);
+    --toss-shadow-1: 0px 1px 3px rgba(0,0,0,0.06);
+    --toss-shadow-2: 0px 2px 8px rgba(0,0,0,0.08);
+    --toss-shadow-3: 0px 4px 12px rgba(0,0,0,0.12);
+    --toss-shadow-4: 0px 8px 24px rgba(0,0,0,0.16);
+
+    /* Fonts */
+    --toss-font-family: "Toss Product Sans", "Tossface", "SF Pro KR", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Basier Square", "Apple SD Gothic Neo", Roboto, "Noto Sans KR", sans-serif;
+
+    /* Motion */
+    --motion-instant: 0ms;
+    --motion-fast: 150ms;
+    --motion-standard: 250ms;
+    --motion-slow: 400ms;
+    --ease-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Global Application Typography & Background */
+.sapUiBody, .sapMApp, .sapMPage, .sapMPageBgStandard {
+    font-family: var(--toss-font-family) !important;
+    background-color: var(--toss-bg-page) !important;
+    color: var(--toss-grey-900) !important;
+}
+
+/* Base Headings */
+.sapMTitle {
+    font-family: var(--toss-font-family) !important;
+    color: var(--toss-grey-900) !important;
+    font-weight: 700 !important;
+}
+
+h2.sapMTitle { font-size: 22px !important; line-height: 30px !important; } /* Heading Large */
+h3.sapMTitle { font-size: 20px !important; line-height: 28px !important; font-weight: 600 !important; } /* Heading */
+
+/* General Text */
+.sapMText {
+    font-family: var(--toss-font-family) !important;
+    color: var(--toss-grey-600) !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+}
+
+.sapMLabel {
+    font-family: var(--toss-font-family) !important;
+    color: var(--toss-grey-800) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    margin-bottom: 4px;
+}
+
+/* Financial Amounts - Tabular Numerals */
+.sapMObjectNumberText, .sapMObjectNumberUnit {
+    font-family: var(--toss-font-family) !important;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700 !important;
+    color: var(--toss-grey-900) !important;
+}
+
+/* ----------------------------------------- */
+/* 4. Component Stylings                     */
+/* ----------------------------------------- */
+
+/* Buttons - Toss Override */
+.sapMBtnInner {
+    border-radius: 8px !important; /* Adjusted from 16px to fit UI5 toolbars naturally */
+    font-family: var(--toss-font-family) !important;
+    font-weight: 600 !important;
+    border: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    transition: background-color var(--motion-fast) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard);
+}
+
+/* Emphasized Button (Fill / Primary) */
+.sapMBtnEmphasized .sapMBtnInner {
+    background-color: var(--toss-blue) !important;
+    color: var(--toss-white) !important;
+}
+.sapMBtnEmphasized:hover .sapMBtnInner,
+.sapMBtnEmphasized.sapMBtnActive .sapMBtnInner {
+    background-color: var(--toss-blue-hover) !important;
+}
+
+/* Transparent Button (Weak / Dark or Neutral) */
+.sapMBtnTransparent .sapMBtnInner {
+    background-color: rgba(2, 32, 71, 0.05) !important;
+    color: var(--toss-grey-700) !important;
+}
+.sapMBtnTransparent:hover .sapMBtnInner,
+.sapMBtnTransparent.sapMBtnActive .sapMBtnInner {
+    background-color: rgba(2, 32, 71, 0.1) !important;
+}
+
+/* Inputs - Box Variant */
+.sapMInputBaseContentWrapper {
+    background-color: rgba(0, 23, 51, 0.02) !important;
+    border: 1px solid var(--toss-border-default) !important;
+    border-radius: 8px !important;
+    transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+.sapMInputBaseContentWrapper.sapMInputBaseContentWrapperStateInner:focus,
+.sapMInputBaseContentWrapper:focus-within {
+    border-color: var(--toss-blue) !important;
+    outline: none !important;
+}
+
+.sapMInputBaseInner {
+    color: var(--toss-grey-800) !important;
+    font-family: var(--toss-font-family) !important;
+}
+
+.sapMInputBaseInner::placeholder {
+    color: var(--toss-grey-400) !important;
+}
+
+/* Cards & Panels */
+.sapMPanel, .dpmTossCard {
+    background-color: var(--toss-bg-card) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--toss-shadow-2) !important;
+    border: none !important;
+    margin-bottom: 1.5rem;
+}
+.sapMPanel > .sapMPanelHdr {
+    background-color: transparent !important;
+    border-bottom: none !important;
+}
+
+/* Generic Tile -> Toss KPI Card */
+.sapMGT {
+    background-color: var(--toss-bg-card) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--toss-shadow-2) !important;
+    border: none !important;
+}
+.sapMGTTitle {
+    font-family: var(--toss-font-family) !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--toss-grey-900) !important;
+}
+.sapMNCValue {
+    font-family: var(--toss-font-family) !important;
+    font-variant-numeric: tabular-nums;
+    font-size: 30px !important;
+    font-weight: 700 !important;
+}
+/* NumericContent State Overrides */
+.sapMNCValue.sapMNCValueGood, .sapMNCIconImage.sapMNCIconGood { color: var(--toss-green) !important; }
+.sapMNCValue.sapMNCValueCritical, .sapMNCIconImage.sapMNCIconCritical { color: var(--toss-orange) !important; }
+.sapMNCValue.sapMNCValueError, .sapMNCIconImage.sapMNCIconError { color: var(--toss-red) !important; }
+.sapMNCValue.sapMNCValueNeutral, .sapMNCIconImage.sapMNCIconNeutral { color: var(--toss-blue) !important; }
+
+.sapMGT:hover {
+    box-shadow: var(--toss-shadow-3) !important;
+}
+
+/* Badges / Object Status */
+.sapMObjStatus {
+    font-family: var(--toss-font-family) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    padding: 3px 7px !important;
+    display: inline-block;
+}
+.sapMObjStatusSuccess {
+    background-color: rgba(34, 197, 94, 0.15) !important;
+    color: var(--toss-green) !important;
+}
+.sapMObjStatusError {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    color: var(--toss-red) !important;
+}
+.sapMObjStatusWarning {
+    background-color: rgba(234, 179, 8, 0.15) !important; /* Yellow weak approx */
+    color: var(--toss-yellow) !important;
+}
+.sapMObjStatusNone {
+    background-color: rgba(2, 32, 71, 0.05) !important;
+    color: var(--toss-grey-700) !important;
+}
+
+/* Table */
+.sapMList {
+    background-color: var(--toss-bg-card) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--toss-shadow-2) !important;
+    overflow: hidden;
+}
+.sapMListTbl {
+    background-color: transparent !important;
+}
+.sapMListTblHeader, .sapMListTblHeader th {
+    background-color: var(--toss-grey-50) !important;
+    vertical-align: middle !important;
+}
+.sapMColumnHeader .sapMText {
+    font-size: 13px !important;
+    color: var(--toss-grey-500) !important;
+    font-weight: 600 !important;
+}
+.sapMListTblRow {
+    border-bottom: 1px solid var(--toss-border-default) !important;
+}
+
+/* Dialogs */
+.sapMDialog {
+    background-color: var(--toss-bg-card) !important;
+    border-radius: 16px !important;
+    box-shadow: var(--toss-shadow-4) !important;
+}
+
+/* Message Toast */
+.sapMMessageToast {
+    background-color: var(--toss-charcoal) !important;
+    color: var(--toss-white) !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    box-shadow: var(--toss-shadow-3) !important;
+    font-family: var(--toss-font-family) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    width: 30rem !important;
+    max-width: calc(100vw - 2rem) !important;
+}
+
+/* ----------------------------------------- */
+/* 5. Layout & Spacing (from original + Toss)*/
+/* ----------------------------------------- */
+
+.dpmPage {
+    gap: 1rem;
+}
+
+.dpmSection {
+    width: 100%;
+}
+
+.dpmFilterBar {
+    gap: 0.75rem;
+}
+
+.dpmFilterItem {
+    width: 12rem;
+}
+
+.dpmFilterItemWide {
+    width: 18rem;
+}
+
+.dpmSummaryLayout {
+    width: 100%;
+    gap: 1rem;
+    align-items: stretch;
+}
+
+.dpmSummaryChartArea {
+    flex: 1 1 42rem;
+    min-width: 30rem;
+}
+
+.dpmSummaryKpiArea {
+    flex: 0 0 28rem;
+    min-width: 22rem;
+}
+
+.dpmSummarySubTitle {
+    margin-bottom: 0.5rem;
+}
+
+.dpmKpiBoxCompact {
+    gap: 0.75rem;
+}
+
+.dpmKpiTileCompact {
+    flex: 1 1 calc(50% - 0.375rem);
+    min-width: 10rem;
+    aspect-ratio: 1 / 1;
+}
+
+/* Info Grid (Detail view) */
+.dpmInfoGrid {
+    gap: 0.75rem;
+}
+
+.dpmInfoItem {
+    width: 11rem;
+}
+
+.dpmInfoItemWide {
+    width: 18rem;
+}
+
+.dpmReceiptRateItem {
+    width: 18rem;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 600px) {
+    .dpmFilterItem,
+    .dpmFilterItemWide,
+    .dpmInfoItem,
+    .dpmInfoItemWide,
+    .dpmReceiptRateItem {
+        width: 100%;
+        flex-basis: 100%;
+    }
+
+    .dpmSummaryChartArea,
+    .dpmSummaryKpiArea {
+        width: 100%;
+        min-width: 0;
+        flex-basis: 100%;
+    }
+
+    .dpmKpiTileCompact {
+        width: auto;
+        flex-basis: calc(50% - 0.375rem);
+        min-width: 8rem;
+    }
+
+    .sapMMessageToast {
+        width: calc(100vw - 2rem) !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .dpmKpiTileCompact {
+        width: 100%;
+        flex-basis: 100%;
+    }
+}

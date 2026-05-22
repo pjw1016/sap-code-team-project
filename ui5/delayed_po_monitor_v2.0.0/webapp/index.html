@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>[MM] 납기 지연 및 미입고 현황 조회</title>
+    <style>
+        /* UI5 Shell/Component가 브라우저 높이를 전부 사용할 수 있도록 기본 높이를 100%로 맞춘다. */
+        html, body, body > div, #container, #container-uiarea {
+            height: 100%;
+        }
+    </style>
+    <!--
+        SAPUI5 bootstrap 설정이다.
+        - resource-roots: code.d3.delayedpomonitor 네임스페이스를 현재 webapp 폴더에 연결
+        - ComponentSupport: 아래 body의 data-sap-ui-component 정보를 읽어 Component.js를 자동 실행
+        - async=true: UI5 모듈을 비동기로 로딩해 초기 로딩 성능을 개선
+    -->
+    <script
+        id="sap-ui-bootstrap"
+        src="resources/sap-ui-core.js"
+        data-sap-ui-theme="sap_horizon"
+        data-sap-ui-resource-roots='{
+            "code.d3.delayedpomonitor": "./"
+        }'
+        data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"
+        data-sap-ui-compat-version="edge"
+        data-sap-ui-async="true"
+        data-sap-ui-frame-options="trusted"
+    ></script>
+</head>
+<body class="sapUiBody sapUiSizeCompact" id="content">
+    <!-- ComponentSupport가 이 div를 찾아 code.d3.delayedpomonitor.Component를 생성한다. -->
+    <div
+        data-sap-ui-component
+        data-name="code.d3.delayedpomonitor"
+        data-id="container"
+        data-settings='{"id" : "code.d3.delayedpomonitor"}'
+        data-handle-validation="true"
+    ></div>
+</body>
+</html>
