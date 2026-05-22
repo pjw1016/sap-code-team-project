@@ -667,6 +667,50 @@ sap.ui.define([
             return mConfig[sHelpType];
         },
 
+        _getValueHelpDialogSize: function (oConfig) {
+            /*
+             * Search Help Dialog의 크기를 컬럼 수에 따라 결정한다.
+             *
+             * 기존에는 모든 TableSelectDialog가 기본 크기로 열려서,
+             * 플랜트처럼 컬럼이 2개뿐인 Help도 화면 대부분을 차지했다.
+             *
+             * 이 앱의 Help는 모두 같은 TableSelectDialog를 쓰지만 정보량은 서로 다르다.
+             * - 플랜트: 코드 + 명칭 정도라 작게 보여도 충분하다.
+             * - 회사/공급업체: 보조 필드가 몇 개 있어 중간 크기가 적당하다.
+             * - 자재/PO: 컬럼이 많아 너무 작으면 가독성이 떨어진다.
+             *
+             * 따라서 개별 팝업마다 CSS를 따로 만들지 않고, 설정 객체의 columns 개수만 보고
+             * contentWidth/contentHeight를 정한다.
+             */
+            var iColumnCount = oConfig && Array.isArray(oConfig.columns) ? oConfig.columns.length : 0;
+
+            if (iColumnCount <= 2) {
+                return {
+                    contentWidth: "38rem",
+                    contentHeight: "18rem"
+                };
+            }
+
+            if (iColumnCount <= 4) {
+                return {
+                    contentWidth: "52rem",
+                    contentHeight: "24rem"
+                };
+            }
+
+            if (iColumnCount <= 7) {
+                return {
+                    contentWidth: "68rem",
+                    contentHeight: "28rem"
+                };
+            }
+
+            return {
+                contentWidth: "82rem",
+                contentHeight: "32rem"
+            };
+        },
+
         _openValueHelpDialog: function (oConfig) {
             /*
              * sap.m.TableSelectDialog 기반 공통 Search Help 팝업이다.
@@ -681,6 +725,7 @@ sap.ui.define([
              */
             var oHelpModel = this.getOwnerComponent().getModel(oConfig.model);
             var aColumns = oConfig.columns || [];
+            var oDialogSize = this._getValueHelpDialogSize(oConfig);
             var oTemplate;
 
             if (!oHelpModel) {
@@ -712,6 +757,13 @@ sap.ui.define([
                 growingThreshold: 20,
                 multiSelect: false,
                 rememberSelections: false,
+                /*
+                 * TableSelectDialog는 contentWidth/contentHeight 속성을 지원한다.
+                 * Help 컬럼 수에 따라 크기를 다르게 주면, 단순한 Help는 작고 가볍게,
+                 * 컬럼이 많은 Help는 넓게 보여줄 수 있다.
+                 */
+                contentWidth: oDialogSize.contentWidth,
+                contentHeight: oDialogSize.contentHeight,
                 draggable: true,
                 resizable: true,
                 search: function (oEvent) {
