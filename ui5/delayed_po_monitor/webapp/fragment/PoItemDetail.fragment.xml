@@ -153,10 +153,8 @@
                     <headerToolbar>
                         <OverflowToolbar>
                             <Title text="{i18n>historyTableTitle}" level="H3"/>
-                            <ToolbarSpacer/>
-                            <ObjectStatus
-                                text="{= ${grHistory>/items}.length + ' ' + ${i18n>countUnit} }"
-                                state="Information"/>
+                            <Title
+                                text="{= ${i18n>countUnit1} + ' ' + ${grHistory>/items}.length + ' ' + ${i18n>countUnit2} }"/>
                         </OverflowToolbar>
                     </headerToolbar>
                     <columns>

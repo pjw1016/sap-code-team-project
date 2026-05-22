@@ -195,6 +195,7 @@
                     KPI와 차트는 모두 "현재 검색조건 기준" 요약 정보이므로 한 영역에 묶어 세로 공간을 줄인다.
                 -->
                 <Panel class="dpmSection dpmSummaryPanel">
+                <!-- <Panel class="sapUiSmallMarginBottom"> -->
                     <headerToolbar>
                         <OverflowToolbar>
                             <Title text="{i18n>summarySectionTitle}" level="H2"/>
@@ -397,30 +398,29 @@
                         </headerToolbar>
                         <columns>
                             <!-- 기본 표시 컬럼. 숨김/표시 전환은 2차 개발에서 별도 기능으로 확장할 수 있다. -->
-                            <Column width=""><Text text="{i18n>colStatus}"/></Column>
-                            <Column width="" hAlign="End"><Text text="{i18n>colDelayDays}"/></Column>
-                            <Column width=""><Text text="{i18n>colEindt}"/></Column>
-                            <Column width=""><Text text="{i18n>colEbeln}"/></Column>
-                            <Column width=""><Text text="{i18n>colEbelp}"/></Column>
-                            <Column width=""><Text text="{i18n>colLifnr}"/></Column>
+                            <Column width="" importance="High"><Text text="{i18n>colStatus}"/></Column>
+                            <Column width="" hAlign="End" importance="High"><Text text="{i18n>colDelayDays}"/></Column>
+                            <Column width="" demandPopin="true" importance="High"><Text text="{i18n>colEindt}"/></Column>
+                            <Column width="" minScreenWidth="1000px" demandPopin="true" importance="Medium"><Text text="{i18n>colEbeln}"/></Column>
+                            <Column width="" minScreenWidth="1000px" importance="Medium"><Text text="{i18n>colEbelp}"/></Column>
+                            <Column width="" importance="High"><Text text="{i18n>colLifnr}"/></Column>
                             <Column
                                 width=""
-                                minScreenWidth="1000px"
-                                demandPopin="false"
-                                importance="Low">
+                                minScreenWidth="1200px"
+                                demandPopin="true"
+                                importance="High">
                                 <Text text="{i18n>colName1}"/>
                             </Column>
-                            <Column width="8rem"><Text text="{i18n>colMatnr}"/></Column>
+                            <Column width="" importance="High"><Text text="{i18n>colMatnr}"/></Column>
                             <Column
                                 width=""
-                                minScreenWidth="1000px"
-                                demandPopin="false"
-                                importance="Low">
+                                minScreenWidth="1200px"
+                                demandPopin="true">
                                 <Text text="{i18n>colMaktx}"/>
                             </Column>
-                            <Column width="" hAlign="End"><Text text="{i18n>colPoQty}"/></Column>
-                            <Column width="" hAlign="End"><Text text="{i18n>colGrQty}"/></Column>
-                            <Column width="" hAlign="End"><Text text="{i18n>colOpenQty}"/></Column>
+                            <Column width="" hAlign="End" importance="High"><Text text="{i18n>colPoQty}"/></Column>
+                            <Column width="" hAlign="End" importance="High"><Text text="{i18n>colGrQty}"/></Column>
+                            <Column width="" hAlign="End" importance="High"><Text text="{i18n>colOpenQty}"/></Column>
                         </columns>
                         <items>
                             <ColumnListItem
@@ -464,8 +464,14 @@
             <OverflowToolbar visible="{= ${messages>/count} > 0 }">
                 <!--
                     조회조건 유효성 검증 메시지 버튼.
-                    오류가 있을 때만 화면 좌측 하단 footer에 표시하고,
+                    오류가 있을 때만 Page footer에 표시하고,
                     버튼을 누르면 MessagePopover로 누적 오류 목록을 보여준다.
+
+                    주의:
+                    Main.controller.js의 _openValidationMessagePopoverDelayed 함수가
+                    id="messagePopoverBtn" 버튼을 찾아 openBy 기준 컨트롤로 사용한다.
+                    따라서 이 버튼이 View에 없으면 messages 모델에 오류가 들어가도
+                    MessagePopover를 화면에 열 수 없다.
                 -->
                 <Button
                     id="messagePopoverBtn"
