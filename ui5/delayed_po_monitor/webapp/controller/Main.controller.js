@@ -79,6 +79,8 @@ sap.ui.define([
              * - 메인 테이블: 사용자가 선택한 상태만 조회
              * - KPI/차트: 현재 검색조건의 전체 상태 분포와 요약을 보여주기 위해 상태 필터 제외
              */
+            var oScrollPosition = this._capturePageScrollPosition();
+
             /*
              * 조회 전 유효성 검증을 먼저 수행한다.
              * 존재하지 않는 코드성 조건으로 Gateway 조회를 보내면 빈 결과인지 오류인지 사용자가 구분하기 어렵다.
@@ -115,6 +117,16 @@ sap.ui.define([
                     this._loadKpiData(aSummaryFilters),
                     this._loadStatusChart(aSummaryFilters)
                 ]);
+            }.bind(this)).finally(function () {
+                /*
+                 * 일반 조회/초기화는 "현재 화면에서 조건만 다시 적용"하는 동작이다.
+                 * 테이블 데이터가 갱신될 때 sap.m.Table 내부 포커스나 growing 렌더링 때문에
+                 * 브라우저가 결과 테이블 쪽으로 따라 내려가는 경우가 있어, 조회 전 위치로 되돌린다.
+                 *
+                 * KPI 카드/차트 클릭은 이 Promise가 끝난 뒤 _scrollToResultTable()을 별도로 호출하므로
+                 * 빠른 필터의 "결과 테이블로 이동" 동작은 그대로 유지된다.
+                 */
+                this._restorePageScrollPosition(oScrollPosition);
             }.bind(this));
         },
 
@@ -128,7 +140,15 @@ sap.ui.define([
                 busy: false
             });
 
-            this._clearStatusChartSelection();
+            /*
+             * 초기화 버튼은 차트 필터 해제 버튼과 다르게 화면 전체를 기본 상태로 되돌리는 기능이다.
+             * 그런데 차트 조각이 선택된 상태에서 vizSelection([])을 호출하면 VizFrame이 deselectData 이벤트를 늦게 발생시킬 수 있다.
+             * 그 이벤트가 onStatusChartSelect로 들어가면 "차트 상태 선택이 해제..." Toast와 테이블 자동 스크롤이 실행된다.
+             *
+             * 따라서 초기화 흐름이 완전히 끝날 때까지 차트 선택 이벤트를 억제한다.
+             */
+            this._bSuppressChartSelectionEvent = true;
+            this._clearStatusChartSelection(true);
             this._resetTableSettings();
             this._clearSearchValidationStates();
 
@@ -137,8 +157,15 @@ sap.ui.define([
                  * 차트는 재조회 후 다시 렌더링되므로, 조회 완료 뒤 한 번 더 선택 상태를 지운다.
                  * 이렇게 해야 사용자가 차트 조각을 선택한 상태에서 초기화해도 파란 선택 테두리/회색 강조가 남지 않는다.
                  */
-                this._clearStatusChartSelection();
+                this._clearStatusChartSelection(true);
                 this._resetTableSettings();
+            }.bind(this)).finally(function () {
+                /*
+                 * 일부 VizFrame 버전은 선택 해제 이벤트를 늦게 발생시킨다.
+                 * 초기화 직후 들어오는 지연 deselectData까지 무시해야
+                 * 차트 필터 해제 메시지와 테이블 자동 스크롤이 다시 발생하지 않는다.
+                 */
+                this._releaseChartSelectionSuppression(200);
             }.bind(this));
         },
 
@@ -1347,6 +1374,60 @@ sap.ui.define([
                         behavior: "smooth",
                         block: "start"
                     });
+                }
+            }, 0);
+        },
+
+        _capturePageScrollPosition: function () {
+            /*
+             * 현재 Page의 세로 스크롤 위치를 저장한다.
+             *
+             * SAPUI5 앱 안에서는 브라우저 window가 아니라 sap.m.Page의 내부 스크롤 컨테이너가
+             * 실제 스크롤을 담당하는 경우가 많다. 그래서 Page ScrollDelegate를 우선 사용하고,
+             * 혹시 해당 API를 사용할 수 없는 실행 환경에서는 브라우저 window 스크롤 값을 보조로 저장한다.
+             */
+            var oPage = this.byId("page");
+            var oScrollDelegate = oPage && typeof oPage.getScrollDelegate === "function"
+                ? oPage.getScrollDelegate()
+                : null;
+
+            if (oScrollDelegate && typeof oScrollDelegate.getScrollTop === "function") {
+                return {
+                    type: "page",
+                    top: oScrollDelegate.getScrollTop()
+                };
+            }
+
+            return {
+                type: "window",
+                top: window.pageYOffset || document.documentElement.scrollTop || 0
+            };
+        },
+
+        _restorePageScrollPosition: function (oScrollPosition) {
+            /*
+             * 조회/초기화 직후 저장해 둔 스크롤 위치로 복원한다.
+             *
+             * setTimeout을 사용하는 이유:
+             * - OData 응답을 JSONModel에 넣으면 Table 행이 다시 렌더링된다.
+             * - 렌더링과 포커스 보정이 끝난 다음 tick에 위치를 되돌려야
+             *   자동으로 테이블 쪽으로 내려가는 현상을 안정적으로 막을 수 있다.
+             */
+            var oPage = this.byId("page");
+            var iTop = oScrollPosition && typeof oScrollPosition.top === "number" ? oScrollPosition.top : 0;
+
+            setTimeout(function () {
+                var oScrollDelegate = oPage && typeof oPage.getScrollDelegate === "function"
+                    ? oPage.getScrollDelegate()
+                    : null;
+
+                if (oScrollDelegate && typeof oScrollDelegate.scrollTo === "function") {
+                    oScrollDelegate.scrollTo(0, iTop, 0);
+                    return;
+                }
+
+                if (typeof window.scrollTo === "function") {
+                    window.scrollTo(0, iTop);
                 }
             }, 0);
         },
