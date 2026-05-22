@@ -1016,7 +1016,9 @@ sap.ui.define([
              *
              * 1. 삼만리 모빌리티의 설립일은 2020-03-15이므로, 그 이전 날짜는 업무 데이터가 존재할 수 없다.
              *    기준일/납기일 From/납기일 To 모두 같은 하한 날짜를 적용한다.
-             * 2. 납기일 From이 To보다 늦으면 조회 범위가 뒤집힌 조건이므로 차단한다.
+             * 2. DatePicker가 파싱하지 못한 잘못된 날짜 문자열은 모델에 반영되지 않을 수 있으므로,
+             *    조회 시점에 화면 입력값 자체도 yyyy-MM-dd 형식과 실제 달력 날짜 기준으로 검증한다.
+             * 3. 납기일 From이 To보다 늦으면 조회 범위가 뒤집힌 조건이므로 차단한다.
              */
             var oFilterData = this.getView().getModel("view").getProperty("/filters");
             var oFromDate = oFilterData && oFilterData.eindtFrom;
@@ -1024,6 +1026,7 @@ sap.ui.define([
             var bHasFrom = oFromDate instanceof Date && !isNaN(oFromDate.getTime());
             var bHasTo = oToDate instanceof Date && !isNaN(oToDate.getTime());
             var oCompanyStartDate = this._getCompanyStartDate();
+            var mInvalidDateInput = {};
             var aErrors = [];
 
             [
@@ -1040,6 +1043,15 @@ sap.ui.define([
                     date: oToDate
                 }
             ].forEach(function (oDateConfig) {
+                if (!this._isDateInputValueValid(oDateConfig.inputId)) {
+                    mInvalidDateInput[oDateConfig.inputId] = true;
+                    aErrors.push({
+                        inputId: oDateConfig.inputId,
+                        message: this._text("validationDateFormatInvalid")
+                    });
+                    return;
+                }
+
                 if (this._isDateBefore(oDateConfig.date, oCompanyStartDate)) {
                     aErrors.push({
                         inputId: oDateConfig.inputId,
@@ -1048,7 +1060,11 @@ sap.ui.define([
                 }
             }.bind(this));
 
-            if (bHasFrom && bHasTo && oFromDate.getTime() > oToDate.getTime()) {
+            if (!mInvalidDateInput.eindtFromPicker
+                && !mInvalidDateInput.eindtToPicker
+                && bHasFrom
+                && bHasTo
+                && oFromDate.getTime() > oToDate.getTime()) {
                 aErrors.push(
                     {
                         inputId: "eindtFromPicker",
@@ -1062,6 +1078,45 @@ sap.ui.define([
             }
 
             return aErrors;
+        },
+
+        _isDateInputValueValid: function (sInputId) {
+            /*
+             * DatePicker의 dateValue 바인딩은 잘못된 문자열을 Date 객체로 변환하지 못할 수 있다.
+             * 따라서 사용자가 실제로 입력한 문자열(getValue)을 기준으로 한 번 더 검증한다.
+             * 빈 값은 "조건 없음"으로 볼 수 있으므로 여기서는 오류로 처리하지 않는다.
+             */
+            var oDatePicker = this.byId(sInputId);
+            var sValue = oDatePicker && typeof oDatePicker.getValue === "function"
+                ? String(oDatePicker.getValue() || "").trim()
+                : "";
+
+            return !sValue || this._isStrictDateString(sValue);
+        },
+
+        _isStrictDateString: function (sValue) {
+            /*
+             * yyyy-MM-dd 모양만 확인하면 2026-05-32 같은 값도 통과할 수 있다.
+             * 그래서 Date 객체로 만든 뒤 연/월/일이 입력값과 정확히 같은지까지 비교한다.
+             */
+            var aMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(sValue || "").trim());
+            var iYear;
+            var iMonth;
+            var iDay;
+            var oDate;
+
+            if (!aMatch) {
+                return false;
+            }
+
+            iYear = Number(aMatch[1]);
+            iMonth = Number(aMatch[2]);
+            iDay = Number(aMatch[3]);
+            oDate = new Date(iYear, iMonth - 1, iDay);
+
+            return oDate.getFullYear() === iYear
+                && oDate.getMonth() === iMonth - 1
+                && oDate.getDate() === iDay;
         },
 
         _getCompanyStartDate: function () {

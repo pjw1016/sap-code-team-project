@@ -85,4 +85,54 @@ sap.ui.define([
 		assert.deepEqual(oController._validateDateRange(), [], "2020-03-15는 회사 설립일 당일이므로 오류가 아니다.");
 	});
 
+	QUnit.test("존재하지 않는 yyyy-MM-dd 날짜 문자열은 날짜 형식 오류로 처리한다", function (assert) {
+		var oController = new Controller();
+
+		oController.getView = function () {
+			return {
+				getModel: function () {
+					return {
+						getProperty: function (sPath) {
+							if (sPath === "/filters") {
+								return {
+									baseDate: new Date(2026, 4, 1),
+									eindtFrom: new Date(2026, 4, 1),
+									eindtTo: new Date(2026, 4, 31)
+								};
+							}
+							return null;
+						}
+					};
+				}
+			};
+		};
+		oController.byId = function (sInputId) {
+			var mValues = {
+				baseDatePicker: "2026-05-32",
+				eindtFromPicker: "2026-06-31",
+				eindtToPicker: "2026-05-31"
+			};
+
+			return {
+				getValue: function () {
+					return mValues[sInputId];
+				}
+			};
+		};
+		oController._text = function (sKey) {
+			return sKey;
+		};
+
+		assert.deepEqual(oController._validateDateRange(), [
+			{
+				inputId: "baseDatePicker",
+				message: "validationDateFormatInvalid"
+			},
+			{
+				inputId: "eindtFromPicker",
+				message: "validationDateFormatInvalid"
+			}
+		], "2026-05-32와 2026-06-31은 실제 존재하지 않는 날짜이므로 오류로 누적된다.");
+	});
+
 });
