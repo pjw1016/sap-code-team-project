@@ -1011,15 +1011,45 @@ sap.ui.define([
         },
 
         _validateDateRange: function () {
-            // 납기일 From이 To보다 늦으면 업무적으로 말이 안 되는 조회조건이므로 바로 차단한다.
+            /*
+             * 날짜형 조회조건의 업무 유효성을 검증한다.
+             *
+             * 1. 삼만리 모빌리티의 설립일은 2020-03-15이므로, 그 이전 날짜는 업무 데이터가 존재할 수 없다.
+             *    기준일/납기일 From/납기일 To 모두 같은 하한 날짜를 적용한다.
+             * 2. 납기일 From이 To보다 늦으면 조회 범위가 뒤집힌 조건이므로 차단한다.
+             */
             var oFilterData = this.getView().getModel("view").getProperty("/filters");
             var oFromDate = oFilterData && oFilterData.eindtFrom;
             var oToDate = oFilterData && oFilterData.eindtTo;
             var bHasFrom = oFromDate instanceof Date && !isNaN(oFromDate.getTime());
             var bHasTo = oToDate instanceof Date && !isNaN(oToDate.getTime());
+            var oCompanyStartDate = this._getCompanyStartDate();
+            var aErrors = [];
+
+            [
+                {
+                    inputId: "baseDatePicker",
+                    date: oFilterData && oFilterData.baseDate
+                },
+                {
+                    inputId: "eindtFromPicker",
+                    date: oFromDate
+                },
+                {
+                    inputId: "eindtToPicker",
+                    date: oToDate
+                }
+            ].forEach(function (oDateConfig) {
+                if (this._isDateBefore(oDateConfig.date, oCompanyStartDate)) {
+                    aErrors.push({
+                        inputId: oDateConfig.inputId,
+                        message: this._text("validationDateBeforeCompanyStart")
+                    });
+                }
+            }.bind(this));
 
             if (bHasFrom && bHasTo && oFromDate.getTime() > oToDate.getTime()) {
-                return [
+                aErrors.push(
                     {
                         inputId: "eindtFromPicker",
                         message: this._text("validationEindtRangeInvalid")
@@ -1028,10 +1058,28 @@ sap.ui.define([
                         inputId: "eindtToPicker",
                         message: this._text("validationEindtRangeInvalid")
                     }
-                ];
+                );
             }
 
-            return [];
+            return aErrors;
+        },
+
+        _getCompanyStartDate: function () {
+            // JavaScript Date의 월은 0부터 시작하므로 2가 3월이다. 비교 기준도 DatePicker 값과 같이 날짜 단위로 맞춘다.
+            return this._normalizeDate(new Date(2020, 2, 15));
+        },
+
+        _isDateBefore: function (oDate, oMinDate) {
+            // DatePicker가 비어 있거나 잘못 파싱한 값은 여기서 판단하지 않고, 정상 Date 객체만 업무 하한일과 비교한다.
+            if (!(oDate instanceof Date) || isNaN(oDate.getTime())) {
+                return false;
+            }
+
+            if (!(oMinDate instanceof Date) || isNaN(oMinDate.getTime())) {
+                return false;
+            }
+
+            return this._normalizeDate(oDate).getTime() < this._normalizeDate(oMinDate).getTime();
         },
 
         _validateSingleSearchCode: function (oValidationConfig) {
@@ -1288,6 +1336,7 @@ sap.ui.define([
         _getValidationTargetLabel: function (sInputId) {
             // MessagePopover subtitle에 표시할 필드명을 Input ID 기준으로 찾는다.
             var mLabelKeyByInputId = {
+                baseDatePicker: "baseDate",
                 eindtFromPicker: "eindtFrom",
                 eindtToPicker: "eindtTo",
                 werksInput: "werks",
