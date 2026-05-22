@@ -224,11 +224,11 @@
                                 <viz:VizFrame
                                     id="statusDistributionChart"
                                     width="100%"
-                                    height="20rem"
+                                    height="23rem"
                                     uiConfig="{applicationSet:'fiori'}"
                                     vizProperties="{
                                         title: { visible: false },
-                                        tooltip: { visible: true },
+                                        tooltip: { visible: false },
                                         legend: { visible: true },
                                         plotArea: {
                                             colorPalette: ['#6a6d70', '#bb0000', '#0a6ed1', '#e9730c', '#107e3e'],
@@ -236,7 +236,7 @@
                                             dataLabel: {
                                                 visible: true,
                                                 type: 'value',
-                                                hideWhenOverlap: true
+                                                hideWhenOverlap: false
                                             }
                                         }
                                     }"

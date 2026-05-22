@@ -5,7 +5,8 @@ sap.ui.define([
     "sap/ui/model/FilterOperator",
     "sap/ui/model/Sorter",
     "sap/ui/core/Fragment",
-    "sap/viz/ui5/controls/Popover",
+    "sap/viz/ui5/format/ChartFormatter",
+    "sap/viz/ui5/api/env/Format",
     "sap/m/Text",
     "sap/m/MessageToast",
     "sap/m/TableSelectDialog",
@@ -15,7 +16,7 @@ sap.ui.define([
     "sap/m/MessageItem",
     "code/d3/delayedpomonitor/model/chartHelper",
     "code/d3/delayedpomonitor/model/formatter"
-], function (Controller, JSONModel, Filter, FilterOperator, Sorter, Fragment, ChartPopover, Text, MessageToast, TableSelectDialog, ColumnListItem, Column, MessagePopover, MessageItem, chartHelper, formatter) {
+], function (Controller, JSONModel, Filter, FilterOperator, Sorter, Fragment, ChartFormatter, Format, Text, MessageToast, TableSelectDialog, ColumnListItem, Column, MessagePopover, MessageItem, chartHelper, formatter) {
     "use strict";
 
     /*
@@ -35,7 +36,7 @@ sap.ui.define([
             // 상세 팝업은 처음부터 만들지 않고, 사용자가 행을 누를 때 1번만 로드해서 재사용한다.
             this._pDetailDialog = null;
             this._initModels();
-            this._initStatusChartPopover();
+            this._initStatusChartLabelFormatter();
 
             // OData metadata가 준비된 뒤 조회해야 EntitySet/Property 정보가 안정적으로 잡힌다.
             if (oODataModel && oODataModel.metadataLoaded) {
@@ -50,12 +51,6 @@ sap.ui.define([
         },
 
         onExit: function () {
-            // Controller가 종료될 때 동적으로 만든 VizFrame Popover도 같이 정리한다.
-            if (this._oStatusChartPopover) {
-                this._oStatusChartPopover.destroy();
-                this._oStatusChartPopover = null;
-            }
-
             // Search Help Dialog는 사용자가 F4를 누를 때 동적으로 만들기 때문에 종료 시 명시적으로 정리한다.
             if (this._oValueHelpDialog) {
                 this._oValueHelpDialog.destroy();
@@ -1410,6 +1405,8 @@ sap.ui.define([
             var aDistribution;
             var iTotalCount = (aItems || []).length;
 
+            this._iStatusChartTotalCount = iTotalCount;
+
             (aItems || []).forEach(function (oItem) {
                 // StatusCode별 건수를 단순 누적한다.
                 var sCode = oItem.StatusCode || "";
@@ -1421,7 +1418,8 @@ sap.ui.define([
                 var fPercent = iTotalCount > 0 ? (iCount / iTotalCount) * 100 : 0;
                 var sPercentText = fPercent.toFixed(2) + "%";
                 var sStatusText = this._text(oStatus.textKey);
-                var sSummaryText = sStatusText + " " + iCount + this._text("countUnit") + "(" + sPercentText + ")";
+                var sLabelText = this._formatStatusChartCountPercent(iCount, iTotalCount);
+                var sSummaryText = sStatusText + " " + sLabelText;
 
                 return {
                     StatusCode: oStatus.code,
@@ -1429,6 +1427,7 @@ sap.ui.define([
                     Count: iCount,
                     Percent: fPercent,
                     PercentText: sPercentText,
+                    LabelText: sLabelText,
                     SummaryText: sSummaryText,
                     TooltipText: sSummaryText,
                     StatusState: oStatus.state
@@ -1587,60 +1586,74 @@ sap.ui.define([
             return mConfig[sAction];
         },
 
-        _initStatusChartPopover: function () {
+        _initStatusChartLabelFormatter: function () {
             /*
-             * VizFrame의 기본 tooltip 대신 차트 전용 Popover를 연결한다.
-             * 사용자가 도넛 조각에 마우스를 올리면 "미입고 예정 12건(27.91%)"처럼
-             * 상태명, 건수, 비율을 한 줄로 보여주기 위한 처리다.
+             * 상태 도넛 차트의 데이터 라벨을 "5건(20.12%)" 형태로 표시하기 위한 초기화다.
+             *
+             * 기존에는 "건" 단위를 i18n의 countUnit에서 가져와 VizFrame Popover/Tooltip에 표시했다.
+             * 그런데 화면 건수 표기를 "(12)" 형태로 바꾸면서 countUnit을 제거하면,
+             * 차트 Tooltip이 countUnit 문자열 자체를 표시하는 문제가 생긴다.
+             *
+             * 그래서 차트 Tooltip/Popover는 사용하지 않고,
+             * 도넛 조각 옆 라벨에 건수와 비율을 직접 표시한다.
              */
             var oChart = this.byId("statusDistributionChart");
-            var sCountFormat = this._text("chartCountFormat");
+            var oChartFormatter;
 
-            if (!oChart || this._oStatusChartPopover) {
+            if (!oChart || this._bStatusChartLabelFormatterInitialized) {
                 return;
             }
 
-            this._applyStatusChartProperties(oChart, sCountFormat);
+            oChartFormatter = ChartFormatter.getInstance();
+            oChartFormatter.registerCustomFormatter("dpmStatusChartCountPercent", function (vValue) {
+                return this._formatStatusChartCountPercent(vValue, this._iStatusChartTotalCount || 0);
+            }.bind(this));
+            Format.numericFormatter(oChartFormatter);
 
-            this._oStatusChartPopover = new ChartPopover({
-                // 기본 Popover의 숫자 행에도 "건" 단위가 붙도록 포맷을 지정한다.
-                formatString: sCountFormat,
-                customDataControl: function (oPopoverData) {
-                    var sStatusCode = this._getChartStatusCodeFromPopoverData(oPopoverData);
-                    var sTooltipText = this._getChartTooltipTextByStatusCode(sStatusCode);
-
-                    return new Text({
-                        text: sTooltipText || this._text("notAvailable"),
-                        wrapping: false
-                    });
-                }.bind(this)
-            });
-
-            this.getView().addDependent(this._oStatusChartPopover);
-            this._oStatusChartPopover.connect(oChart.getVizUid());
+            this._applyStatusChartProperties(oChart);
+            this._bStatusChartLabelFormatterInitialized = true;
         },
 
-        _applyStatusChartProperties: function (oChart, sCountFormat) {
+        _applyStatusChartProperties: function (oChart) {
             /*
-             * 차트 숫자 라벨의 "건" 표시를 i18n 기준으로 적용한다.
-             *
-             * 이유:
-             * - VizFrame의 vizProperties는 XML에서 object literal 형태로 작성되어 있다.
-             * - 이 형태 안에 i18n 바인딩을 직접 섞으면 UI5 버전/파서에 따라 해석이 불안정할 수 있다.
-             * - SAPUI5 SDK에서 VizFrame은 setVizProperties로 속성을 동적으로 변경할 수 있으므로,
-             *   컨트롤러에서 ResourceBundle 값을 읽어 formatString만 명확하게 덮어쓴다.
+             * 차트 표시 속성은 Controller에서 한 번 더 명시한다.
+             * XML에도 기본값이 있지만, custom formatter는 JS에서 등록해야 하므로
+             * dataLabel.formatString도 같은 위치에서 맞춰 둔다.
              */
             if (!oChart || typeof oChart.setVizProperties !== "function") {
                 return;
             }
 
             oChart.setVizProperties({
+                tooltip: {
+                    visible: false
+                },
                 plotArea: {
                     dataLabel: {
-                        formatString: sCountFormat
+                        visible: true,
+                        type: "value",
+                        /*
+                         * 기본값처럼 라벨 겹침 숨김을 켜 두면 작은 조각의 라벨이 자동으로 빠질 수 있다.
+                         * 이 차트는 상태가 최대 5개로 고정되어 있고, 업무상 5개 상태의 건수/비율을 모두 보는 것이 중요하므로
+                         * 약간 가까워 보이더라도 모든 라벨을 표시하도록 한다.
+                         */
+                        hideWhenOverlap: false,
+                        formatString: "dpmStatusChartCountPercent"
                     }
                 }
             });
+        },
+
+        _formatStatusChartCountPercent: function (vCount, iTotalCount) {
+            /*
+             * 차트 라벨 전용 표시 포맷이다.
+             * 예: Count=5, Total=24 -> "5건(20.83%)"
+             */
+            var iCount = Number(vCount) || 0;
+            var iTotal = Number(iTotalCount) || 0;
+            var fPercent = iTotal > 0 ? (iCount / iTotal) * 100 : 0;
+
+            return iCount + "건(" + fPercent.toFixed(2) + "%)";
         },
 
         _clearStatusChartSelection: function (bKeepSuppressed) {
