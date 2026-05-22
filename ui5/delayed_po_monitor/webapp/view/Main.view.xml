@@ -70,6 +70,7 @@
                                     <MultiComboBox
                                         id="statusMultiCombo"
                                         selectedKeys="{view>/filters/statusCodes}"
+                                        placeholder="{i18n>allPlaceholder}"
                                         width="100%">
                                         <core:Item key="O" text="{i18n>statusO}"/>
                                         <core:Item key="D" text="{i18n>statusD}"/>
@@ -98,6 +99,7 @@
                                         id="bukrsInput"
                                         value="{view>/filters/bukrs}"
                                         maxLength="4"
+                                        placeholder="{i18n>allPlaceholder}"
                                         showValueHelp="true"
                                         valueHelpRequest=".onValueHelpRequest">
                                         <customData>
@@ -113,6 +115,7 @@
                                         id="ebelnInput"
                                         value="{view>/filters/ebeln}"
                                         maxLength="10"
+                                        placeholder="{i18n>allPlaceholder}"
                                         showValueHelp="true"
                                         valueHelpRequest=".onValueHelpRequest">
                                         <customData>
@@ -128,6 +131,7 @@
                                         id="lifnrInput"
                                         value="{view>/filters/lifnr}"
                                         maxLength="6"
+                                        placeholder="{i18n>allPlaceholder}"
                                         showValueHelp="true"
                                         valueHelpRequest=".onValueHelpRequest">
                                         <customData>
@@ -139,7 +143,10 @@
 
                                 <VBox class="dpmFilterItemWide">
                                     <Label text="{i18n>name1}" labelFor="name1Input"/>
-                                    <Input id="name1Input" value="{view>/filters/name1}"/>
+                                    <Input
+                                        id="name1Input"
+                                        value="{view>/filters/name1}"
+                                        placeholder="{i18n>allPlaceholder}"/>
                                 </VBox>
 
                                 <VBox class="dpmFilterItem">
@@ -148,6 +155,7 @@
                                         id="matnrInput"
                                         value="{view>/filters/matnr}"
                                         maxLength="10"
+                                        placeholder="{i18n>allPlaceholder}"
                                         showValueHelp="true"
                                         valueHelpRequest=".onValueHelpRequest">
                                         <customData>
@@ -162,7 +170,10 @@
 
                                 <VBox class="dpmFilterItemWide">
                                     <Label text="{i18n>maktx}" labelFor="maktxInput"/>
-                                    <Input id="maktxInput" value="{view>/filters/maktx}"/>
+                                    <Input
+                                        id="maktxInput"
+                                        value="{view>/filters/maktx}"
+                                        placeholder="{i18n>allPlaceholder}"/>
                                 </VBox>
                             </FlexBox>
 
