@@ -7,7 +7,7 @@ sap.ui.define([
 
 	QUnit.module("Main Controller");
 
-	function createControllerWithFakeView() {
+	function createControllerWithFakeView(oOptions) {
 		var oAppController = new Controller();
 		var mModels = {};
 		var oFakeView = {
@@ -19,8 +19,18 @@ sap.ui.define([
 			}
 		};
 
+		oOptions = oOptions || {};
+
 		oAppController.getView = function () {
 			return oFakeView;
+		};
+
+		oAppController.getOwnerComponent = function () {
+			return {
+				getModel: function () {
+					return oOptions.odataModel || null;
+				}
+			};
 		};
 
 		return {
@@ -75,6 +85,110 @@ sap.ui.define([
 
 		assert.strictEqual(oFixture.models.view.getProperty("/FclLayout"), "TwoColumnsMidExpanded", "Selecting an RFQ opens the Mid column.");
 		assert.strictEqual(oFixture.models.work.getProperty("/SelectedRfq/RfqNo"), "5000000123", "Selected RFQ is stored for the Mid column header.");
+	});
+
+	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+		oFixture.models.view.setProperty("/FclLayout", "TwoColumnsMidExpanded");
+
+		oFixture.controller.onEnterMidFullScreen();
+		assert.strictEqual(oFixture.models.view.getProperty("/FclLayout"), "MidColumnFullScreen", "Full screen action expands the Mid column.");
+
+		oFixture.controller.onExitMidFullScreen();
+		assert.strictEqual(oFixture.models.view.getProperty("/FclLayout"), "TwoColumnsMidExpanded", "Exit full screen returns to the two-column comparison layout.");
+	});
+
+	QUnit.test("Mid column close action should clear the selected RFQ context", function (assert) {
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedRfq", {
+			RfqNo: "5000000123"
+		});
+		oFixture.models.work.setProperty("/RfqItems", [{ RfqItem: "00010" }]);
+		oFixture.models.view.setProperty("/FclLayout", "TwoColumnsMidExpanded");
+
+		oFixture.controller.onCloseMidColumn();
+
+		assert.strictEqual(oFixture.models.view.getProperty("/FclLayout"), "OneColumn", "Close action returns to the Begin column only.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedRfq"), {}, "Selected RFQ header is cleared.");
+		assert.deepEqual(oFixture.models.work.getProperty("/RfqItems"), [], "RFQ item rows are cleared with the closed Mid column.");
+	});
+
+	QUnit.test("_buildHeaderFilters should convert filter model to OData filters", function (assert) {
+		var oFixture = createControllerWithFakeView();
+		var aFilters;
+		var oStatusFilter;
+
+		oFixture.controller.onInit();
+		oFixture.models.filter.setData({
+			RfqNo: "5000000123",
+			DocDateFrom: new Date(2026, 4, 1),
+			DocDateTo: new Date(2026, 4, 31),
+			AwardStatus: ["N", "P"],
+			Lifnr: "SUP001",
+			Name1: "ABC",
+			Matnr: "100001",
+			Maktx: "Bolt",
+			Werks: "P001",
+			EindtFrom: new Date(2026, 5, 1),
+			EindtTo: new Date(2026, 5, 30),
+			MqNo: "MQ70000001",
+			Bukrs: "1000",
+			Ekorg: "1010",
+			Ekgrp: "001"
+		});
+
+		aFilters = oFixture.controller._buildHeaderFilters();
+		oStatusFilter = aFilters[aFilters.length - 1];
+
+		assert.strictEqual(aFilters.length, 15, "All filled search conditions become OData filters.");
+		assert.strictEqual(aFilters[0].sPath, "RfqNo", "RFQ number uses RfqNo property.");
+		assert.strictEqual(aFilters[0].sOperator, "EQ", "RFQ number uses EQ operator.");
+		assert.strictEqual(aFilters[1].sPath, "DocDate", "Document date from uses DocDate property.");
+		assert.strictEqual(aFilters[1].sOperator, "GE", "Document date from uses GE operator.");
+		assert.strictEqual(aFilters[2].sOperator, "LE", "Document date to uses LE operator.");
+		assert.strictEqual(oStatusFilter.bAnd, false, "Multiple award statuses are grouped with OR.");
+		assert.strictEqual(oStatusFilter.aFilters.length, 2, "Two selected award statuses create two inner filters.");
+	});
+
+	QUnit.test("onSearch should load RFQHeaderSet and update Begin column models", function (assert) {
+		var done = assert.async();
+		var oHeader = {
+			RfqNo: "5000000123",
+			DocDate: new Date(2026, 4, 20),
+			RfqItemCount: 4,
+			MqCount: 8,
+			VendorCount: 3,
+			AwardStatus: "N",
+			AwardStatusText: "미채택",
+			AwardStatusState: "None"
+		};
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				read: function (sPath, mParameters) {
+					assert.strictEqual(sPath, "/RFQHeaderSet", "RFQHeaderSet is read for the Begin column.");
+					assert.ok(Array.isArray(mParameters.filters), "OData filters are passed as an array.");
+					mParameters.success({
+						results: [oHeader]
+					});
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.filter.setProperty("/RfqNo", "5000000123");
+
+		oFixture.controller.onSearch().then(function () {
+			assert.strictEqual(oFixture.models.work.getProperty("/RfqHeaderCount"), 1, "Header count is updated.");
+			assert.deepEqual(oFixture.models.work.getProperty("/RfqHeaders"), [oHeader], "Header rows are stored in the work model.");
+			assert.strictEqual(oFixture.models.work.getProperty("/Kpi/NotAwarded"), 1, "KPI for not awarded headers is calculated.");
+			assert.strictEqual(oFixture.models.view.getProperty("/FclLayout"), "TwoColumnsMidExpanded", "Single result opens Mid column automatically.");
+			assert.strictEqual(oFixture.models.work.getProperty("/SelectedRfq/RfqNo"), "5000000123", "Single result is stored as selected RFQ.");
+			done();
+		});
 	});
 
 });

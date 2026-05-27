@@ -1,8 +1,11 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/model/json/JSONModel",
+    "sap/ui/model/Filter",
+    "sap/ui/model/FilterOperator",
+    "sap/m/MessageToast",
     "code/d3/quotecomparison/model/formatter"
-], (Controller, JSONModel, formatter) => {
+], (Controller, JSONModel, Filter, FilterOperator, MessageToast, formatter) => {
     "use strict";
 
     return Controller.extend("code.d3.quotecomparison.controller.Main", {
@@ -19,8 +22,8 @@ sap.ui.define([
          * filter: DynamicPage Header의 조회조건 값
          * work  : RFQ/MQ 조회 결과, 선택된 RFQ/MQ, KPI처럼 업무 화면에 표시되는 값
          *
-         * 실제 OData 연동은 다음 단계에서 붙이지만, 레이아웃과 바인딩은 지금부터
-         * 같은 모델 경로를 사용하게 해 두어 이후 Controller 로직을 크게 바꾸지 않게 한다.
+         * 실제 OData 응답은 `work` 모델에 넣고, 화면 제어 상태는 `view` 모델에 둔다.
+         * 이렇게 나누면 조회 데이터가 바뀌어도 레이아웃 상태와 업무 데이터가 서로 섞이지 않는다.
          */
         _initViewModels() {
             const oView = this.getView();
@@ -33,9 +36,8 @@ sap.ui.define([
         /**
          * 화면 제어 모델의 초기값을 반환한다.
          *
-         * FCL은 처음부터 Mid Column을 보여주면 빈 상세화면이 먼저 노출된다.
-         * 따라서 최초 진입 시에는 OneColumn으로 Begin Column만 보여주고,
-         * RFQ Header를 선택하거나 조회 결과가 1건뿐인 경우에만 Mid Column을 연다.
+         * FCL은 최초 진입 시 Begin Column만 보여준다.
+         * RFQ Header 행을 선택하거나 RFQ Header 조회 결과가 정확히 1건일 때 Mid Column을 연다.
          */
         _createInitialViewData() {
             return {
@@ -75,9 +77,8 @@ sap.ui.define([
         /**
          * 업무 데이터 모델의 초기값을 반환한다.
          *
-         * 현재 단계에서는 실제 데이터 조회 전이므로 배열은 비워둔다.
-         * 경로를 먼저 확정해 두면 XMLView가 안정적으로 렌더링되고,
-         * OData 연동 단계에서는 같은 경로에 조회 결과만 넣으면 된다.
+         * 현재 화면은 Header -> Item -> MQ 비교 순서로 단계적으로 데이터를 채운다.
+         * 따라서 Header 조회 전에는 모든 배열과 선택 객체를 비워 두고, 조회 단계마다 해당 경로만 갱신한다.
          */
         _createInitialWorkData() {
             return {
@@ -101,22 +102,18 @@ sap.ui.define([
         /**
          * 조회 버튼 이벤트.
          *
-         * 다음 OData 연동 단계에서 RFQHeaderSet 조회 성공 후 아래 두 메서드를 호출한다.
-         * - _updateRfqHeaderCountFromRows(): RFQ 헤더 목록 타이틀의 (N) 갱신
-         * - _openMidColumnIfSingleHeader(): 조회 결과가 1건이면 Mid Column 자동 오픈
-         *
-         * 현재는 데이터 조회가 없으므로 빈 배열 기준으로만 안정적으로 동작하게 둔다.
+         * 이번 단계에서는 Begin Column에 필요한 RFQHeaderSet만 조회한다.
+         * Header 행을 클릭했을 때 RFQItemSet을 읽는 로직은 다음 단계에서 붙인다.
          */
         onSearch() {
-            this._updateRfqHeaderCountFromRows();
-            this._openMidColumnIfSingleHeader();
+            return this._loadRfqHeaders();
         },
 
         /**
          * 조회조건 초기화 버튼 이벤트.
          *
          * 필터 값은 최초 상태로 되돌리고, 상세조건 영역도 닫는다.
-         * 업무 조회 결과는 사용자가 별도로 재조회하기 전까지 유지할 수 있으므로 여기서는 건드리지 않는다.
+         * 이미 조회된 Header 목록은 사용자가 새로 조회하기 전까지 유지한다.
          */
         onReset() {
             const oView = this.getView();
@@ -132,7 +129,7 @@ sap.ui.define([
         /**
          * 상세조건 열기/닫기 버튼 이벤트.
          *
-         * 버튼 문구는 XML의 expression binding이 view>/AdvancedFilterVisible 값을 보고
+         * 버튼 문구는 XML의 expression binding이 `view>/AdvancedFilterVisible` 값을 보고
          * "상세조건" 또는 "상세조건 닫기"로 자동 전환한다.
          */
         onToggleAdvancedFilter() {
@@ -145,9 +142,9 @@ sap.ui.define([
         /**
          * RFQ Header 선택 이벤트.
          *
-         * 사용자가 Begin Column의 RFQ Header 행을 선택하면 Mid Column을 열고,
+         * Begin Column의 RFQ Header 행을 선택하면 Mid Column을 열고,
          * 선택한 Header를 Mid 영역의 ObjectHeader에 바인딩한다.
-         * 실제 RFQItemSet 조회는 다음 OData 연동 단계에서 이 메서드 뒤에 붙인다.
+         * 실제 RFQItemSet 조회는 다음 단계에서 이 메서드 뒤에 연결한다.
          */
         onRfqSelectionChange(oEvent) {
             const oSelectedRfq = this._getSelectedObjectFromEvent(oEvent);
@@ -157,6 +154,37 @@ sap.ui.define([
             }
 
             this._openMidColumnForRfq(oSelectedRfq);
+        },
+
+        /**
+         * Mid Column을 전체 화면으로 확장한다.
+         *
+         * SAPUI5 FlexibleColumnLayout은 문자열 레이아웃 값을 기준으로 컬럼 표시 방식을 바꾼다.
+         * `MidColumnFullScreen`은 SDK 샘플의 full-screen 버튼과 같은 의미로,
+         * 선택한 RFQ의 비교 영역을 넓게 확인해야 할 때 사용한다.
+         */
+        onEnterMidFullScreen() {
+            this._setFclLayout("MidColumnFullScreen");
+        },
+
+        /**
+         * Mid Column 전체 화면을 해제하고 Begin + Mid 2컬럼 비교 화면으로 돌아간다.
+         *
+         * RFQ 목록과 상세 비교를 동시에 보는 것이 이 프로그램의 기본 작업 흐름이므로
+         * 전체 화면 해제 시에는 `TwoColumnsMidExpanded`로 복귀시킨다.
+         */
+        onExitMidFullScreen() {
+            this._setFclLayout("TwoColumnsMidExpanded");
+        },
+
+        /**
+         * Mid Column을 닫고 선택된 RFQ 및 비교 영역을 초기화한다.
+         *
+         * 닫기 버튼은 화면 배치만 바꾸는 것이 아니라, 사용자가 더 이상 선택 RFQ를 보고 있지 않다는 뜻이다.
+         * 따라서 기존 `_clearSelectionAndComparisonArea`를 재사용해 Header 선택, RFQ Item, MQ 비교 데이터까지 함께 비운다.
+         */
+        onCloseMidColumn() {
+            this._clearSelectionAndComparisonArea();
         },
 
         /**
@@ -236,6 +264,263 @@ sap.ui.define([
          * XMLView가 먼저 안정적으로 렌더링되도록 임시로 남겨두는 안전장치다.
          */
         onPlaceholderAction() {
+        },
+
+        /**
+         * RFQHeaderSet을 조회하여 Begin Column의 RFQ Header 목록, KPI, 건수를 갱신한다.
+         *
+         * SAPUI5 OData V2 Model의 `read`는 success/error 콜백 방식이다.
+         * 이 화면에서는 조회 이후 여러 후속 처리가 이어지므로 `_readEntitySet`에서 Promise로 감싼 뒤
+         * then/catch/finally 흐름으로 작성한다.
+         */
+        _loadRfqHeaders() {
+            const oView = this.getView();
+            const oViewModel = oView.getModel("view");
+            const oWorkModel = oView.getModel("work");
+            const aFilters = this._buildHeaderFilters();
+
+            if (oViewModel) {
+                oViewModel.setProperty("/Busy", true);
+            }
+
+            this._clearSelectionAndComparisonArea();
+
+            return this._readEntitySet("/RFQHeaderSet", aFilters).then((aRows) => {
+                oWorkModel.setProperty("/RfqHeaders", aRows);
+                this._updateRfqHeaderCountFromRows();
+                this._updateHeaderKpis(aRows);
+
+                if (aRows.length === 1) {
+                    this._openMidColumnForRfq(aRows[0]);
+                }
+
+                return aRows;
+            }).catch((oError) => {
+                oWorkModel.setProperty("/RfqHeaders", []);
+                this._updateRfqHeaderCountFromRows();
+                this._updateHeaderKpis([]);
+                this._showToast(this._getText("msgLoadRfqHeaderError") || "RFQ Header 조회 중 오류가 발생했습니다.");
+                throw oError;
+            }).finally(() => {
+                if (oViewModel) {
+                    oViewModel.setProperty("/Busy", false);
+                }
+            });
+        },
+
+        /**
+         * 조회조건 JSONModel 값을 Gateway가 이해할 수 있는 OData Filter 배열로 변환한다.
+         *
+         * Backend DPC_EXT의 GET_FILTER_VALUES는 Metadata 기준 CamelCase Property명을 읽는다.
+         * 따라서 ABAP 필드명(RFQ_NO, DOC_DATE)이 아니라 OData Property명(RfqNo, DocDate)을 사용한다.
+         */
+        _buildHeaderFilters() {
+            const oFilterModel = this.getView().getModel("filter");
+            const oFilter = oFilterModel ? oFilterModel.getData() : {};
+            const aFilters = [];
+
+            this._addTextFilter(aFilters, "RfqNo", oFilter.RfqNo, FilterOperator.EQ);
+            this._addDateFilter(aFilters, "DocDate", FilterOperator.GE, oFilter.DocDateFrom);
+            this._addDateFilter(aFilters, "DocDate", FilterOperator.LE, oFilter.DocDateTo);
+            this._addTextFilter(aFilters, "Lifnr", oFilter.Lifnr, FilterOperator.EQ);
+            this._addTextFilter(aFilters, "Name1", oFilter.Name1, FilterOperator.Contains);
+            this._addTextFilter(aFilters, "Matnr", oFilter.Matnr, FilterOperator.EQ);
+            this._addTextFilter(aFilters, "Maktx", oFilter.Maktx, FilterOperator.Contains);
+            this._addTextFilter(aFilters, "Werks", oFilter.Werks, FilterOperator.EQ);
+            this._addDateFilter(aFilters, "Eindt", FilterOperator.GE, oFilter.EindtFrom);
+            this._addDateFilter(aFilters, "Eindt", FilterOperator.LE, oFilter.EindtTo);
+            this._addTextFilter(aFilters, "MqNo", oFilter.MqNo, FilterOperator.EQ);
+            this._addTextFilter(aFilters, "Bukrs", oFilter.Bukrs, FilterOperator.EQ);
+            this._addTextFilter(aFilters, "Ekorg", oFilter.Ekorg, FilterOperator.EQ);
+            this._addTextFilter(aFilters, "Ekgrp", oFilter.Ekgrp, FilterOperator.EQ);
+            this._addAwardStatusFilters(aFilters, oFilter.AwardStatus);
+
+            return aFilters;
+        },
+
+        /**
+         * 문자열 조건을 Filter 배열에 추가한다.
+         *
+         * 빈 값은 조회조건이 아니므로 Filter를 만들지 않는다.
+         * 공급업체명/자재명은 설계서 기준으로 부분 검색 성격이 있어 Contains를 사용하고,
+         * 코드성 필드는 정확히 일치해야 하므로 EQ를 사용한다.
+         */
+        _addTextFilter(aFilters, sProperty, sValue, sOperator) {
+            const sCleanValue = typeof sValue === "string" ? sValue.trim() : sValue;
+
+            if (sCleanValue) {
+                aFilters.push(new Filter(sProperty, sOperator, sCleanValue));
+            }
+        },
+
+        /**
+         * 날짜 조건을 Filter 배열에 추가한다.
+         *
+         * OData V2의 Edm.DateTime 필터는 Date 객체를 넘기면 UI5 ODataModel이 직렬화한다.
+         * 자정 값을 그대로 쓰면 브라우저/서버 시간대 차이로 전날이 될 수 있으므로,
+         * 납기지연 조회 프로그램과 동일하게 날짜 전용 조건은 정오 기준 Date로 보정한다.
+         */
+        _addDateFilter(aFilters, sProperty, sOperator, oDate) {
+            if (oDate instanceof Date && !Number.isNaN(oDate.getTime())) {
+                aFilters.push(new Filter(sProperty, sOperator, this._normalizeDate(oDate)));
+            }
+        },
+
+        /**
+         * MultiComboBox의 채택상태 선택값을 OR Filter로 변환한다.
+         *
+         * 예: 미채택(N), 일부채택(P)을 같이 선택하면
+         * `(AwardStatus eq 'N' or AwardStatus eq 'P')` 형태로 Gateway에 전달된다.
+         */
+        _addAwardStatusFilters(aFilters, aAwardStatus) {
+            const aStatusKeys = Array.isArray(aAwardStatus) ? aAwardStatus.filter(Boolean) : [];
+
+            if (!aStatusKeys.length) {
+                return;
+            }
+
+            aFilters.push(new Filter({
+                filters: aStatusKeys.map((sStatus) => {
+                    return new Filter("AwardStatus", FilterOperator.EQ, sStatus);
+                }),
+                and: false
+            }));
+        },
+
+        /**
+         * SAPUI5 OData V2 Model의 read 호출을 Promise 형태로 감싼다.
+         *
+         * OData 응답은 보통 `{ results: [...] }` 형태로 내려오므로 배열만 반환한다.
+         * 단건 응답이 들어오더라도 이 함수는 EntitySet 조회 전용이므로 빈 배열로 방어한다.
+         */
+        _readEntitySet(sPath, aFilters) {
+            const oModel = this.getOwnerComponent().getModel();
+
+            return new Promise((resolve, reject) => {
+                if (!oModel || !oModel.read) {
+                    reject(new Error("Default ODataModel is not available."));
+                    return;
+                }
+
+                oModel.read(sPath, {
+                    filters: aFilters || [],
+                    success: (oData) => {
+                        resolve(oData && Array.isArray(oData.results) ? oData.results : []);
+                    },
+                    error: reject
+                });
+            });
+        },
+
+        /**
+         * RFQ Header 상태별 KPI를 계산한다.
+         *
+         * Backend가 Header별 AwardStatus를 이미 계산해서 내려주므로,
+         * UI5에서는 조회 결과 배열을 순회하며 상태 코드별 건수만 세면 된다.
+         */
+        _updateHeaderKpis(aRows) {
+            const oWorkModel = this.getView().getModel("work");
+            const oKpi = {
+                NotAwarded: 0,
+                PartiallyAwarded: 0,
+                Awarded: 0,
+                PoCreated: 0
+            };
+
+            (aRows || []).forEach((oRow) => {
+                switch (oRow.AwardStatus) {
+                    case "N":
+                        oKpi.NotAwarded += 1;
+                        break;
+                    case "P":
+                        oKpi.PartiallyAwarded += 1;
+                        break;
+                    case "A":
+                        oKpi.Awarded += 1;
+                        break;
+                    case "PO":
+                        oKpi.PoCreated += 1;
+                        break;
+                    default:
+                        break;
+                }
+            });
+
+            if (oWorkModel) {
+                oWorkModel.setProperty("/Kpi", oKpi);
+            }
+        },
+
+        /**
+         * 새 Header 조회 전에 하위 비교 영역을 초기화한다.
+         *
+         * RFQ Header를 다시 조회하면 이전 Header의 RFQ Item/MQ 후보가 남아 있으면 안 된다.
+         * 따라서 Begin Column 목록은 조회 결과로 갱신하되, Mid Column 관련 선택값과 비교 데이터는 비운다.
+         */
+        _clearSelectionAndComparisonArea() {
+            const oView = this.getView();
+            const oViewModel = oView.getModel("view");
+            const oWorkModel = oView.getModel("work");
+
+            if (oViewModel) {
+                oViewModel.setProperty("/FclLayout", "OneColumn");
+            }
+
+            if (oWorkModel) {
+                oWorkModel.setProperty("/SelectedRfq", {});
+                oWorkModel.setProperty("/SelectedRfqItem", {});
+                oWorkModel.setProperty("/SelectedMq", {});
+                oWorkModel.setProperty("/RfqItems", []);
+                oWorkModel.setProperty("/MqCompareRows", []);
+                oWorkModel.setProperty("/ChartRows", []);
+            }
+        },
+
+        /**
+         * FlexibleColumnLayout의 현재 배치를 변경한다.
+         *
+         * 레이아웃 변경은 여러 버튼에서 반복되므로 작은 헬퍼로 모아둔다.
+         * 이렇게 해두면 이후 SemanticHelper를 도입하더라도 이 함수 안에서만 변경하면 된다.
+         */
+        _setFclLayout(sLayout) {
+            const oViewModel = this.getView().getModel("view");
+
+            if (oViewModel) {
+                oViewModel.setProperty("/FclLayout", sLayout);
+            }
+        },
+
+        /**
+         * 날짜만 의미 있는 조회조건을 정오 기준 Date로 보정한다.
+         *
+         * 이 방식은 날짜가 UTC 변환 과정에서 전날로 밀리는 문제를 줄이기 위한 실무 방어 코드다.
+         */
+        _normalizeDate(oDate) {
+            return new Date(oDate.getFullYear(), oDate.getMonth(), oDate.getDate(), 12, 0, 0);
+        },
+
+        /**
+         * i18n 텍스트를 읽는다.
+         *
+         * 테스트나 초기 렌더링 시점에 i18n 모델이 아직 없을 수 있으므로 방어적으로 빈 문자열을 반환한다.
+         */
+        _getText(sKey, aArgs) {
+            const oI18nModel = this.getView().getModel("i18n");
+            const oBundle = oI18nModel && oI18nModel.getResourceBundle && oI18nModel.getResourceBundle();
+
+            return oBundle && oBundle.getText ? oBundle.getText(sKey, aArgs) : "";
+        },
+
+        /**
+         * 사용자에게 짧은 처리 메시지를 표시한다.
+         *
+         * 조회 실패처럼 화면 전환이 필요 없는 오류는 MessageToast로 가볍게 알린다.
+         * 상세한 오류 메시지 수집과 MessagePopover 연결은 후속 유효성/오류처리 단계에서 확장한다.
+         */
+        _showToast(sMessage) {
+            if (sMessage) {
+                MessageToast.show(sMessage);
+            }
         },
 
         /**
