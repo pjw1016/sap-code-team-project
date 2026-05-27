@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="1.0" xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns:sap="http://www.sap.com/Protocols/SAPData">
+    <edmx:DataServices m:DataServiceVersion="2.0">
+        <Schema Namespace="ZGWD3MM0005_SRV" xml:lang="en" sap:schema-version="1" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+            <EntityType Name="RFQHeader" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="RfqNo"/>
+                </Key>
+                <Property Name="RfqNo" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="RFQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="DocDate" Type="Edm.DateTime" Precision="7" sap:unicode="false" sap:label="RFQ 생성일" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Bukrs" Type="Edm.String" MaxLength="4" sap:unicode="false" sap:label="회사코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Butxt" Type="Edm.String" MaxLength="50" sap:unicode="false" sap:label="회사명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Ekorg" Type="Edm.String" MaxLength="4" sap:unicode="false" sap:label="구매조직" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Ekotx" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="구매조직명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Ekgrp" Type="Edm.String" MaxLength="3" sap:unicode="false" sap:label="구매그룹" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Eknam" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="구매담당자" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Waers" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="통화" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false" sap:semantics="currency-code"/>
+                <Property Name="RfqItemCount" Type="Edm.Int32" sap:unicode="false" sap:label="RFQ 품목 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MqCount" Type="Edm.Int32" sap:unicode="false" sap:label="MQ 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="VendorCount" Type="Edm.Int32" sap:unicode="false" sap:label="공급업체 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="AwardItemCount" Type="Edm.Int32" sap:unicode="false" sap:label="채택 품목 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoItemCount" Type="Edm.Int32" sap:unicode="false" sap:label="PO 생성 품목 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="AwardStatus" Type="Edm.String" MaxLength="2" sap:unicode="false" sap:label="채택상태 코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="AwardStatusText" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="채택상태" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="AwardStatusState" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="채택상태 UI" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Lifnr" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="공급업체 코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Name1" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="공급업체명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Matnr" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="자재코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Maktx" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="자재명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Werks" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="플랜트" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Eindt" Type="Edm.DateTime" Precision="7" sap:unicode="false" sap:label="납기일" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MqNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="MQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+            </EntityType>
+            <EntityType Name="RFQItem" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="RfqNo"/>
+                    <PropertyRef Name="RfqItem"/>
+                </Key>
+                <Property Name="RfqNo" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="RFQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="RfqItem" Type="Edm.String" Nullable="false" MaxLength="5" sap:unicode="false" sap:label="RFQ 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Matnr" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="자재코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Maktx" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="자재명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Werks" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="플랜트" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="WerksName" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="플랜트명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Lgort" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="저장위치" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Lgobe" Type="Edm.String" MaxLength="16" sap:unicode="false" sap:label="저장위치명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ReqQty" Type="Edm.Decimal" Precision="13" Scale="3" sap:unicode="false" sap:unit="Meins" sap:label="요청수량" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Meins" Type="Edm.String" MaxLength="3" sap:unicode="false" sap:label="단위" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false" sap:semantics="unit-of-measure"/>
+                <Property Name="Eindt" Type="Edm.DateTime" Precision="7" sap:unicode="false" sap:label="납기일" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ValidMqCount" Type="Edm.Int32" sap:unicode="false" sap:label="유효 MQ 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="NoResponseMqCount" Type="Edm.Int32" sap:unicode="false" sap:label="미응답 MQ 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="AwardMqNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="채택 MQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="AwardMqItem" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="채택 MQ 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="AwardLifnr" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="채택 공급업체" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="AwardName1" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="채택 공급업체명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoCreatedYn" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="PO 생성여부" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="PO 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoItem" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="PO 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ItemStatus" Type="Edm.String" MaxLength="2" sap:unicode="false" sap:label="품목상태 코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ItemStatusText" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="품목상태" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ItemStatusState" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="품목상태 UI" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="CanCancelAward" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="채택취소 가능" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+            </EntityType>
+            <EntityType Name="MQCompare" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="MqNo"/>
+                    <PropertyRef Name="MqItem"/>
+                </Key>
+                <Property Name="RfqNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="RFQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="RfqItem" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="RFQ 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MqNo" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="MQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MqItem" Type="Edm.String" Nullable="false" MaxLength="5" sap:unicode="false" sap:label="MQ 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Lifnr" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="공급업체 코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Name1" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="공급업체명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Matnr" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="자재코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Maktx" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="자재명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Werks" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="플랜트" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="WerksName" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="플랜트명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Lgort" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="저장위치" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Lgobe" Type="Edm.String" MaxLength="16" sap:unicode="false" sap:label="저장위치명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="QuoteQty" Type="Edm.Decimal" Precision="13" Scale="3" sap:unicode="false" sap:unit="Meins" sap:label="견적수량" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Meins" Type="Edm.String" MaxLength="3" sap:unicode="false" sap:label="단위" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false" sap:semantics="unit-of-measure"/>
+                <Property Name="Netpr" Type="Edm.Decimal" Precision="24" Scale="3" sap:unicode="false" sap:unit="Waers" sap:label="원통화 단가" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Peinh" Type="Edm.Decimal" Precision="5" Scale="0" sap:unicode="false" sap:label="가격단위" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Netwr" Type="Edm.Decimal" Precision="24" Scale="3" sap:unicode="false" sap:unit="Waers" sap:label="원통화 금액" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Waers" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="원통화" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false" sap:semantics="currency-code"/>
+                <Property Name="ExchangeDate" Type="Edm.DateTime" Precision="7" sap:unicode="false" sap:label="환율 기준일" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Kursf" Type="Edm.Decimal" Precision="9" Scale="5" sap:unicode="false" sap:label="환율" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="NetprKrw" Type="Edm.Decimal" Precision="24" Scale="3" sap:unicode="false" sap:unit="Kwaers" sap:label="환산단가" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="NetwrKrw" Type="Edm.Decimal" Precision="24" Scale="3" sap:unicode="false" sap:unit="Kwaers" sap:label="환산금액" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Kwaers" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="회사통화" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false" sap:semantics="currency-code"/>
+                <Property Name="Eindt" Type="Edm.DateTime" Precision="7" sap:unicode="false" sap:label="납기일" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="CurrentAwardYn" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="현재채택 여부" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="RecommendYn" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="자동추천 여부" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ResponseStatus" Type="Edm.String" MaxLength="2" sap:unicode="false" sap:label="응답상태 코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ResponseStatusText" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="응답상태" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoCreatedYn" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="PO 생성여부" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="PO 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoItem" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="PO 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="CanSelect" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="선택 가능여부" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="BlockReason" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="선택불가 사유" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+            </EntityType>
+            <EntityType Name="MQDetail" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="MqNo"/>
+                    <PropertyRef Name="MqItem"/>
+                </Key>
+                <Property Name="RfqNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="RFQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="RfqItem" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="RFQ 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MqNo" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="MQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MqItem" Type="Edm.String" Nullable="false" MaxLength="5" sap:unicode="false" sap:label="MQ 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Lifnr" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="공급업체 코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Name1" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="공급업체명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Matnr" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="자재코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Maktx" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="자재명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Werks" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="플랜트" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="WerksName" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="플랜트명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Lgort" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="저장위치" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Lgobe" Type="Edm.String" MaxLength="16" sap:unicode="false" sap:label="저장위치명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="QuoteQty" Type="Edm.Decimal" Precision="13" Scale="3" sap:unicode="false" sap:unit="Meins" sap:label="견적수량" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Meins" Type="Edm.String" MaxLength="3" sap:unicode="false" sap:label="단위" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false" sap:semantics="unit-of-measure"/>
+                <Property Name="Netpr" Type="Edm.Decimal" Precision="24" Scale="3" sap:unicode="false" sap:unit="Waers" sap:label="원통화 단가" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Peinh" Type="Edm.Decimal" Precision="5" Scale="0" sap:unicode="false" sap:label="가격단위" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Netwr" Type="Edm.Decimal" Precision="24" Scale="3" sap:unicode="false" sap:unit="Waers" sap:label="원통화 금액" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Waers" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="원통화" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false" sap:semantics="currency-code"/>
+                <Property Name="ExchangeDate" Type="Edm.DateTime" Precision="7" sap:unicode="false" sap:label="환율 기준일" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Kursf" Type="Edm.Decimal" Precision="9" Scale="5" sap:unicode="false" sap:label="환율" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="NetprKrw" Type="Edm.Decimal" Precision="24" Scale="3" sap:unicode="false" sap:unit="Kwaers" sap:label="환산단가" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="NetwrKrw" Type="Edm.Decimal" Precision="24" Scale="3" sap:unicode="false" sap:unit="Kwaers" sap:label="환산금액" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Kwaers" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="회사통화" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false" sap:semantics="currency-code"/>
+                <Property Name="Eindt" Type="Edm.DateTime" Precision="7" sap:unicode="false" sap:label="납기일" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Bukrs" Type="Edm.String" MaxLength="4" sap:unicode="false" sap:label="회사코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Butxt" Type="Edm.String" MaxLength="50" sap:unicode="false" sap:label="회사명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Ekorg" Type="Edm.String" MaxLength="4" sap:unicode="false" sap:label="구매조직" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Ekotx" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="구매조직명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Ekgrp" Type="Edm.String" MaxLength="3" sap:unicode="false" sap:label="구매그룹" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Eknam" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="구매담당자" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Banfn" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="PR 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Zterm" Type="Edm.String" MaxLength="4" sap:unicode="false" sap:label="지급조건" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="HeadTxt" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="헤더텍스트" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="CurrentAwardYn" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="현재채택 여부" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="RecommendYn" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="자동추천 여부" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ResponseStatus" Type="Edm.String" MaxLength="2" sap:unicode="false" sap:label="응답상태 코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ResponseStatusText" Type="Edm.String" MaxLength="20" sap:unicode="false" sap:label="응답상태" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoCreatedYn" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="PO 생성여부" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="PO 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoItem" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="PO 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="CanSelect" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="선택 가능여부" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="BlockReason" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="선택불가 사유" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+            </EntityType>
+            <EntityType Name="QuotationItem" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="MqNo"/>
+                    <PropertyRef Name="MqItem"/>
+                </Key>
+                <Property Name="ActionType" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="처리유형" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="RfqNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="RFQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="RfqItem" Type="Edm.String" MaxLength="5" sap:unicode="false" sap:label="RFQ 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MqNo" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="MQ 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MqItem" Type="Edm.String" Nullable="false" MaxLength="5" sap:unicode="false" sap:label="MQ 품목" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MessageType" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="메시지 유형" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MessageText" Type="Edm.String" MaxLength="100" sap:unicode="false" sap:label="메시지 내용" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+            </EntityType>
+            <EntityContainer Name="ZGWD3MM0005_SRV_Entities" m:IsDefaultEntityContainer="true" sap:supported-formats="atom json xlsx">
+                <EntitySet Name="RFQHeaderSet" EntityType="ZGWD3MM0005_SRV.RFQHeader" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
+                <EntitySet Name="RFQItemSet" EntityType="ZGWD3MM0005_SRV.RFQItem" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
+                <EntitySet Name="MQCompareSet" EntityType="ZGWD3MM0005_SRV.MQCompare" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
+                <EntitySet Name="MQDetailSet" EntityType="ZGWD3MM0005_SRV.MQDetail" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
+                <EntitySet Name="QuotationItemSet" EntityType="ZGWD3MM0005_SRV.QuotationItem" sap:creatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
+            </EntityContainer>
+            <Annotation Term="Core.SchemaVersion" String="1.0.0" xmlns="http://docs.oasis-open.org/odata/ns/edm"/>
+            <atom:link rel="self" href="http://61.97.134.36:8000/sap/opu/odata/sap/ZGWD3MM0005_SRV/$metadata" xmlns:atom="http://www.w3.org/2005/Atom"/>
+            <atom:link rel="latest-version" href="http://61.97.134.36:8000/sap/opu/odata/sap/ZGWD3MM0005_SRV/$metadata" xmlns:atom="http://www.w3.org/2005/Atom"/>
+        </Schema>
+    </edmx:DataServices>
+</edmx:Edmx>

@@ -1,0 +1,168 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form">
+    <Dialog
+        id="idMqDetailDialog"
+        title="{i18n>mqDetail}"
+        contentWidth="60rem"
+        contentHeight="42rem"
+        draggable="true"
+        resizable="true">
+        <content>
+            <ScrollContainer
+                width="100%"
+                height="100%"
+                vertical="true">
+                <VBox class="sapUiSmallMargin">
+                    <Title
+                        text="{i18n>detailBasicInfo}"
+                        level="H3"/>
+                    <form:SimpleForm
+                        editable="false"
+                        layout="ResponsiveGridLayout"
+                        columnsL="2"
+                        columnsM="1">
+                        <Label text="{i18n>rfqNo}"/>
+                        <Text text="{detail>/MqDetail/RfqNo}"/>
+                        <Label text="{i18n>rfqItem}"/>
+                        <Text text="{detail>/MqDetail/RfqItem}"/>
+                        <Label text="{i18n>mqNo}"/>
+                        <Text text="{detail>/MqDetail/MqNo}"/>
+                        <Label text="{i18n>mqItem}"/>
+                        <Text text="{detail>/MqDetail/MqItem}"/>
+                        <Label text="{i18n>lifnr}"/>
+                        <Text text="{detail>/MqDetail/Lifnr}"/>
+                        <Label text="{i18n>name1}"/>
+                        <Text text="{detail>/MqDetail/Name1}"/>
+                        <Label text="{i18n>matnr}"/>
+                        <Text text="{detail>/MqDetail/Matnr}"/>
+                        <Label text="{i18n>maktx}"/>
+                        <Text text="{detail>/MqDetail/Maktx}"/>
+                        <Label text="{i18n>werks}"/>
+                        <Text text="{detail>/MqDetail/Werks} {detail>/MqDetail/WerksName}"/>
+                        <Label text="{i18n>lgort}"/>
+                        <Text text="{detail>/MqDetail/Lgort} {detail>/MqDetail/Lgobe}"/>
+                    </form:SimpleForm>
+
+                    <Title
+                        text="{i18n>detailQuotationInfo}"
+                        level="H3"
+                        class="sapUiSmallMarginTop"/>
+                    <form:SimpleForm
+                        editable="false"
+                        layout="ResponsiveGridLayout"
+                        columnsL="2"
+                        columnsM="1">
+                        <Label text="{i18n>quoteQty}"/>
+                        <ObjectNumber
+                            number="{path: 'detail>/MqDetail/QuoteQty', formatter: '.formatter.formatQuantity'}"
+                            unit="{detail>/MqDetail/Meins}"/>
+                        <Label text="{i18n>netpr}"/>
+                        <ObjectNumber
+                            number="{path: 'detail>/MqDetail/Netpr', formatter: '.formatter.formatAmount'}"
+                            unit="{detail>/MqDetail/Waers}"/>
+                        <Label text="{i18n>peinh}"/>
+                        <ObjectNumber
+                            number="{path: 'detail>/MqDetail/Peinh', formatter: '.formatter.formatQuantity'}"/>
+                        <Label text="{i18n>netwr}"/>
+                        <ObjectNumber
+                            number="{path: 'detail>/MqDetail/Netwr', formatter: '.formatter.formatAmount'}"
+                            unit="{detail>/MqDetail/Waers}"/>
+                        <Label text="{i18n>exchangeDate}"/>
+                        <Text text="{path: 'detail>/MqDetail/ExchangeDate', formatter: '.formatter.formatDate'}"/>
+                        <Label text="{i18n>kursf}"/>
+                        <ObjectNumber
+                            number="{path: 'detail>/MqDetail/Kursf', formatter: '.formatter.formatAmount'}"/>
+                        <Label text="{i18n>netprKrw}"/>
+                        <ObjectNumber
+                            number="{path: 'detail>/MqDetail/NetprKrw', formatter: '.formatter.formatAmount'}"
+                            unit="{detail>/MqDetail/Kwaers}"/>
+                        <Label text="{i18n>netwrKrw}"/>
+                        <ObjectNumber
+                            number="{path: 'detail>/MqDetail/NetwrKrw', formatter: '.formatter.formatAmount'}"
+                            unit="{detail>/MqDetail/Kwaers}"/>
+                        <Label text="{i18n>eindt}"/>
+                        <Text text="{path: 'detail>/MqDetail/Eindt', formatter: '.formatter.formatDate'}"/>
+                    </form:SimpleForm>
+
+                    <Title
+                        text="{i18n>detailReferenceInfo}"
+                        level="H3"
+                        class="sapUiSmallMarginTop"/>
+                    <form:SimpleForm
+                        editable="false"
+                        layout="ResponsiveGridLayout"
+                        columnsL="2"
+                        columnsM="1">
+                        <Label text="{i18n>bukrs}"/>
+                        <Text text="{detail>/MqDetail/Bukrs} {detail>/MqDetail/Butxt}"/>
+                        <Label text="{i18n>ekorg}"/>
+                        <Text text="{detail>/MqDetail/Ekorg} {detail>/MqDetail/Ekotx}"/>
+                        <Label text="{i18n>ekgrp}"/>
+                        <Text text="{detail>/MqDetail/Ekgrp} {detail>/MqDetail/Eknam}"/>
+                        <Label text="{i18n>banfn}"/>
+                        <Text text="{detail>/MqDetail/Banfn}"/>
+                        <Label text="{i18n>zterm}"/>
+                        <Text text="{detail>/MqDetail/Zterm}"/>
+                        <Label text="{i18n>headTxt}"/>
+                        <Text
+                            text="{detail>/MqDetail/HeadTxt}"
+                            wrapping="true"/>
+                    </form:SimpleForm>
+
+                    <Title
+                        text="{i18n>detailStatusInfo}"
+                        level="H3"
+                        class="sapUiSmallMarginTop"/>
+                    <form:SimpleForm
+                        editable="false"
+                        layout="ResponsiveGridLayout"
+                        columnsL="2"
+                        columnsM="1">
+                        <Label text="{i18n>responseStatus}"/>
+                        <ObjectStatus
+                            text="{detail>/MqDetail/ResponseStatusText}"
+                            state="{path: 'detail>/MqDetail/ResponseStatus', formatter: '.formatter.formatResponseState'}"/>
+                        <Label text="{i18n>currentAward}"/>
+                        <ObjectStatus
+                            text="{path: 'detail>/MqDetail/CurrentAwardYn', formatter: '.formatter.formatBooleanText'}"
+                            state="{path: 'detail>/MqDetail/CurrentAwardYn', formatter: '.formatter.formatBooleanState'}"/>
+                        <Label text="{i18n>recommend}"/>
+                        <ObjectStatus
+                            text="{path: 'detail>/MqDetail/RecommendYn', formatter: '.formatter.formatBooleanText'}"
+                            state="{path: 'detail>/MqDetail/RecommendYn', formatter: '.formatter.formatBooleanState'}"/>
+                        <Label text="{i18n>poCreated}"/>
+                        <ObjectStatus
+                            text="{path: 'detail>/MqDetail/PoCreatedYn', formatter: '.formatter.formatBooleanText'}"
+                            state="{path: 'detail>/MqDetail/PoCreatedYn', formatter: '.formatter.formatBooleanState'}"/>
+                        <Label text="{i18n>poNo}"/>
+                        <Text text="{detail>/MqDetail/PoNo}"/>
+                        <Label text="{i18n>poItem}"/>
+                        <Text text="{detail>/MqDetail/PoItem}"/>
+                        <Label text="{i18n>canSelect}"/>
+                        <ObjectStatus
+                            text="{path: 'detail>/MqDetail/CanSelect', formatter: '.formatter.formatCanSelectText'}"
+                            state="{path: 'detail>/MqDetail/CanSelect', formatter: '.formatter.formatCanSelectState'}"/>
+                        <Label text="{i18n>blockReason}"/>
+                        <Text
+                            text="{detail>/MqDetail/BlockReason}"
+                            wrapping="true"/>
+                    </form:SimpleForm>
+                </VBox>
+            </ScrollContainer>
+        </content>
+        <beginButton>
+            <Button
+                text="{i18n>selectThisMq}"
+                type="Emphasized"
+                enabled="{= ${detail>/MqDetail/CanSelect} === 'X' }"
+                press=".onSelectMqFromDialog"/>
+        </beginButton>
+        <endButton>
+            <Button
+                text="{i18n>close}"
+                press=".onCloseMqDetailDialog"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

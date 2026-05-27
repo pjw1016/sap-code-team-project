@@ -1,0 +1,726 @@
+<mvc:View
+    controllerName="code.d3.quotecomparison.controller.Main"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.f"
+    xmlns:form="sap.ui.layout.form"
+    xmlns:table="sap.ui.table"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:viz.data="sap.viz.ui5.data"
+    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds">
+    <!--
+        전체 화면은 Fiori 2.0 계열의 DynamicPage를 기준으로 구성한다.
+        Header에는 조회조건, Content에는 좌측 RFQ 목록과 우측 비교 영역,
+        Footer에는 채택/채택취소 같은 주요 업무 액션을 배치한다.
+    -->
+    <f:DynamicPage
+        id="idDynamicPage"
+        busy="{view>/Busy}"
+        showFooter="true"
+        fitContent="true">
+        <!-- <f:title>
+            <f:DynamicPageTitle>
+                <f:heading>
+                    <Title text="{i18n>title}"/>
+                </f:heading>
+            </f:DynamicPageTitle>
+        </f:title> -->
+
+        <f:header>
+            <f:DynamicPageHeader pinnable="true">
+                <!--
+                    조회조건 영역.
+                    Search Help는 이번 개발 범위에서 제외했으므로 Input에는 showValueHelp를 설정하지 않는다.
+                    화면 모델(filter>) 값은 다음 Controller 단계에서 JSONModel로 초기화한다.
+                -->
+                <VBox width="100%">
+                    <!--
+                        조회조건 제목은 DynamicPage Header 안에서 항상 보이게 둔다.
+                        기본조건과 상세조건은 각각 FlexBox로 배치하여 넓은 화면에서는 가로로 흐르고,
+                        좁은 화면에서는 SAPUI5 FlexBox의 wrap 동작으로 자동 줄바꿈된다.
+                    -->
+                    <Title
+                        text="{i18n>searchConditionTitle}"
+                        level="H3"
+                        class="sapUiTinyMarginBottom"/>
+
+                    <FlexBox
+                        id="idBasicFilterBar"
+                        wrap="Wrap"
+                        renderType="Bare"
+                        alignItems="End">
+                        <VBox
+                            width="14rem"
+                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                            <Label
+                                text="{i18n>rfqNo}"
+                                labelFor="idRfqNoInput"/>
+                            <Input
+                                id="idRfqNoInput"
+                                value="{filter>/RfqNo}"
+                                maxLength="10"
+                                placeholder="{i18n>rfqSearchPlaceholder}"/>
+                        </VBox>
+
+                        <VBox
+                            width="12rem"
+                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                            <Label
+                                text="{i18n>docDateFrom}"
+                                labelFor="idDocDateFromPicker"/>
+                            <DatePicker
+                                id="idDocDateFromPicker"
+                                dateValue="{filter>/DocDateFrom}"
+                                displayFormat="yyyy-MM-dd"
+                                valueFormat="yyyy-MM-dd"/>
+                        </VBox>
+
+                        <VBox
+                            width="12rem"
+                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                            <Label
+                                text="{i18n>docDateTo}"
+                                labelFor="idDocDateToPicker"/>
+                            <DatePicker
+                                id="idDocDateToPicker"
+                                dateValue="{filter>/DocDateTo}"
+                                displayFormat="yyyy-MM-dd"
+                                valueFormat="yyyy-MM-dd"/>
+                        </VBox>
+
+                        <VBox
+                            width="14rem"
+                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                            <Label
+                                text="{i18n>awardStatus}"
+                                labelFor="idAwardStatusCombo"/>
+                            <MultiComboBox
+                                id="idAwardStatusCombo"
+                                selectedKeys="{filter>/AwardStatus}"
+                                placeholder="{i18n>allPlaceholder}">
+                                <core:Item key="N" text="{i18n>awardStatusN}"/>
+                                <core:Item key="P" text="{i18n>awardStatusP}"/>
+                                <core:Item key="A" text="{i18n>awardStatusA}"/>
+                                <core:Item key="PO" text="{i18n>awardStatusPO}"/>
+                            </MultiComboBox>
+                        </VBox>
+                    </FlexBox>
+
+                    <!--
+                        상세조건은 초기에는 숨긴다.
+                        버튼을 누르면 이 FlexBox 전체가 표시되므로 기본조건과 상세조건이 동시에 과하게 노출되지 않는다.
+                    -->
+                    <VBox visible="{= ${view>/AdvancedFilterVisible} === true }">
+                        <Title
+                            text="{i18n>filterAdvancedTitle}"
+                            level="H4"
+                            class="sapUiTinyMarginBottom"/>
+                        <FlexBox
+                            id="idAdvancedFilterBar"
+                            wrap="Wrap"
+                            renderType="Bare"
+                            alignItems="End">
+                            <VBox
+                                width="12rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>lifnr}"
+                                    labelFor="idLifnrInput"/>
+                                <Input
+                                    id="idLifnrInput"
+                                    value="{filter>/Lifnr}"
+                                    maxLength="10"
+                                    placeholder="{i18n>inputPlaceholder}"/>
+                            </VBox>
+
+                            <VBox
+                                width="14rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>name1}"
+                                    labelFor="idName1Input"/>
+                                <Input
+                                    id="idName1Input"
+                                    value="{filter>/Name1}"
+                                    placeholder="{i18n>inputPlaceholder}"/>
+                            </VBox>
+
+                            <VBox
+                                width="12rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>matnr}"
+                                    labelFor="idMatnrInput"/>
+                                <Input
+                                    id="idMatnrInput"
+                                    value="{filter>/Matnr}"
+                                    maxLength="18"
+                                    placeholder="{i18n>inputPlaceholder}"/>
+                            </VBox>
+
+                            <VBox
+                                width="14rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>maktx}"
+                                    labelFor="idMaktxInput"/>
+                                <Input
+                                    id="idMaktxInput"
+                                    value="{filter>/Maktx}"
+                                    placeholder="{i18n>inputPlaceholder}"/>
+                            </VBox>
+
+                            <VBox
+                                width="10rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>werks}"
+                                    labelFor="idWerksInput"/>
+                                <Input
+                                    id="idWerksInput"
+                                    value="{filter>/Werks}"
+                                    maxLength="4"
+                                    placeholder="{i18n>inputPlaceholder}"/>
+                            </VBox>
+
+                            <VBox
+                                width="12rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>eindtFrom}"
+                                    labelFor="idEindtFromPicker"/>
+                                <DatePicker
+                                    id="idEindtFromPicker"
+                                    dateValue="{filter>/EindtFrom}"
+                                    displayFormat="yyyy-MM-dd"
+                                    valueFormat="yyyy-MM-dd"/>
+                            </VBox>
+
+                            <VBox
+                                width="12rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>eindtTo}"
+                                    labelFor="idEindtToPicker"/>
+                                <DatePicker
+                                    id="idEindtToPicker"
+                                    dateValue="{filter>/EindtTo}"
+                                    displayFormat="yyyy-MM-dd"
+                                    valueFormat="yyyy-MM-dd"/>
+                            </VBox>
+
+                            <VBox
+                                width="12rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>mqNo}"
+                                    labelFor="idMqNoInput"/>
+                                <Input
+                                    id="idMqNoInput"
+                                    value="{filter>/MqNo}"
+                                    maxLength="10"
+                                    placeholder="{i18n>inputPlaceholder}"/>
+                            </VBox>
+
+                            <VBox
+                                width="10rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>bukrs}"
+                                    labelFor="idBukrsInput"/>
+                                <Input
+                                    id="idBukrsInput"
+                                    value="{filter>/Bukrs}"
+                                    maxLength="4"
+                                    placeholder="{i18n>inputPlaceholder}"/>
+                            </VBox>
+
+                            <VBox
+                                width="10rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>ekorg}"
+                                    labelFor="idEkorgInput"/>
+                                <Input
+                                    id="idEkorgInput"
+                                    value="{filter>/Ekorg}"
+                                    maxLength="4"
+                                    placeholder="{i18n>inputPlaceholder}"/>
+                            </VBox>
+
+                            <VBox
+                                width="10rem"
+                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                <Label
+                                    text="{i18n>ekgrp}"
+                                    labelFor="idEkgrpInput"/>
+                                <Input
+                                    id="idEkgrpInput"
+                                    value="{filter>/Ekgrp}"
+                                    maxLength="3"
+                                    placeholder="{i18n>inputPlaceholder}"/>
+                            </VBox>
+                        </FlexBox>
+                    </VBox>
+
+                    <OverflowToolbar>
+                        <ToolbarSpacer/>
+                        <Button
+                            text="{= ${view>/AdvancedFilterVisible} ? ${i18n>hideAdvancedFilter} : ${i18n>showAdvancedFilter} }"
+                            type="Transparent"
+                            press=".onToggleAdvancedFilter"/>
+                        <Button
+                            text="{i18n>reset}"
+                            type="Transparent"
+                            press=".onReset"/>
+                        <Button
+                            text="{i18n>search}"
+                            type="Emphasized"
+                            press=".onSearch"/>
+                    </OverflowToolbar>
+                </VBox>
+            </f:DynamicPageHeader>
+        </f:header>
+
+        <f:content>
+            <!--
+                본문은 FlexibleColumnLayout으로 구성한다.
+                Begin Column은 RFQ Header 목록,
+                Mid Column은 선택한 RFQ의 Item/MQ 비교 영역을 담당한다.
+            -->
+            <f:FlexibleColumnLayout
+                id="idFlexibleColumnLayout"
+                layout="{view>/FclLayout}">
+                <f:beginColumnPages>
+                    <Page
+                        id="idBeginPage"
+                        showHeader="false">
+                        <content>
+                            <VBox class="sapUiSmallMargin">
+                                <!-- KPI는 현재 조회된 RFQ Header 결과를 기준으로 Controller에서 계산한다. -->
+                                <FlexBox
+                                    wrap="Wrap"
+                                    renderType="Bare"
+                                    justifyContent="SpaceBetween">
+                                    <GenericTile
+                                        header="{i18n>kpiNotAwarded}"
+                                        class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                        <TileContent>
+                                            <NumericContent
+                                                value="{work>/Kpi/NotAwarded}"
+                                                scale="{i18n>countUnit}"
+                                                valueColor="Neutral"
+                                                icon="sap-icon://pending"/>
+                                        </TileContent>
+                                    </GenericTile>
+                                    <GenericTile
+                                        header="{i18n>kpiPartiallyAwarded}"
+                                        class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                        <TileContent>
+                                            <NumericContent
+                                                value="{work>/Kpi/PartiallyAwarded}"
+                                                scale="{i18n>countUnit}"
+                                                valueColor="Critical"
+                                                icon="sap-icon://split-segmentation"/>
+                                        </TileContent>
+                                    </GenericTile>
+                                    <GenericTile
+                                        header="{i18n>kpiAwarded}"
+                                        class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                        <TileContent>
+                                            <NumericContent
+                                                value="{work>/Kpi/Awarded}"
+                                                scale="{i18n>countUnit}"
+                                                valueColor="Good"
+                                                icon="sap-icon://accept"/>
+                                        </TileContent>
+                                    </GenericTile>
+                                    <GenericTile
+                                        header="{i18n>kpiPoCreated}"
+                                        class="sapUiTinyMarginBottom">
+                                        <TileContent>
+                                            <NumericContent
+                                                value="{work>/Kpi/PoCreated}"
+                                                scale="{i18n>countUnit}"
+                                                valueColor="Good"
+                                                icon="sap-icon://documents"/>
+                                        </TileContent>
+                                    </GenericTile>
+                                </FlexBox>
+
+                                <Table
+                                    id="idRfqHeaderTable"
+                                    items="{work>/RfqHeaders}"
+                                    mode="SingleSelectMaster"
+                                    growing="true"
+                                    growingThreshold="20"
+                                    noDataText="{i18n>msgNoData}"
+                                    selectionChange=".onRfqSelectionChange">
+                                    <headerToolbar>
+                                        <OverflowToolbar>
+                                            <Title
+                                                text="{= ${i18n>rfqHeaderListTitle} + ' (' + ${work>/RfqHeaderCount} + ')' }"
+                                                level="H3"/>
+                                            <ToolbarSpacer/>
+                                        </OverflowToolbar>
+                                    </headerToolbar>
+                                    <columns>
+                                        <Column width="8rem">
+                                            <Text text="{i18n>rfqNo}"/>
+                                        </Column>
+                                        <Column minScreenWidth="Tablet" demandPopin="true">
+                                            <Text text="{i18n>docDate}"/>
+                                        </Column>
+                                        <Column minScreenWidth="Desktop" demandPopin="true">
+                                            <Text text="{i18n>rfqItemCount}"/>
+                                        </Column>
+                                        <Column minScreenWidth="Desktop" demandPopin="true">
+                                            <Text text="{i18n>mqCount}"/>
+                                        </Column>
+                                        <Column minScreenWidth="Tablet" demandPopin="true">
+                                            <Text text="{i18n>awardStatus}"/>
+                                        </Column>
+                                    </columns>
+                                    <items>
+                                        <ColumnListItem type="Active">
+                                            <cells>
+                                                <ObjectIdentifier title="{work>RfqNo}"/>
+                                                <Text text="{path: 'work>DocDate', formatter: '.formatter.formatDate'}"/>
+                                                <ObjectNumber
+                                                    number="{work>RfqItemCount}"
+                                                    unit="{i18n>countUnit}"/>
+                                                <ObjectNumber
+                                                    number="{work>MqCount}"
+                                                    unit="{i18n>countUnit}"/>
+                                                <ObjectStatus
+                                                    text="{work>AwardStatusText}"
+                                                    state="{work>AwardStatusState}"/>
+                                            </cells>
+                                        </ColumnListItem>
+                                    </items>
+                                </Table>
+                            </VBox>
+                        </content>
+                    </Page>
+                </f:beginColumnPages>
+
+                <f:midColumnPages>
+                    <Page
+                        id="idMidPage"
+                        showHeader="false">
+                        <content>
+                            <VBox class="sapUiSmallMargin">
+                                <!-- 선택한 RFQ Header의 핵심 값을 짧게 보여준다. -->
+                                <ObjectHeader
+                                    title="{work>/SelectedRfq/RfqNo}"
+                                    intro="{i18n>selectedRfqTitle}"
+                                    responsive="true">
+                                    <attributes>
+                                        <ObjectAttribute
+                                            title="{i18n>docDate}"
+                                            text="{path: 'work>/SelectedRfq/DocDate', formatter: '.formatter.formatDate'}"/>
+                                        <ObjectAttribute
+                                            title="{i18n>awardStatus}"
+                                            text="{work>/SelectedRfq/AwardStatusText}"/>
+                                        <ObjectAttribute
+                                            title="{i18n>vendorCount}"
+                                            text="{work>/SelectedRfq/VendorCount}"/>
+                                    </attributes>
+                                    <statuses>
+                                        <ObjectStatus
+                                            text="{work>/SelectedRfq/AwardStatusText}"
+                                            state="{work>/SelectedRfq/AwardStatusState}"/>
+                                    </statuses>
+                                </ObjectHeader>
+
+                                <!--
+                                    Mid Column은 RFQ Item, Chart, MQ 비교 목록을 탭으로 분리한다.
+                                    실제 데이터 배열(work>/...)은 Controller 단계에서 채운다.
+                                -->
+                                <IconTabBar
+                                    id="idMidIconTabBar"
+                                    selectedKey="{view>/SelectedTabKey}"
+                                    expandable="false"
+                                    applyContentPadding="false">
+                                    <items>
+                                        <IconTabFilter
+                                            key="items"
+                                            text="{i18n>rfqItemTabTitle}"
+                                            icon="sap-icon://list">
+                                            <Table
+                                                id="idRfqItemTable"
+                                                items="{work>/RfqItems}"
+                                                mode="SingleSelectMaster"
+                                                growing="true"
+                                                growingThreshold="20"
+                                                noDataText="{i18n>msgNoData}"
+                                                selectionChange=".onRfqItemSelectionChange">
+                                                <columns>
+                                                    <Column width="6rem">
+                                                        <Text text="{i18n>rfqItem}"/>
+                                                    </Column>
+                                                    <Column minScreenWidth="Tablet" demandPopin="true">
+                                                        <Text text="{i18n>matnr}"/>
+                                                    </Column>
+                                                    <Column>
+                                                        <Text text="{i18n>maktx}"/>
+                                                    </Column>
+                                                    <Column minScreenWidth="Desktop" demandPopin="true">
+                                                        <Text text="{i18n>reqQty}"/>
+                                                    </Column>
+                                                    <Column minScreenWidth="Tablet" demandPopin="true">
+                                                        <Text text="{i18n>eindt}"/>
+                                                    </Column>
+                                                    <Column minScreenWidth="Desktop" demandPopin="true">
+                                                        <Text text="{i18n>awardVendor}"/>
+                                                    </Column>
+                                                    <Column minScreenWidth="Tablet" demandPopin="true">
+                                                        <Text text="{i18n>awardStatus}"/>
+                                                    </Column>
+                                                </columns>
+                                                <items>
+                                                    <ColumnListItem type="Active">
+                                                        <cells>
+                                                            <Text text="{work>RfqItem}"/>
+                                                            <ObjectIdentifier
+                                                                title="{work>Matnr}"
+                                                                text="{work>Maktx}"/>
+                                                            <Text text="{work>Maktx}"/>
+                                                            <ObjectNumber
+                                                                number="{path: 'work>ReqQty', formatter: '.formatter.formatQuantity'}"
+                                                                unit="{work>Meins}"/>
+                                                            <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
+                                                            <ObjectIdentifier
+                                                                title="{work>AwardLifnr}"
+                                                                text="{work>AwardName1}"/>
+                                                            <ObjectStatus
+                                                                text="{work>ItemStatusText}"
+                                                                state="{work>ItemStatusState}"/>
+                                                        </cells>
+                                                    </ColumnListItem>
+                                                </items>
+                                            </Table>
+                                        </IconTabFilter>
+
+                                        <IconTabFilter
+                                            key="chart"
+                                            text="{i18n>chartTabTitle}"
+                                            icon="sap-icon://bar-chart">
+                                            <VBox class="sapUiSmallMargin">
+                                                <viz:VizFrame
+                                                    id="idAmountCompareChart"
+                                                    width="100%"
+                                                    height="20rem"
+                                                    uiConfig="{applicationSet:'fiori'}"
+                                                    vizType="column"
+                                                    vizProperties="{
+                                                        title: { visible: false },
+                                                        legend: { visible: false },
+                                                        plotArea: { dataLabel: { visible: true } },
+                                                        valueAxis: { title: { visible: true, text: 'KRW' } },
+                                                        categoryAxis: { title: { visible: true, text: 'Supplier' } }
+                                                    }">
+                                                    <viz:dataset>
+                                                        <viz.data:FlattenedDataset data="{work>/ChartRows}">
+                                                            <viz.data:dimensions>
+                                                                <viz.data:DimensionDefinition
+                                                                    name="Supplier"
+                                                                    value="{work>Name1}"/>
+                                                            </viz.data:dimensions>
+                                                            <viz.data:measures>
+                                                                <viz.data:MeasureDefinition
+                                                                    name="KRW"
+                                                                    value="{work>NetwrKrw}"/>
+                                                            </viz.data:measures>
+                                                        </viz.data:FlattenedDataset>
+                                                    </viz:dataset>
+                                                    <viz:feeds>
+                                                        <viz.feeds:FeedItem
+                                                            uid="valueAxis"
+                                                            type="Measure"
+                                                            values="KRW"/>
+                                                        <viz.feeds:FeedItem
+                                                            uid="categoryAxis"
+                                                            type="Dimension"
+                                                            values="Supplier"/>
+                                                    </viz:feeds>
+                                                </viz:VizFrame>
+                                            </VBox>
+                                        </IconTabFilter>
+
+                                        <IconTabFilter
+                                            key="mq"
+                                            text="{i18n>mqCompareTabTitle}"
+                                            icon="sap-icon://compare">
+                                            <table:Table
+                                                id="idMqCompareTable"
+                                                rows="{work>/MqCompareRows}"
+                                                selectionMode="None"
+                                                visibleRowCount="7"
+                                                enableBusyIndicator="true"
+                                                ariaLabelledBy="idMqCompareTableTitle">
+                                                <table:extension>
+                                                    <OverflowToolbar>
+                                                        <Title
+                                                            id="idMqCompareTableTitle"
+                                                            text="{i18n>mqCompareTabTitle}"
+                                                            level="H3"/>
+                                                        <ToolbarSpacer/>
+                                                        <Button
+                                                            text="{i18n>autoRecommend}"
+                                                            icon="sap-icon://sys-enter-2"
+                                                            type="Transparent"
+                                                            press=".onApplyAutoRecommend"/>
+                                                        <Button
+                                                            text="{i18n>mqDetail}"
+                                                            icon="sap-icon://detail-view"
+                                                            type="Transparent"
+                                                            enabled="{= !!${work>/SelectedMq/MqNo} }"
+                                                            press=".onOpenMqDetail"/>
+                                                    </OverflowToolbar>
+                                                </table:extension>
+                                                <table:columns>
+                                                    <table:Column width="5rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>selectedMq}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <RadioButton
+                                                                selected="{work>UiSelected}"
+                                                                enabled="{= ${work>CanSelect} === 'X' }"
+                                                                select=".onMqRadioSelect"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="9rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>mqNo}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <ObjectIdentifier
+                                                                title="{work>MqNo}"
+                                                                text="{work>MqItem}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="11rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>name1}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <ObjectIdentifier
+                                                                title="{work>Name1}"
+                                                                text="{work>Lifnr}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="7rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>quoteQty}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <ObjectNumber
+                                                                number="{path: 'work>QuoteQty', formatter: '.formatter.formatQuantity'}"
+                                                                unit="{work>Meins}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="8rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>netpr}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <ObjectNumber
+                                                                number="{path: 'work>Netpr', formatter: '.formatter.formatAmount'}"
+                                                                unit="{work>Waers}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="9rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>netwrKrw}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <ObjectNumber
+                                                                number="{path: 'work>NetwrKrw', formatter: '.formatter.formatAmount'}"
+                                                                unit="{work>Kwaers}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="8rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>eindt}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="8rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>responseStatus}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <ObjectStatus
+                                                                text="{work>ResponseStatusText}"
+                                                                state="{path: 'work>ResponseStatus', formatter: '.formatter.formatResponseState'}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="8rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>currentAward}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <ObjectStatus
+                                                                text="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatBooleanText'}"
+                                                                state="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatBooleanState'}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="8rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>recommend}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <ObjectStatus
+                                                                text="{path: 'work>RecommendYn', formatter: '.formatter.formatBooleanText'}"
+                                                                state="{path: 'work>RecommendYn', formatter: '.formatter.formatBooleanState'}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                    <table:Column width="9rem">
+                                                        <table:label>
+                                                            <Label text="{i18n>canSelect}"/>
+                                                        </table:label>
+                                                        <table:template>
+                                                            <ObjectStatus
+                                                                text="{path: 'work>CanSelect', formatter: '.formatter.formatCanSelectText'}"
+                                                                state="{path: 'work>CanSelect', formatter: '.formatter.formatCanSelectState'}"/>
+                                                        </table:template>
+                                                    </table:Column>
+                                                </table:columns>
+                                            </table:Table>
+                                        </IconTabFilter>
+                                    </items>
+                                </IconTabBar>
+                            </VBox>
+                        </content>
+                    </Page>
+                </f:midColumnPages>
+            </f:FlexibleColumnLayout>
+        </f:content>
+
+        <f:footer>
+            <!--
+                Footer에는 사용자가 가장 자주 누를 업무 액션만 둔다.
+                실제 활성화 조건은 work model이 준비된 다음 단계부터 동작한다.
+            -->
+            <OverflowToolbar>
+                <ToolbarSpacer/>
+                <Button
+                    text="{i18n>cancelAward}"
+                    icon="sap-icon://sys-cancel"
+                    enabled="{= ${work>/SelectedRfqItem/CanCancelAward} === 'X' }"
+                    press=".onCancelAward"/>
+                <Button
+                    text="{i18n>saveAward}"
+                    icon="sap-icon://accept"
+                    type="Emphasized"
+                    enabled="{= !!${work>/SelectedMq/MqNo} }"
+                    press=".onSaveAward"/>
+            </OverflowToolbar>
+        </f:footer>
+    </f:DynamicPage>
+</mvc:View>
