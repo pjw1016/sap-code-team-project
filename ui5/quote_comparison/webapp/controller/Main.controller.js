@@ -142,8 +142,7 @@ sap.ui.define([
          * RFQ Header 선택 이벤트.
          *
          * Begin Column의 RFQ Header 행을 선택하면 Mid Column을 열고,
-         * 선택한 Header를 Mid 영역의 ObjectHeader에 바인딩한다.
-         * 실제 RFQItemSet 조회는 다음 단계에서 이 메서드 뒤에 연결한다.
+         * 선택한 Header를 Mid 영역의 ObjectPage Header에 바인딩한 뒤 RFQItemSet을 조회한다.
          */
         onRfqSelectionChange(oEvent) {
             const oSelectedRfq = this._getSelectedObjectFromEvent(oEvent);
@@ -152,7 +151,7 @@ sap.ui.define([
                 return;
             }
 
-            this._openMidColumnForRfq(oSelectedRfq);
+            return this._openMidColumnForRfq(oSelectedRfq);
         },
 
         /**
@@ -290,7 +289,11 @@ sap.ui.define([
                 this._updateHeaderKpis(aRows);
 
                 if (aRows.length === 1) {
-                    this._openMidColumnForRfq(aRows[0]);
+                    /*
+                     * RFQ 번호로 1건만 조회된 경우에는 사용자가 목록을 다시 누르지 않아도 Mid Column을 연다.
+                     * Header 조회 자체는 성공으로 유지해야 하므로, Item 조회 실패는 RFQHeaderSet catch로 전파하지 않는다.
+                     */
+                    this._openMidColumnForRfq(aRows[0]).catch(() => {});
                 }
 
                 return aRows;
@@ -349,6 +352,71 @@ sap.ui.define([
 
             if (sCleanValue) {
                 aFilters.push(new Filter(sProperty, sOperator, sCleanValue));
+            }
+        },
+
+        /**
+         * 선택 RFQ의 RFQItemSet을 조회한다.
+         *
+         * Backend DPC_EXT의 RFQITEMSET_GET_ENTITYSET은 `RfqNo eq '...'` 조건을 기준으로
+         * 해당 RFQ의 품목과 품목별 채택상태, 채택 MQ, 채택취소 가능 여부를 계산해서 내려준다.
+         * UI5에서는 이 계산 결과를 그대로 `work>/RfqItems`에 담고, 이후 RFQ Item 선택 시 MQCompareSet을 이어서 조회한다.
+         */
+        _loadRfqItemsForRfq(sRfqNo) {
+            const oWorkModel = this.getView().getModel("work");
+            const aFilters = this._buildRfqItemFilters(sRfqNo);
+
+            this._clearRfqItemDependentArea();
+
+            if (!sRfqNo) {
+                return Promise.resolve([]);
+            }
+
+            return this._readEntitySet("/RFQItemSet", aFilters).then((aRows) => {
+                if (oWorkModel) {
+                    oWorkModel.setProperty("/RfqItems", aRows);
+                }
+
+                return aRows;
+            }).catch((oError) => {
+                if (oWorkModel) {
+                    oWorkModel.setProperty("/RfqItems", []);
+                }
+
+                this._showToast(this._getText("msgLoadRfqItemError") || "RFQ Item 목록 조회 중 오류가 발생했습니다.");
+                throw oError;
+            });
+        },
+
+        /**
+         * RFQItemSet 조회용 OData Filter를 만든다.
+         *
+         * DPC_EXT의 필터 해석 메서드는 OData Property명 기준으로 `RfqNo`를 읽는다.
+         * 따라서 화면에서 선택한 Header의 RfqNo를 그대로 EQ 조건으로 전달한다.
+         */
+        _buildRfqItemFilters(sRfqNo) {
+            const aFilters = [];
+
+            this._addTextFilter(aFilters, "RfqNo", sRfqNo, FilterOperator.EQ);
+
+            return aFilters;
+        },
+
+        /**
+         * RFQ Item 하위 단계의 선택/비교 데이터를 비운다.
+         *
+         * Header를 바꿔 선택하면 이전 Header의 Item, MQ 후보, 차트가 남아 있으면 안 된다.
+         * Header 자체와 Begin 목록은 유지하고, Mid Column 안쪽의 하위 업무 데이터만 초기화한다.
+         */
+        _clearRfqItemDependentArea() {
+            const oWorkModel = this.getView().getModel("work");
+
+            if (oWorkModel) {
+                oWorkModel.setProperty("/RfqItems", []);
+                oWorkModel.setProperty("/SelectedRfqItem", {});
+                oWorkModel.setProperty("/SelectedMq", {});
+                oWorkModel.setProperty("/MqCompareRows", []);
+                oWorkModel.setProperty("/ChartRows", []);
             }
         },
 
@@ -554,7 +622,7 @@ sap.ui.define([
         /**
          * 선택된 RFQ Header를 Mid Column의 Header 영역에 반영하고 FCL을 2컬럼으로 전환한다.
          *
-         * 실제 데이터 연동 단계에서는 이 메서드 뒤에 RFQItemSet 조회를 호출하면 된다.
+         * Header 선택 직후 RFQItemSet까지 조회해 Mid 첫 섹션을 채운다.
          */
         _openMidColumnForRfq(oRfq) {
             const oView = this.getView();
@@ -568,6 +636,8 @@ sap.ui.define([
             if (oViewModel) {
                 oViewModel.setProperty("/FclLayout", "TwoColumnsMidExpanded");
             }
+
+            return this._loadRfqItemsForRfq(oRfq && oRfq.RfqNo);
         },
 
         /**

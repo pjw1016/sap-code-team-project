@@ -63,7 +63,16 @@ sap.ui.define([
 	});
 
 	QUnit.test("onRfqSelectionChange should open the Mid column", function (assert) {
-		var oFixture = createControllerWithFakeView();
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				read: function (sPath, mParameters) {
+					assert.strictEqual(sPath, "/RFQItemSet", "Selecting an RFQ starts the RFQ item query.");
+					mParameters.success({
+						results: []
+					});
+				}
+			}
+		});
 
 		oFixture.controller.onInit();
 		oFixture.controller.onRfqSelectionChange({
@@ -85,6 +94,57 @@ sap.ui.define([
 
 		assert.strictEqual(oFixture.models.view.getProperty("/FclLayout"), "TwoColumnsMidExpanded", "Selecting an RFQ opens the Mid column.");
 		assert.strictEqual(oFixture.models.work.getProperty("/SelectedRfq/RfqNo"), "5000000123", "Selected RFQ is stored for the Mid column header.");
+	});
+
+	QUnit.test("onRfqSelectionChange should load RFQItemSet for the selected RFQ", function (assert) {
+		var done = assert.async();
+		var oRfq = {
+			RfqNo: "5000000123",
+			AwardStatusText: "미채택"
+		};
+		var aItems = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			Matnr: "100001",
+			Maktx: "Bolt M10",
+			ItemStatusText: "미채택",
+			ItemStatusState: "None"
+		}];
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				read: function (sPath, mParameters) {
+					assert.strictEqual(sPath, "/RFQItemSet", "RFQItemSet is read when a header is selected.");
+					assert.strictEqual(mParameters.filters.length, 1, "The selected RFQ is passed as one filter.");
+					assert.strictEqual(mParameters.filters[0].sPath, "RfqNo", "RFQ item query filters by RfqNo.");
+					assert.strictEqual(mParameters.filters[0].sOperator, "EQ", "RFQ item query uses exact RFQ number matching.");
+					assert.strictEqual(mParameters.filters[0].oValue1, "5000000123", "Selected RFQ number is used as the filter value.");
+					mParameters.success({
+						results: aItems
+					});
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+
+		oFixture.controller.onRfqSelectionChange({
+			getParameter: function () {
+				return {
+					getBindingContext: function () {
+						return {
+							getObject: function () {
+								return oRfq;
+							}
+						};
+					}
+				};
+			}
+		}).then(function () {
+			assert.deepEqual(oFixture.models.work.getProperty("/RfqItems"), aItems, "RFQ item rows are stored in the work model.");
+			assert.deepEqual(oFixture.models.work.getProperty("/MqCompareRows"), [], "Previous MQ compare rows are cleared before item drilldown.");
+			assert.deepEqual(oFixture.models.work.getProperty("/ChartRows"), [], "Previous chart rows are cleared before item drilldown.");
+			done();
+		});
 	});
 
 	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
@@ -169,10 +229,17 @@ sap.ui.define([
 		var oFixture = createControllerWithFakeView({
 			odataModel: {
 				read: function (sPath, mParameters) {
-					assert.strictEqual(sPath, "/RFQHeaderSet", "RFQHeaderSet is read for the Begin column.");
-					assert.ok(Array.isArray(mParameters.filters), "OData filters are passed as an array.");
+					if (sPath === "/RFQHeaderSet") {
+						assert.ok(Array.isArray(mParameters.filters), "OData filters are passed as an array.");
+						mParameters.success({
+							results: [oHeader]
+						});
+						return;
+					}
+
+					assert.strictEqual(sPath, "/RFQItemSet", "Single RFQ header result also starts the RFQ item query.");
 					mParameters.success({
-						results: [oHeader]
+						results: []
 					});
 				}
 			}
