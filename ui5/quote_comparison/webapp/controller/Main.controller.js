@@ -43,8 +43,7 @@ sap.ui.define([
             return {
                 Busy: false,
                 AdvancedFilterVisible: false,
-                FclLayout: "OneColumn",
-                SelectedTabKey: "items"
+                FclLayout: "OneColumn"
             };
         },
 

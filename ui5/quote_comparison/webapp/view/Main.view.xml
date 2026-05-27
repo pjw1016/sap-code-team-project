@@ -433,7 +433,7 @@
                 preserveHeaderStateOnScroll="false"
                 headerContentPinnable="true"
                 toggleHeaderOnTitleClick="true"
-                showAnchorBar="false"
+                showAnchorBar="true"
                 showFooter="true"
                 isChildPage="true"
                 upperCaseAnchorBar="false">
@@ -536,267 +536,265 @@
                 </uxap:headerContent>
 
                 <uxap:sections>
-                    <uxap:ObjectPageSection title="{i18n>comparisonSectionTitle}">
+                    <!--
+                        ObjectPageSection은 ObjectPageLayout의 AnchorBar 항목으로 자동 노출된다.
+                        사용자가 AnchorBar에서 섹션명을 누르면 UI5가 해당 섹션 위치로 스크롤하므로,
+                        탭보다 전체 비교 내용을 위아래로 훑어보기 좋다.
+                    -->
+                    <uxap:ObjectPageSection title="{i18n>rfqItemTabTitle}">
                         <uxap:subSections>
                             <uxap:ObjectPageSubSection>
                                 <uxap:blocks>
-                                    <IconTabBar
-                                        id="idCompareTabBar"
-                                        selectedKey="{view>/SelectedTabKey}"
-                                        expandable="false"
-                                        headerMode="Inline">
+                                    <Table
+                                        id="idRfqItemTable"
+                                        items="{work>/RfqItems}"
+                                        mode="SingleSelectMaster"
+                                        growing="true"
+                                        growingThreshold="20"
+                                        noDataText="{i18n>msgNoData}"
+                                        selectionChange=".onRfqItemSelectionChange">
+                                        <columns>
+                                            <Column width="6rem">
+                                                <Text text="{i18n>rfqItem}"/>
+                                            </Column>
+                                            <Column minScreenWidth="Tablet" demandPopin="true">
+                                                <Text text="{i18n>matnr}"/>
+                                            </Column>
+                                            <Column>
+                                                <Text text="{i18n>maktx}"/>
+                                            </Column>
+                                            <Column minScreenWidth="Desktop" demandPopin="true">
+                                                <Text text="{i18n>reqQty}"/>
+                                            </Column>
+                                            <Column minScreenWidth="Tablet" demandPopin="true">
+                                                <Text text="{i18n>eindt}"/>
+                                            </Column>
+                                            <Column minScreenWidth="Desktop" demandPopin="true">
+                                                <Text text="{i18n>awardVendor}"/>
+                                            </Column>
+                                            <Column minScreenWidth="Tablet" demandPopin="true">
+                                                <Text text="{i18n>awardStatus}"/>
+                                            </Column>
+                                        </columns>
                                         <items>
-                                            <IconTabFilter
-                                                key="items"
-                                                text="{i18n>rfqItemTabTitle}"
-                                                icon="sap-icon://list">
-                                                <Table
-                                                    id="idRfqItemTable"
-                                                    items="{work>/RfqItems}"
-                                                    mode="SingleSelectMaster"
-                                                    growing="true"
-                                                    growingThreshold="20"
-                                                    noDataText="{i18n>msgNoData}"
-                                                    selectionChange=".onRfqItemSelectionChange">
-                                                    <columns>
-                                                        <Column width="6rem">
-                                                            <Text text="{i18n>rfqItem}"/>
-                                                        </Column>
-                                                        <Column minScreenWidth="Tablet" demandPopin="true">
-                                                            <Text text="{i18n>matnr}"/>
-                                                        </Column>
-                                                        <Column>
-                                                            <Text text="{i18n>maktx}"/>
-                                                        </Column>
-                                                        <Column minScreenWidth="Desktop" demandPopin="true">
-                                                            <Text text="{i18n>reqQty}"/>
-                                                        </Column>
-                                                        <Column minScreenWidth="Tablet" demandPopin="true">
-                                                            <Text text="{i18n>eindt}"/>
-                                                        </Column>
-                                                        <Column minScreenWidth="Desktop" demandPopin="true">
-                                                            <Text text="{i18n>awardVendor}"/>
-                                                        </Column>
-                                                        <Column minScreenWidth="Tablet" demandPopin="true">
-                                                            <Text text="{i18n>awardStatus}"/>
-                                                        </Column>
-                                                    </columns>
-                                                    <items>
-                                                        <ColumnListItem type="Navigation">
-                                                            <cells>
-                                                                <Text text="{work>RfqItem}"/>
-                                                                <ObjectIdentifier
-                                                                    title="{work>Matnr}"
-                                                                    text="{work>Maktx}"/>
-                                                                <Text text="{work>Maktx}"/>
-                                                                <ObjectNumber
-                                                                    number="{path: 'work>ReqQty', formatter: '.formatter.formatQuantity'}"
-                                                                    unit="{work>Meins}"/>
-                                                                <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
-                                                                <ObjectIdentifier
-                                                                    title="{work>AwardLifnr}"
-                                                                    text="{work>AwardName1}"/>
-                                                                <ObjectStatus
-                                                                    text="{work>ItemStatusText}"
-                                                                    state="{work>ItemStatusState}"/>
-                                                            </cells>
-                                                        </ColumnListItem>
-                                                    </items>
-                                                </Table>
-                                            </IconTabFilter>
-
-                                            <IconTabFilter
-                                                key="chart"
-                                                text="{i18n>chartTabTitle}"
-                                                icon="sap-icon://bar-chart">
-                                                <VBox class="sapUiSmallMargin">
-                                                    <viz:VizFrame
-                                                        id="idAmountCompareChart"
-                                                        width="100%"
-                                                        height="20rem"
-                                                        uiConfig="{applicationSet:'fiori'}"
-                                                        vizType="column"
-                                                        vizProperties="{
-                                                            title: { visible: false },
-                                                            legend: { visible: false },
-                                                            plotArea: { dataLabel: { visible: true } },
-                                                            valueAxis: { title: { visible: true, text: 'KRW' } },
-                                                            categoryAxis: { title: { visible: true, text: 'Supplier' } }
-                                                        }">
-                                                        <viz:dataset>
-                                                            <viz.data:FlattenedDataset data="{work>/ChartRows}">
-                                                                <viz.data:dimensions>
-                                                                    <viz.data:DimensionDefinition
-                                                                        name="Supplier"
-                                                                        value="{work>Name1}"/>
-                                                                </viz.data:dimensions>
-                                                                <viz.data:measures>
-                                                                    <viz.data:MeasureDefinition
-                                                                        name="KRW"
-                                                                        value="{work>NetwrKrw}"/>
-                                                                </viz.data:measures>
-                                                            </viz.data:FlattenedDataset>
-                                                        </viz:dataset>
-                                                        <viz:feeds>
-                                                            <viz.feeds:FeedItem
-                                                                uid="valueAxis"
-                                                                type="Measure"
-                                                                values="KRW"/>
-                                                            <viz.feeds:FeedItem
-                                                                uid="categoryAxis"
-                                                                type="Dimension"
-                                                                values="Supplier"/>
-                                                        </viz:feeds>
-                                                    </viz:VizFrame>
-                                                </VBox>
-                                            </IconTabFilter>
-
-                                            <IconTabFilter
-                                                key="mq"
-                                                text="{i18n>mqCompareTabTitle}"
-                                                icon="sap-icon://compare">
-                                                <table:Table
-                                                    id="idMqCompareTable"
-                                                    rows="{work>/MqCompareRows}"
-                                                    selectionMode="None"
-                                                    visibleRowCount="7"
-                                                    enableBusyIndicator="true"
-                                                    ariaLabelledBy="idMqCompareTableTitle">
-                                                    <table:extension>
-                                                        <OverflowToolbar>
-                                                            <Title
-                                                                id="idMqCompareTableTitle"
-                                                                text="{i18n>mqCompareTabTitle}"
-                                                                level="H3"/>
-                                                            <ToolbarSpacer/>
-                                                            <Button
-                                                                text="{i18n>autoRecommend}"
-                                                                icon="sap-icon://sys-enter-2"
-                                                                type="Transparent"
-                                                                press=".onApplyAutoRecommend"/>
-                                                            <Button
-                                                                text="{i18n>mqDetail}"
-                                                                icon="sap-icon://detail-view"
-                                                                type="Transparent"
-                                                                enabled="{= !!${work>/SelectedMq/MqNo} }"
-                                                                press=".onOpenMqDetail"/>
-                                                        </OverflowToolbar>
-                                                    </table:extension>
-                                                    <table:columns>
-                                                        <table:Column width="5rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>selectedMq}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <RadioButton
-                                                                    selected="{work>UiSelected}"
-                                                                    enabled="{= ${work>CanSelect} === 'X' }"
-                                                                    select=".onMqRadioSelect"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="9rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>mqNo}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <ObjectIdentifier
-                                                                    title="{work>MqNo}"
-                                                                    text="{work>MqItem}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="11rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>name1}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <ObjectIdentifier
-                                                                    title="{work>Name1}"
-                                                                    text="{work>Lifnr}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="7rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>quoteQty}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <ObjectNumber
-                                                                    number="{path: 'work>QuoteQty', formatter: '.formatter.formatQuantity'}"
-                                                                    unit="{work>Meins}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="8rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>netpr}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <ObjectNumber
-                                                                    number="{path: 'work>Netpr', formatter: '.formatter.formatAmount'}"
-                                                                    unit="{work>Waers}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="9rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>netwrKrw}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <ObjectNumber
-                                                                    number="{path: 'work>NetwrKrw', formatter: '.formatter.formatAmount'}"
-                                                                    unit="{work>Kwaers}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="8rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>eindt}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="8rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>responseStatus}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <ObjectStatus
-                                                                    text="{work>ResponseStatusText}"
-                                                                    state="{path: 'work>ResponseStatus', formatter: '.formatter.formatResponseState'}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="8rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>currentAward}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <ObjectStatus
-                                                                    text="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatBooleanText'}"
-                                                                    state="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatBooleanState'}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="8rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>recommend}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <ObjectStatus
-                                                                    text="{path: 'work>RecommendYn', formatter: '.formatter.formatBooleanText'}"
-                                                                    state="{path: 'work>RecommendYn', formatter: '.formatter.formatBooleanState'}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                        <table:Column width="9rem">
-                                                            <table:label>
-                                                                <Label text="{i18n>canSelect}"/>
-                                                            </table:label>
-                                                            <table:template>
-                                                                <ObjectStatus
-                                                                    text="{path: 'work>CanSelect', formatter: '.formatter.formatCanSelectText'}"
-                                                                    state="{path: 'work>CanSelect', formatter: '.formatter.formatCanSelectState'}"/>
-                                                            </table:template>
-                                                        </table:Column>
-                                                    </table:columns>
-                                                </table:Table>
-                                            </IconTabFilter>
+                                            <ColumnListItem type="Navigation">
+                                                <cells>
+                                                    <Text text="{work>RfqItem}"/>
+                                                    <ObjectIdentifier
+                                                        title="{work>Matnr}"
+                                                        text="{work>Maktx}"/>
+                                                    <Text text="{work>Maktx}"/>
+                                                    <ObjectNumber
+                                                        number="{path: 'work>ReqQty', formatter: '.formatter.formatQuantity'}"
+                                                        unit="{work>Meins}"/>
+                                                    <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
+                                                    <ObjectIdentifier
+                                                        title="{work>AwardLifnr}"
+                                                        text="{work>AwardName1}"/>
+                                                    <ObjectStatus
+                                                        text="{work>ItemStatusText}"
+                                                        state="{work>ItemStatusState}"/>
+                                                </cells>
+                                            </ColumnListItem>
                                         </items>
-                                    </IconTabBar>
+                                    </Table>
+                                </uxap:blocks>
+                            </uxap:ObjectPageSubSection>
+                        </uxap:subSections>
+                    </uxap:ObjectPageSection>
+
+                    <uxap:ObjectPageSection title="{i18n>chartTabTitle}">
+                        <uxap:subSections>
+                            <uxap:ObjectPageSubSection>
+                                <uxap:blocks>
+                                    <VBox class="sapUiSmallMargin">
+                                        <viz:VizFrame
+                                            id="idAmountCompareChart"
+                                            width="100%"
+                                            height="20rem"
+                                            uiConfig="{applicationSet:'fiori'}"
+                                            vizType="column"
+                                            vizProperties="{
+                                                title: { visible: false },
+                                                legend: { visible: false },
+                                                plotArea: { dataLabel: { visible: true } },
+                                                valueAxis: { title: { visible: true, text: 'KRW' } },
+                                                categoryAxis: { title: { visible: true, text: 'Supplier' } }
+                                            }">
+                                            <viz:dataset>
+                                                <viz.data:FlattenedDataset data="{work>/ChartRows}">
+                                                    <viz.data:dimensions>
+                                                        <viz.data:DimensionDefinition
+                                                            name="Supplier"
+                                                            value="{work>Name1}"/>
+                                                    </viz.data:dimensions>
+                                                    <viz.data:measures>
+                                                        <viz.data:MeasureDefinition
+                                                            name="KRW"
+                                                            value="{work>NetwrKrw}"/>
+                                                    </viz.data:measures>
+                                                </viz.data:FlattenedDataset>
+                                            </viz:dataset>
+                                            <viz:feeds>
+                                                <viz.feeds:FeedItem
+                                                    uid="valueAxis"
+                                                    type="Measure"
+                                                    values="KRW"/>
+                                                <viz.feeds:FeedItem
+                                                    uid="categoryAxis"
+                                                    type="Dimension"
+                                                    values="Supplier"/>
+                                            </viz:feeds>
+                                        </viz:VizFrame>
+                                    </VBox>
+                                </uxap:blocks>
+                            </uxap:ObjectPageSubSection>
+                        </uxap:subSections>
+                    </uxap:ObjectPageSection>
+
+                    <uxap:ObjectPageSection title="{i18n>mqCompareTabTitle}">
+                        <uxap:subSections>
+                            <uxap:ObjectPageSubSection>
+                                <uxap:blocks>
+                                    <table:Table
+                                        id="idMqCompareTable"
+                                        rows="{work>/MqCompareRows}"
+                                        selectionMode="None"
+                                        visibleRowCount="7"
+                                        enableBusyIndicator="true"
+                                        ariaLabelledBy="idMqCompareTableTitle">
+                                        <table:extension>
+                                            <OverflowToolbar>
+                                                <Title
+                                                    id="idMqCompareTableTitle"
+                                                    text="{i18n>mqCompareTabTitle}"
+                                                    level="H3"/>
+                                                <ToolbarSpacer/>
+                                                <Button
+                                                    text="{i18n>autoRecommend}"
+                                                    icon="sap-icon://sys-enter-2"
+                                                    type="Transparent"
+                                                    press=".onApplyAutoRecommend"/>
+                                                <Button
+                                                    text="{i18n>mqDetail}"
+                                                    icon="sap-icon://detail-view"
+                                                    type="Transparent"
+                                                    enabled="{= !!${work>/SelectedMq/MqNo} }"
+                                                    press=".onOpenMqDetail"/>
+                                            </OverflowToolbar>
+                                        </table:extension>
+                                        <table:columns>
+                                            <table:Column width="5rem">
+                                                <table:label>
+                                                    <Label text="{i18n>selectedMq}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <RadioButton
+                                                        selected="{work>UiSelected}"
+                                                        enabled="{= ${work>CanSelect} === 'X' }"
+                                                        select=".onMqRadioSelect"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="9rem">
+                                                <table:label>
+                                                    <Label text="{i18n>mqNo}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectIdentifier
+                                                        title="{work>MqNo}"
+                                                        text="{work>MqItem}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="11rem">
+                                                <table:label>
+                                                    <Label text="{i18n>name1}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectIdentifier
+                                                        title="{work>Name1}"
+                                                        text="{work>Lifnr}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="7rem">
+                                                <table:label>
+                                                    <Label text="{i18n>quoteQty}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectNumber
+                                                        number="{path: 'work>QuoteQty', formatter: '.formatter.formatQuantity'}"
+                                                        unit="{work>Meins}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="8rem">
+                                                <table:label>
+                                                    <Label text="{i18n>netpr}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectNumber
+                                                        number="{path: 'work>Netpr', formatter: '.formatter.formatAmount'}"
+                                                        unit="{work>Waers}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="9rem">
+                                                <table:label>
+                                                    <Label text="{i18n>netwrKrw}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectNumber
+                                                        number="{path: 'work>NetwrKrw', formatter: '.formatter.formatAmount'}"
+                                                        unit="{work>Kwaers}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="8rem">
+                                                <table:label>
+                                                    <Label text="{i18n>eindt}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="8rem">
+                                                <table:label>
+                                                    <Label text="{i18n>responseStatus}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectStatus
+                                                        text="{work>ResponseStatusText}"
+                                                        state="{path: 'work>ResponseStatus', formatter: '.formatter.formatResponseState'}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="8rem">
+                                                <table:label>
+                                                    <Label text="{i18n>currentAward}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectStatus
+                                                        text="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatBooleanText'}"
+                                                        state="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatBooleanState'}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="8rem">
+                                                <table:label>
+                                                    <Label text="{i18n>recommend}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectStatus
+                                                        text="{path: 'work>RecommendYn', formatter: '.formatter.formatBooleanText'}"
+                                                        state="{path: 'work>RecommendYn', formatter: '.formatter.formatBooleanState'}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="9rem">
+                                                <table:label>
+                                                    <Label text="{i18n>canSelect}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectStatus
+                                                        text="{path: 'work>CanSelect', formatter: '.formatter.formatCanSelectText'}"
+                                                        state="{path: 'work>CanSelect', formatter: '.formatter.formatCanSelectState'}"/>
+                                                </table:template>
+                                            </table:Column>
+                                        </table:columns>
+                                    </table:Table>
                                 </uxap:blocks>
                             </uxap:ObjectPageSubSection>
                         </uxap:subSections>
