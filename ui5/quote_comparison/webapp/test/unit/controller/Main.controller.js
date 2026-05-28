@@ -690,6 +690,233 @@ sap.ui.define([
 		assert.strictEqual(sToastMessage, "선택 가능한 추천 MQ가 없습니다.", "User is informed when no selectable recommendation exists.");
 	});
 
+	QUnit.test("onSaveAward should MERGE AWARD for the selected MQ and refresh comparison data", function (assert) {
+		var done = assert.async();
+		var bRefreshed = false;
+		var sToastMessage = "";
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				update: function (sPath, oPayload, mParameters) {
+					assert.strictEqual(sPath, "/QuotationItemSet(MqNo='MQ70000002',MqItem='00010')", "Selected MQ key is used for QuotationItemSet MERGE.");
+					assert.deepEqual(oPayload, {
+						MqNo: "MQ70000002",
+						MqItem: "00010",
+						ActionType: "AWARD"
+					}, "AWARD payload is sent to the backend.");
+					assert.strictEqual(mParameters.merge, true, "OData update is sent as MERGE.");
+					mParameters.success();
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedMq", {
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			CanSelect: "X"
+		});
+		oFixture.controller._confirmAction = function () {
+			return Promise.resolve(true);
+		};
+		oFixture.controller._refreshAfterAward = function () {
+			bRefreshed = true;
+			return Promise.resolve();
+		};
+		oFixture.controller._showToast = function (sMessage) {
+			sToastMessage = sMessage;
+		};
+		oFixture.controller._getText = function (sKey) {
+			return sKey === "msgAwardSuccess" ? "견적이 채택되었습니다." : "선택한 MQ를 채택하시겠습니까?";
+		};
+
+		oFixture.controller.onSaveAward().then(function () {
+			assert.strictEqual(sToastMessage, "견적이 채택되었습니다.", "Success message is shown after successful MERGE.");
+			assert.ok(bRefreshed, "RFQ item and MQ comparison data are refreshed after successful AWARD.");
+			assert.strictEqual(oFixture.models.view.getProperty("/Busy"), false, "Busy state is cleared after the update flow.");
+			done();
+		});
+	});
+
+	QUnit.test("onSaveAward should not call MERGE when no MQ is selected", function (assert) {
+		var bUpdateCalled = false;
+		var sToastMessage = "";
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				update: function () {
+					bUpdateCalled = true;
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.controller._showToast = function (sMessage) {
+			sToastMessage = sMessage;
+		};
+		oFixture.controller._getText = function (sKey) {
+			return sKey === "msgSelectMq" ? "채택할 MQ를 선택하세요." : "";
+		};
+
+		return oFixture.controller.onSaveAward().then(function () {
+			assert.notOk(bUpdateCalled, "Backend update is not called without a selected MQ.");
+			assert.strictEqual(sToastMessage, "채택할 MQ를 선택하세요.", "User is asked to select an MQ first.");
+		});
+	});
+
+	QUnit.test("onCancelAward should MERGE CANCEL for the awarded MQ and refresh comparison data", function (assert) {
+		var done = assert.async();
+		var bRefreshed = false;
+		var sToastMessage = "";
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				update: function (sPath, oPayload, mParameters) {
+					assert.strictEqual(sPath, "/QuotationItemSet(MqNo='MQ70000002',MqItem='00010')", "Awarded MQ key is used for QuotationItemSet MERGE.");
+					assert.deepEqual(oPayload, {
+						MqNo: "MQ70000002",
+						MqItem: "00010",
+						ActionType: "CANCEL"
+					}, "CANCEL payload is sent to the backend.");
+					assert.strictEqual(mParameters.merge, true, "OData update is sent as MERGE.");
+					mParameters.success();
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedRfqItem", {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			AwardMqNo: "MQ70000002",
+			AwardMqItem: "00010",
+			CanCancelAward: "X"
+		});
+		oFixture.controller._confirmAction = function () {
+			return Promise.resolve(true);
+		};
+		oFixture.controller._refreshAfterAward = function () {
+			bRefreshed = true;
+			return Promise.resolve();
+		};
+		oFixture.controller._showToast = function (sMessage) {
+			sToastMessage = sMessage;
+		};
+		oFixture.controller._getText = function (sKey) {
+			if (sKey === "msgCancelSuccess") {
+				return "견적 채택이 취소되었습니다.";
+			}
+
+			if (sKey === "msgConfirmCancel") {
+				return "현재 채택된 MQ를 채택취소하시겠습니까?";
+			}
+
+			return "";
+		};
+
+		oFixture.controller.onCancelAward().then(function () {
+			assert.strictEqual(sToastMessage, "견적 채택이 취소되었습니다.", "Success message is shown after successful CANCEL.");
+			assert.ok(bRefreshed, "RFQ item and MQ comparison data are refreshed after successful CANCEL.");
+			assert.strictEqual(oFixture.models.view.getProperty("/Busy"), false, "Busy state is cleared after the update flow.");
+			done();
+		});
+	});
+
+	QUnit.test("onCancelAward should not call MERGE when the selected RFQ item cannot be cancelled", function (assert) {
+		var bUpdateCalled = false;
+		var sToastMessage = "";
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				update: function () {
+					bUpdateCalled = true;
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedRfqItem", {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			CanCancelAward: ""
+		});
+		oFixture.controller._showToast = function (sMessage) {
+			sToastMessage = sMessage;
+		};
+		oFixture.controller._getText = function (sKey) {
+			return sKey === "msgNoAwardToCancel" ? "채택취소할 MQ가 없습니다." : "";
+		};
+
+		return oFixture.controller.onCancelAward().then(function () {
+			assert.notOk(bUpdateCalled, "Backend update is not called without a cancellable awarded MQ.");
+			assert.strictEqual(sToastMessage, "채택취소할 MQ가 없습니다.", "User is informed that there is no award to cancel.");
+		});
+	});
+
+	QUnit.test("_refreshAfterAward should preserve the current Mid column layout while reloading data", function (assert) {
+		var done = assert.async();
+		var aReadPaths = [];
+		var oSelectedRfq = {
+			RfqNo: "5000000123",
+			AwardStatusText: "Not awarded"
+		};
+		var oUpdatedItem = {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			ItemStatusText: "Awarded",
+			CanCancelAward: "X"
+		};
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				read: function (sPath, mParameters) {
+					aReadPaths.push(sPath);
+
+					if (sPath === "/RFQHeaderSet") {
+						mParameters.success({
+							results: [
+								oSelectedRfq,
+								{ RfqNo: "5000000456", AwardStatusText: "Not awarded" }
+							]
+						});
+						return;
+					}
+
+					if (sPath === "/RFQItemSet") {
+						mParameters.success({
+							results: [oUpdatedItem]
+						});
+						return;
+					}
+
+					assert.strictEqual(sPath, "/MQCompareSet", "MQ comparison is reloaded for the remembered RFQ item.");
+					mParameters.success({
+						results: [{
+							RfqNo: "5000000123",
+							RfqItem: "00010",
+							MqNo: "MQ70000002",
+							MqItem: "00010",
+							CurrentAwardYn: "X",
+							CanSelect: ""
+						}]
+					});
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.view.setProperty("/FclLayout", "TwoColumnsMidExpanded");
+		oFixture.models.work.setProperty("/SelectedRfq", oSelectedRfq);
+		oFixture.models.work.setProperty("/SelectedRfqItem", {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			ItemStatusText: "Not awarded"
+		});
+
+		oFixture.controller._refreshAfterAward().then(function () {
+			assert.deepEqual(aReadPaths, ["/RFQHeaderSet", "/RFQItemSet", "/MQCompareSet"], "Header, item, and MQ data are refreshed in order.");
+			assert.strictEqual(oFixture.models.view.getProperty("/FclLayout"), "TwoColumnsMidExpanded", "Award refresh keeps the user in the Mid column layout.");
+			assert.deepEqual(oFixture.models.work.getProperty("/SelectedRfq"), oSelectedRfq, "Selected RFQ context is restored after header refresh.");
+			assert.strictEqual(oFixture.models.work.getProperty("/SelectedRfqItem/ItemStatusText"), "Awarded", "Selected RFQ item context is replaced with the refreshed item row.");
+			done();
+		});
+	});
+
 	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
 		var oFixture = createControllerWithFakeView();
 

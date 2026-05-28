@@ -4,9 +4,10 @@ sap.ui.define([
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "sap/m/MessageToast",
+    "sap/m/MessageBox",
     "sap/ui/core/Fragment",
     "code/d3/quotecomparison/model/formatter"
-], (Controller, JSONModel, Filter, FilterOperator, MessageToast, Fragment, formatter) => {
+], (Controller, JSONModel, Filter, FilterOperator, MessageToast, MessageBox, Fragment, formatter) => {
     "use strict";
 
     return Controller.extend("code.d3.quotecomparison.controller.Main", {
@@ -279,17 +280,68 @@ sap.ui.define([
         /**
          * 채택 버튼 이벤트.
          *
-         * QuotationItemSet MERGE 호출은 OData Update 단계에서 작성한다.
+         * 선택된 MQ 1건을 현재 RFQ Item의 최종 거래선으로 채택한다.
+         * 실제 기존 채택 MQ 해제와 신규 채택 처리는 Backend `QuotationItemSet_UPDATE_ENTITY`가
+         * `ActionType = AWARD`를 기준으로 단건 트랜잭션에서 처리한다.
          */
         onSaveAward() {
+            const oWorkModel = this.getView().getModel("work");
+            const oSelectedMq = oWorkModel ? (oWorkModel.getProperty("/SelectedMq") || {}) : {};
+
+            if (!oSelectedMq.MqNo || !oSelectedMq.MqItem) {
+                this._showToast(this._getText("msgSelectMq") || "채택할 MQ를 선택하세요.");
+                return Promise.resolve(null);
+            }
+
+            return this._confirmAction(this._getText("msgConfirmAward") || "선택한 MQ를 이 RFQ Item의 최종 거래선으로 채택하시겠습니까?")
+                .then((bConfirmed) => {
+                    if (!bConfirmed) {
+                        return null;
+                    }
+
+                    return this._updateQuotationItem(
+                        oSelectedMq.MqNo,
+                        oSelectedMq.MqItem,
+                        "AWARD",
+                        this._getText("msgAwardSuccess") || "견적이 채택되었습니다."
+                    );
+                });
         },
 
         /**
          * 채택취소 버튼 이벤트.
          *
-         * QuotationItemSet MERGE 호출은 OData Update 단계에서 작성한다.
+         * 채택취소는 현재 RFQ Item에 이미 채택된 MQ를 대상으로만 수행한다.
+         * 화면 버튼도 `CanCancelAward = X`일 때만 활성화하지만, 사용자가 오래된 화면 상태에서
+         * 버튼을 누르거나 테스트 코드가 직접 호출할 수 있으므로 Controller에서도 한 번 더 방어한다.
+         *
+         * Backend는 `ActionType = CANCEL`을 받으면 해당 MQ Item의 SELIDC를 해제하고,
+         * PO 생성 여부 같은 업무 제약은 DPC_EXT에서 최종 검증한다.
          */
         onCancelAward() {
+            const oWorkModel = this.getView().getModel("work");
+            const oSelectedRfqItem = oWorkModel ? (oWorkModel.getProperty("/SelectedRfqItem") || {}) : {};
+            const sAwardMqNo = oSelectedRfqItem.AwardMqNo;
+            const sAwardMqItem = oSelectedRfqItem.AwardMqItem;
+
+            if (oSelectedRfqItem.CanCancelAward !== "X" || !sAwardMqNo || !sAwardMqItem) {
+                this._showToast(this._getText("msgNoAwardToCancel") || "채택취소할 MQ가 없습니다.");
+                return Promise.resolve(null);
+            }
+
+            return this._confirmAction(this._getText("msgConfirmCancel") || "현재 채택된 MQ를 채택취소하시겠습니까?")
+                .then((bConfirmed) => {
+                    if (!bConfirmed) {
+                        return null;
+                    }
+
+                    return this._updateQuotationItem(
+                        sAwardMqNo,
+                        sAwardMqItem,
+                        "CANCEL",
+                        this._getText("msgCancelSuccess") || "견적 채택이 취소되었습니다."
+                    );
+                });
         },
 
         /**
@@ -346,24 +398,31 @@ sap.ui.define([
          * 이 화면에서는 조회 이후 여러 후속 처리가 이어지므로 `_readEntitySet`에서 Promise로 감싼 뒤
          * then/catch/finally 흐름으로 작성한다.
          */
-        _loadRfqHeaders() {
+        _loadRfqHeaders(mOptions = {}) {
             const oView = this.getView();
             const oViewModel = oView.getModel("view");
             const oWorkModel = oView.getModel("work");
             const aFilters = this._buildHeaderFilters();
+            const bKeepComparisonContext = mOptions.keepComparisonContext === true;
 
             if (oViewModel) {
                 oViewModel.setProperty("/Busy", true);
             }
 
-            this._clearSelectionAndComparisonArea();
+            /*
+             * 일반 조회는 이전 비교 컨텍스트를 지우지만, 채택 후 재조회는 사용자가 보던
+             * Mid Column과 선택 RFQ Item을 유지해야 하므로 초기화를 건너뛴다.
+             */
+            if (!bKeepComparisonContext) {
+                this._clearSelectionAndComparisonArea();
+            }
 
             return this._readEntitySet("/RFQHeaderSet", aFilters).then((aRows) => {
                 oWorkModel.setProperty("/RfqHeaders", aRows);
                 this._updateRfqHeaderCountFromRows();
                 this._updateHeaderKpis(aRows);
 
-                if (aRows.length === 1) {
+                if (!bKeepComparisonContext && aRows.length === 1) {
                     /*
                      * RFQ 번호로 1건만 조회된 경우에는 사용자가 목록을 다시 누르지 않아도 Mid Column을 연다.
                      * Header 조회 자체는 성공으로 유지해야 하므로, Item 조회 실패는 RFQHeaderSet catch로 전파하지 않는다.
@@ -703,6 +762,144 @@ sap.ui.define([
                         resolve(oData || {});
                     },
                     error: reject
+                });
+            });
+        },
+
+        _updateEntity(sPath, oPayload, mParameters) {
+            const oModel = this.getOwnerComponent().getModel();
+
+            return new Promise((resolve, reject) => {
+                if (!oModel || !oModel.update) {
+                    reject(new Error("Default ODataModel update is not available."));
+                    return;
+                }
+
+                oModel.update(sPath, oPayload, Object.assign({}, mParameters, {
+                    success: resolve,
+                    error: reject
+                }));
+            });
+        },
+
+        _confirmAction(sMessage) {
+            return new Promise((resolve) => {
+                MessageBox.confirm(sMessage, {
+                    onClose: (sAction) => {
+                        resolve(sAction === MessageBox.Action.OK);
+                    }
+                });
+            });
+        },
+
+        _updateQuotationItem(sMqNo, sMqItem, sActionType, sSuccessMessage) {
+            const oViewModel = this.getView().getModel("view");
+            const sPath = this._createQuotationItemPath(sMqNo, sMqItem);
+            const oPayload = {
+                MqNo: sMqNo,
+                MqItem: sMqItem,
+                ActionType: sActionType
+            };
+
+            if (!sPath) {
+                return Promise.resolve(null);
+            }
+
+            if (oViewModel) {
+                oViewModel.setProperty("/Busy", true);
+            }
+
+            /*
+             * 설계서 기준 채택/취소는 Function Import가 아니라 QuotationItemSet 단건 MERGE다.
+             * Gateway가 성공 시 204 No Content를 줄 수 있으므로 success body에 의존하지 않고,
+             * 성공 callback 자체를 기준으로 메시지와 재조회를 처리한다.
+             */
+            return this._updateEntity(sPath, oPayload, {
+                merge: true
+            }).then(() => {
+                this._showToast(sSuccessMessage);
+                return this._refreshAfterAward();
+            }).catch((oError) => {
+                this._showToast(this._getText("msgDefaultError") || "처리 중 오류가 발생했습니다. 잠시 후 다시 시도하세요.");
+                throw oError;
+            }).finally(() => {
+                if (oViewModel) {
+                    oViewModel.setProperty("/Busy", false);
+                }
+            });
+        },
+
+        _createQuotationItemPath(sMqNo, sMqItem) {
+            const oModel = this.getOwnerComponent().getModel();
+
+            if (!sMqNo || !sMqItem) {
+                return "";
+            }
+
+            if (oModel && oModel.createKey) {
+                return oModel.createKey("/QuotationItemSet", {
+                    MqNo: sMqNo,
+                    MqItem: sMqItem
+                });
+            }
+
+            return "/QuotationItemSet(MqNo='" + this._escapeODataKeyValue(sMqNo) + "',MqItem='" + this._escapeODataKeyValue(sMqItem) + "')";
+        },
+
+        _refreshAfterAward() {
+            const oView = this.getView();
+            const oViewModel = oView.getModel("view");
+            const oWorkModel = oView.getModel("work");
+            const oSelectedRfq = oWorkModel ? (oWorkModel.getProperty("/SelectedRfq") || {}) : {};
+            const oSelectedRfqItem = oWorkModel ? (oWorkModel.getProperty("/SelectedRfqItem") || {}) : {};
+            const sCurrentLayout = oViewModel ? oViewModel.getProperty("/FclLayout") : "";
+            const sRfqNo = oSelectedRfqItem.RfqNo || oSelectedRfq.RfqNo;
+            const sRfqItem = oSelectedRfqItem.RfqItem;
+
+            /*
+             * 채택 성공 후에는 Header KPI, Item 상태/채택 공급업체, MQ 비교 상태가 모두 바뀔 수 있다.
+             * 따라서 Header -> Item -> MQ 순서로 다시 읽는다. Item 재조회 중 하위 영역이 초기화되므로,
+             * 기존에 사용자가 보고 있던 RFQ와 RFQ Item 컨텍스트는 다시 세팅한 뒤 MQCompareSet을 호출한다.
+             */
+            return this._loadRfqHeaders({
+                keepComparisonContext: true
+            }).then(() => {
+                if (!sRfqNo) {
+                    return null;
+                }
+
+                if (oWorkModel) {
+                    oWorkModel.setProperty("/SelectedRfq", oSelectedRfq);
+                }
+
+                return this._loadRfqItemsForRfq(sRfqNo).then((aItems) => {
+                    const oUpdatedItem = (aItems || []).find((oItem) => {
+                        return oItem.RfqItem === sRfqItem;
+                    }) || oSelectedRfqItem;
+
+                    if (oWorkModel) {
+                        oWorkModel.setProperty("/SelectedRfq", oSelectedRfq);
+                        oWorkModel.setProperty("/SelectedRfqItem", oUpdatedItem || {});
+                    }
+
+                    if (!sRfqItem) {
+                        return [];
+                    }
+
+                    return this._loadMqCompareForRfqItem(Object.assign({}, oUpdatedItem || {}, {
+                        RfqNo: sRfqNo,
+                        RfqItem: sRfqItem
+                    })).then((aRows) => {
+                        /*
+                         * Header/Item/MQ를 다시 읽어도 저장 직전 사용자가 보고 있던 FCL 배치를 복원한다.
+                         * 채택은 데이터 변경이지 화면 닫기가 아니므로 `onCloseMidColumn`의 OneColumn 초기화와 분리한다.
+                         */
+                        if (oViewModel && sCurrentLayout) {
+                            oViewModel.setProperty("/FclLayout", sCurrentLayout);
+                        }
+
+                        return aRows;
+                    });
                 });
             });
         },
