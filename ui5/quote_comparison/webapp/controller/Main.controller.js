@@ -188,20 +188,23 @@ sap.ui.define([
         /**
          * RFQ Item 선택 이벤트.
          *
-         * 실제 MQCompareSet 조회는 다음 단계에서 연결한다.
-         * 지금은 선택된 RFQ Item을 work 모델에 보관하고,
-         * 이전 Item에서 남은 MQ 선택/비교표/차트 데이터만 초기화한다.
+         * 선택된 RFQ Item을 work 모델에 보관하고 이전 Item의 MQ 선택/비교표/차트 데이터를 초기화한다.
+         * 그 다음 Backend가 계산한 MQ 후보 비교 결과를 MQCompareSet에서 조회한다.
          */
         onRfqItemSelectionChange(oEvent) {
             const oSelectedItem = this._getSelectedObjectFromEvent(oEvent);
             const oWorkModel = this.getView().getModel("work");
 
-            if (oSelectedItem && oWorkModel) {
-                oWorkModel.setProperty("/SelectedRfqItem", oSelectedItem);
-                oWorkModel.setProperty("/SelectedMq", {});
-                oWorkModel.setProperty("/MqCompareRows", []);
-                oWorkModel.setProperty("/ChartRows", []);
+            if (!oSelectedItem || !oWorkModel) {
+                return Promise.resolve([]);
             }
+
+            oWorkModel.setProperty("/SelectedRfqItem", oSelectedItem);
+            oWorkModel.setProperty("/SelectedMq", {});
+            oWorkModel.setProperty("/MqCompareRows", []);
+            oWorkModel.setProperty("/ChartRows", []);
+
+            return this._loadMqCompareForRfqItem(oSelectedItem);
         },
 
         /**
@@ -407,6 +410,59 @@ sap.ui.define([
         },
 
         /**
+         * 선택 RFQ Item의 MQCompareSet을 조회한다.
+         *
+         * DPC_EXT는 RFQ 번호와 RFQ Item 번호를 함께 받아야 후보 MQ를 정확히 비교할 수 있다.
+         * 조회된 Row에는 RadioButton 바인딩용 UI 전용 필드 `UiSelected`를 false로 추가한다.
+         * 실제 선택 가능 여부는 Backend의 `CanSelect`를 그대로 사용하고, 여기서는 자동 선택하지 않는다.
+         */
+        _loadMqCompareForRfqItem(oRfqItem) {
+            const oView = this.getView();
+            const oWorkModel = oView.getModel("work");
+            const oSelectedRfq = oWorkModel ? (oWorkModel.getProperty("/SelectedRfq") || {}) : {};
+            const sRfqNo = oRfqItem && (oRfqItem.RfqNo || oSelectedRfq.RfqNo);
+            const sRfqItem = oRfqItem && oRfqItem.RfqItem;
+            const aFilters = this._buildMqCompareFilters(sRfqNo, sRfqItem);
+
+            if (!sRfqNo || !sRfqItem) {
+                return Promise.resolve([]);
+            }
+
+            return this._readEntitySet("/MQCompareSet", aFilters).then((aRows) => {
+                const aPreparedRows = (aRows || []).map((oRow) => Object.assign({}, oRow, {
+                    UiSelected: false
+                }));
+
+                if (oWorkModel) {
+                    oWorkModel.setProperty("/MqCompareRows", aPreparedRows);
+                }
+
+                return aPreparedRows;
+            }).catch((oError) => {
+                if (oWorkModel) {
+                    oWorkModel.setProperty("/MqCompareRows", []);
+                }
+
+                this._showToast(this._getText("msgLoadMqCompareError") || "MQ 비교 목록 조회 중 오류가 발생했습니다.");
+                throw oError;
+            });
+        },
+
+        /**
+         * MQCompareSet 조회용 필터를 만든다.
+         *
+         * Backend 필터 해석 기준에 맞춰 `RfqNo eq ...`와 `RfqItem eq ...`를 모두 전달한다.
+         */
+        _buildMqCompareFilters(sRfqNo, sRfqItem) {
+            const aFilters = [];
+
+            this._addTextFilter(aFilters, "RfqNo", sRfqNo, FilterOperator.EQ);
+            this._addTextFilter(aFilters, "RfqItem", sRfqItem, FilterOperator.EQ);
+
+            return aFilters;
+        },
+
+        /**
          * RFQ Item 하위 단계의 선택/비교 데이터를 비운다.
          *
          * Header를 바꿔 선택하면 이전 Header의 Item, MQ 후보, 차트가 남아 있으면 안 된다.
@@ -414,6 +470,8 @@ sap.ui.define([
          */
         _clearRfqItemDependentArea() {
             const oWorkModel = this.getView().getModel("work");
+
+            this._clearTableSelection("idRfqItemTable");
 
             if (oWorkModel) {
                 oWorkModel.setProperty("/RfqItems", []);
@@ -533,6 +591,9 @@ sap.ui.define([
             const oViewModel = oView.getModel("view");
             const oWorkModel = oView.getModel("work");
 
+            this._clearTableSelection("idRfqHeaderTable");
+            this._clearTableSelection("idRfqItemTable");
+
             if (oViewModel) {
                 oViewModel.setProperty("/FclLayout", "OneColumn");
             }
@@ -553,6 +614,14 @@ sap.ui.define([
          * 레이아웃 변경은 여러 버튼에서 반복되므로 작은 헬퍼로 모아둔다.
          * 이렇게 해두면 이후 SemanticHelper를 도입하더라도 이 함수 안에서만 변경하면 된다.
          */
+        _clearTableSelection(sTableId) {
+            const oTable = this.byId(sTableId);
+
+            if (oTable && oTable.removeSelections) {
+                oTable.removeSelections(true);
+            }
+        },
+
         _setFclLayout(sLayout) {
             const oViewModel = this.getView().getModel("view");
 

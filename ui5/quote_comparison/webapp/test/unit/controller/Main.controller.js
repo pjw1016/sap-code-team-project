@@ -10,19 +10,27 @@ sap.ui.define([
 	function createControllerWithFakeView(oOptions) {
 		var oAppController = new Controller();
 		var mModels = {};
+
+		oOptions = oOptions || {};
+
 		var oFakeView = {
 			setModel: function (oModel, sName) {
 				mModels[sName] = oModel;
 			},
 			getModel: function (sName) {
 				return mModels[sName];
+			},
+			byId: function (sId) {
+				return oOptions.controls && oOptions.controls[sId];
 			}
 		};
 
-		oOptions = oOptions || {};
-
 		oAppController.getView = function () {
 			return oFakeView;
+		};
+
+		oAppController.byId = function (sId) {
+			return oFakeView.byId(sId);
 		};
 
 		oAppController.getOwnerComponent = function () {
@@ -191,6 +199,70 @@ sap.ui.define([
 		assert.deepEqual(oFixture.models.work.getProperty("/ChartRows"), [], "Previous chart rows are cleared.");
 	});
 
+	QUnit.test("onRfqItemSelectionChange should load MQCompareSet for the selected RFQ item", function (assert) {
+		var done = assert.async();
+		var oRfqItem = {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			Matnr: "100001",
+			Maktx: "Bolt M10"
+		};
+		var aMqRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000001",
+			MqItem: "00010",
+			Lifnr: "V001",
+			Name1: "삼만리 부품"
+		}];
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				read: function (sPath, mParameters) {
+					assert.strictEqual(sPath, "/MQCompareSet", "RFQ item selection reads MQCompareSet.");
+					assert.strictEqual(mParameters.filters.length, 2, "MQ compare query sends RFQ number and item filters.");
+					assert.strictEqual(mParameters.filters[0].sPath, "RfqNo", "First filter is RfqNo.");
+					assert.strictEqual(mParameters.filters[0].sOperator, "EQ", "RfqNo uses exact matching.");
+					assert.strictEqual(mParameters.filters[0].oValue1, "5000000123", "Selected RFQ number is used.");
+					assert.strictEqual(mParameters.filters[1].sPath, "RfqItem", "Second filter is RfqItem.");
+					assert.strictEqual(mParameters.filters[1].sOperator, "EQ", "RfqItem uses exact matching.");
+					assert.strictEqual(mParameters.filters[1].oValue1, "00010", "Selected RFQ item is used.");
+					mParameters.success({
+						results: aMqRows
+					});
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+
+		oFixture.controller.onRfqItemSelectionChange({
+			getParameter: function () {
+				return {
+					getBindingContext: function () {
+						return {
+							getObject: function () {
+								return oRfqItem;
+							}
+						};
+					}
+				};
+			}
+		}).then(function () {
+			assert.deepEqual(oFixture.models.work.getProperty("/SelectedRfqItem"), oRfqItem, "Selected RFQ item remains stored.");
+			assert.deepEqual(oFixture.models.work.getProperty("/MqCompareRows"), [{
+				RfqNo: "5000000123",
+				RfqItem: "00010",
+				MqNo: "MQ70000001",
+				MqItem: "00010",
+				Lifnr: "V001",
+				Name1: "삼만리 부품",
+				UiSelected: false
+			}], "MQ compare rows are stored with no selected MQ yet.");
+			assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), {}, "No MQ is selected automatically.");
+			done();
+		});
+	});
+
 	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
 		var oFixture = createControllerWithFakeView();
 
@@ -219,6 +291,61 @@ sap.ui.define([
 		assert.strictEqual(oFixture.models.view.getProperty("/FclLayout"), "OneColumn", "Close action returns to the Begin column only.");
 		assert.deepEqual(oFixture.models.work.getProperty("/SelectedRfq"), {}, "Selected RFQ header is cleared.");
 		assert.deepEqual(oFixture.models.work.getProperty("/RfqItems"), [], "RFQ item rows are cleared with the closed Mid column.");
+	});
+
+	QUnit.test("_clearRfqItemDependentArea should clear remembered RFQ item table selection", function (assert) {
+		var bRemoveAll;
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idRfqItemTable: {
+					removeSelections: function (bAll) {
+						bRemoveAll = bAll;
+					}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/RfqItems", [{ RfqItem: "00010" }]);
+		oFixture.models.work.setProperty("/SelectedRfqItem", { RfqItem: "00010" });
+		oFixture.models.work.setProperty("/MqCompareRows", [{ MqNo: "MQ70000001" }]);
+
+		oFixture.controller._clearRfqItemDependentArea();
+
+		assert.strictEqual(bRemoveAll, true, "All remembered sap.m.Table selections are removed.");
+		assert.deepEqual(oFixture.models.work.getProperty("/RfqItems"), [], "RFQ item rows are cleared.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedRfqItem"), {}, "Selected RFQ item model state is cleared.");
+		assert.deepEqual(oFixture.models.work.getProperty("/MqCompareRows"), [], "MQ compare rows are cleared.");
+	});
+
+	QUnit.test("_clearSelectionAndComparisonArea should clear remembered header and item table selections", function (assert) {
+		var mRemoveAll = {};
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idRfqHeaderTable: {
+					removeSelections: function (bAll) {
+						mRemoveAll.header = bAll;
+					}
+				},
+				idRfqItemTable: {
+					removeSelections: function (bAll) {
+						mRemoveAll.item = bAll;
+					}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.view.setProperty("/FclLayout", "TwoColumnsMidExpanded");
+		oFixture.models.work.setProperty("/SelectedRfq", { RfqNo: "5000000123" });
+		oFixture.models.work.setProperty("/SelectedRfqItem", { RfqItem: "00010" });
+
+		oFixture.controller._clearSelectionAndComparisonArea();
+
+		assert.deepEqual(mRemoveAll, { header: true, item: true }, "All remembered sap.m.Table selections are removed.");
+		assert.strictEqual(oFixture.models.view.getProperty("/FclLayout"), "OneColumn", "FCL layout is reset.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedRfq"), {}, "Selected RFQ header is cleared.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedRfqItem"), {}, "Selected RFQ item is cleared.");
 	});
 
 	QUnit.test("_buildHeaderFilters should convert filter model to OData filters", function (assert) {
@@ -254,7 +381,7 @@ sap.ui.define([
 		assert.strictEqual(aFilters[1].sPath, "DocDate", "Document date from uses DocDate property.");
 		assert.strictEqual(aFilters[1].sOperator, "GE", "Document date from uses GE operator.");
 		assert.strictEqual(aFilters[2].sOperator, "LE", "Document date to uses LE operator.");
-		assert.strictEqual(oStatusFilter.bAnd, false, "Multiple award statuses are grouped with OR.");
+		assert.notOk(oStatusFilter.bAnd, "Multiple award statuses are grouped with OR.");
 		assert.strictEqual(oStatusFilter.aFilters.length, 2, "Two selected award statuses create two inner filters.");
 	});
 
