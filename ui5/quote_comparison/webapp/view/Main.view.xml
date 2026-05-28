@@ -302,62 +302,100 @@
                 </uxap:headerContent>
 
                 <uxap:sections>
-                    <uxap:ObjectPageSection title="{i18n>rfqHeaderListTitle}">
+                    <uxap:ObjectPageSection>
                         <uxap:subSections>
                             <uxap:ObjectPageSubSection>
                                 <uxap:blocks>
-                                    <VBox class="sapUiSmallMargin">
-                                        <!-- KPI는 RFQHeaderSet 조회 결과의 AwardStatus 기준으로 Controller에서 계산한다. -->
-                                        <FlexBox
-                                            wrap="Wrap"
-                                            renderType="Bare"
-                                            justifyContent="SpaceBetween">
-                                            <GenericTile
-                                                header="{i18n>kpiNotAwarded}"
-                                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
-                                                <TileContent>
-                                                    <NumericContent
-                                                        value="{work>/Kpi/NotAwarded}"
-                                                        scale="{i18n>countUnit}"
-                                                        valueColor="Neutral"
-                                                        icon="sap-icon://pending"/>
-                                                </TileContent>
-                                            </GenericTile>
-                                            <GenericTile
-                                                header="{i18n>kpiPartiallyAwarded}"
-                                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
-                                                <TileContent>
-                                                    <NumericContent
-                                                        value="{work>/Kpi/PartiallyAwarded}"
-                                                        scale="{i18n>countUnit}"
-                                                        valueColor="Critical"
-                                                        icon="sap-icon://split-segmentation"/>
-                                                </TileContent>
-                                            </GenericTile>
-                                            <GenericTile
-                                                header="{i18n>kpiAwarded}"
-                                                class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
-                                                <TileContent>
-                                                    <NumericContent
-                                                        value="{work>/Kpi/Awarded}"
-                                                        scale="{i18n>countUnit}"
-                                                        valueColor="Good"
-                                                        icon="sap-icon://accept"/>
-                                                </TileContent>
-                                            </GenericTile>
-                                            <GenericTile
-                                                header="{i18n>kpiPoCreated}"
-                                                class="sapUiTinyMarginBottom">
-                                                <TileContent>
-                                                    <NumericContent
-                                                        value="{work>/Kpi/PoCreated}"
-                                                        scale="{i18n>countUnit}"
-                                                        valueColor="Good"
-                                                        icon="sap-icon://documents"/>
-                                                </TileContent>
-                                            </GenericTile>
-                                        </FlexBox>
-
+                                    <Panel backgroundDesign="Solid" class="sapUiSmallMargin">
+                                        <content>
+                                        <!--
+                                            KPI 영역은 RFQ Header Table과 별도 block으로 둔다.
+                                            GenericTile의 press 이벤트는 빠른 채택상태 필터로 동작한다.
+                                        -->
+                                        <VBox class="sapUiSmallMarginBottom">
+                                            <OverflowToolbar>
+                                                <Title text="{i18n>kpiSectionTitle}" level="H3"/>
+                                                <ToolbarSpacer/>
+                                                <Button
+                                                    icon="sap-icon://clear-filter"
+                                                    type="Transparent"
+                                                    tooltip="{i18n>clearKpiFilter}"
+                                                    press=".onClearAwardStatusQuickFilter"/>
+                                            </OverflowToolbar>
+                                            <FlexBox
+                                                wrap="Wrap"
+                                                renderType="Bare"
+                                                justifyContent="SpaceBetween">
+                                                <GenericTile
+                                                    header="{i18n>kpiNotAwarded}"
+                                                    press=".onKpiAwardStatusPress"
+                                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                                    <customData>
+                                                        <core:CustomData key="awardStatus" value="N"/>
+                                                    </customData>
+                                                    <TileContent>
+                                                        <NumericContent
+                                                            value="{work>/Kpi/NotAwarded}"
+                                                            scale="{i18n>countUnit}"
+                                                            valueColor="Error"
+                                                            icon="sap-icon://pending"/>
+                                                    </TileContent>
+                                                </GenericTile>
+                                                <GenericTile
+                                                    header="{i18n>kpiPartiallyAwarded}"
+                                                    press=".onKpiAwardStatusPress"
+                                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                                    <customData>
+                                                        <core:CustomData key="awardStatus" value="P"/>
+                                                    </customData>
+                                                    <TileContent>
+                                                        <NumericContent
+                                                            value="{work>/Kpi/PartiallyAwarded}"
+                                                            scale="{i18n>countUnit}"
+                                                            valueColor="Critical"
+                                                            icon="sap-icon://split-segmentation"/>
+                                                    </TileContent>
+                                                </GenericTile>
+                                                <GenericTile
+                                                    header="{i18n>kpiAwarded}"
+                                                    press=".onKpiAwardStatusPress"
+                                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                                    <customData>
+                                                        <core:CustomData key="awardStatus" value="A"/>
+                                                    </customData>
+                                                    <TileContent>
+                                                        <NumericContent
+                                                            value="{work>/Kpi/Awarded}"
+                                                            scale="{i18n>countUnit}"
+                                                            valueColor="Good"
+                                                            icon="sap-icon://accept"/>
+                                                    </TileContent>
+                                                </GenericTile>
+                                                <GenericTile
+                                                    header="{i18n>kpiPoCreated}"
+                                                    press=".onKpiAwardStatusPress"
+                                                    class="sapUiTinyMarginBottom">
+                                                    <customData>
+                                                        <core:CustomData key="awardStatus" value="PO"/>
+                                                    </customData>
+                                                    <TileContent>
+                                                        <NumericContent
+                                                            value="{work>/Kpi/PoCreated}"
+                                                            scale="{i18n>countUnit}"
+                                                            valueColor="Good"
+                                                            icon="sap-icon://documents"/>
+                                                    </TileContent>
+                                                </GenericTile>
+                                            </FlexBox>
+                                        </VBox>
+                                        </content>
+                                    </Panel>
+                                </uxap:blocks>
+                            </uxap:ObjectPageSubSection>
+                            <uxap:ObjectPageSubSection>
+                                <uxap:blocks>
+                                    <Panel backgroundDesign="Solid" class="sapUiSmallMargin">
+                                        <content>
                                         <Table
                                             id="idRfqHeaderTable"
                                             items="{work>/RfqHeaders}"
@@ -373,6 +411,23 @@
                                                         text="{= ${i18n>rfqHeaderListTitle} + ' (' + ${work>/RfqHeaderCount} + ')' }"
                                                         level="H3"/>
                                                     <ToolbarSpacer/>
+                                                    <Text text="{view>/HeaderTableStatusSummary}"/>
+                                                    <Text text="{view>/HeaderTableSortGroupSummary}"/>
+                                                    <Button
+                                                        icon="sap-icon://sort"
+                                                        type="Transparent"
+                                                        tooltip="{i18n>tableSettingsTitle}"
+                                                        press=".onOpenRfqHeaderTableSettings"/>
+                                                    <Button
+                                                        icon="sap-icon://reset"
+                                                        type="Transparent"
+                                                        tooltip="{i18n>tableSettingsReset}"
+                                                        press=".onResetRfqHeaderTableSettings"/>
+                                                    <Button
+                                                        icon="sap-icon://refresh"
+                                                        type="Transparent"
+                                                        tooltip="{i18n>refresh}"
+                                                        press=".onSearch"/>
                                                 </OverflowToolbar>
                                             </headerToolbar>
                                             <columns>
@@ -396,7 +451,10 @@
                                                 </Column>
                                             </columns>
                                             <items>
-                                                <ColumnListItem type="Navigation">
+                                                <ColumnListItem
+                                                    type="Navigation"
+                                                    highlight="{path: 'work>AwardStatus', formatter: '.formatter.formatAwardHighlight'}"
+                                                    highlightText="{work>AwardStatusText}">
                                                     <cells>
                                                         <ObjectIdentifier
                                                             title="{work>RfqNo}"
@@ -412,7 +470,8 @@
                                                 </ColumnListItem>
                                             </items>
                                         </Table>
-                                    </VBox>
+                                        </content>
+                                    </Panel>
                                 </uxap:blocks>
                             </uxap:ObjectPageSubSection>
                         </uxap:subSections>

@@ -1,0 +1,33 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <!--
+        RFQ Header sap.m.Table 정렬/그룹 설정 Dialog.
+        납기지연 및 미입고 현황 조회 프로그램과 같은 방식으로,
+        사용자가 선택한 항목을 Controller에서 Sorter 배열로 변환해 Table Binding에 적용한다.
+    -->
+    <ViewSettingsDialog
+        id="idRfqHeaderTableSettingsDialog"
+        title="{i18n>tableSettingsTitle}"
+        sortDescending="false"
+        confirm=".onRfqHeaderTableSettingsConfirm">
+        <sortItems>
+            <ViewSettingsItem key="RfqNo" text="{i18n>rfqNo}"/>
+            <ViewSettingsItem key="DocDate" text="{i18n>docDate}"/>
+            <ViewSettingsItem key="RfqItemCount" text="{i18n>rfqItemCount}"/>
+            <ViewSettingsItem key="MqCount" text="{i18n>mqCount}"/>
+            <ViewSettingsItem key="VendorCount" text="{i18n>vendorCount}"/>
+            <ViewSettingsItem key="AwardStatus" text="{i18n>awardStatus}"/>
+            <ViewSettingsItem key="Bukrs" text="{i18n>bukrs}"/>
+            <ViewSettingsItem key="Ekorg" text="{i18n>ekorg}"/>
+            <ViewSettingsItem key="Ekgrp" text="{i18n>ekgrp}"/>
+        </sortItems>
+        <groupItems>
+            <ViewSettingsItem key="AwardStatus" text="{i18n>awardStatus}"/>
+            <ViewSettingsItem key="Bukrs" text="{i18n>bukrs}"/>
+            <ViewSettingsItem key="Ekorg" text="{i18n>ekorg}"/>
+            <ViewSettingsItem key="Ekgrp" text="{i18n>ekgrp}"/>
+            <ViewSettingsItem key="DocDate" text="{i18n>docDate}"/>
+        </groupItems>
+    </ViewSettingsDialog>
+</core:FragmentDefinition>

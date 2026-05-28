@@ -3,11 +3,12 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
+    "sap/ui/model/Sorter",
     "sap/m/MessageToast",
     "sap/m/MessageBox",
     "sap/ui/core/Fragment",
     "code/d3/quotecomparison/model/formatter"
-], (Controller, JSONModel, Filter, FilterOperator, MessageToast, MessageBox, Fragment, formatter) => {
+], (Controller, JSONModel, Filter, FilterOperator, Sorter, MessageToast, MessageBox, Fragment, formatter) => {
     "use strict";
 
     return Controller.extend("code.d3.quotecomparison.controller.Main", {
@@ -15,6 +16,7 @@ sap.ui.define([
 
         onInit() {
             this._initViewModels();
+            this._applyHeaderQuickAwardStatusFilter("", true);
         },
 
         /**
@@ -46,7 +48,14 @@ sap.ui.define([
             return {
                 Busy: false,
                 AdvancedFilterVisible: false,
-                FclLayout: "OneColumn"
+                FclLayout: "OneColumn",
+                HeaderTableStatusSummary: "",
+                HeaderTableSortGroupSummary: "",
+                HeaderTableQuickAwardStatus: "",
+                HeaderTableSortKey: "",
+                HeaderTableSortDescending: false,
+                HeaderTableGroupKey: "",
+                HeaderTableGroupDescending: false
             };
         },
 
@@ -132,6 +141,93 @@ sap.ui.define([
             if (oViewModel) {
                 oViewModel.setProperty("/AdvancedFilterVisible", false);
             }
+
+            this._applyHeaderQuickAwardStatusFilter("", true);
+        },
+
+        /**
+         * RFQ Header KPI 카드 클릭 이벤트.
+         *
+         * KPI 카드는 조회 결과 요약 숫자를 유지한 상태에서 RFQ Header Table만 빠르게 좁혀 보는 용도다.
+         * 따라서 조회조건 모델은 변경하지 않고, 이미 조회된 Table binding에만 채택상태 필터를 적용한다.
+         */
+        onKpiAwardStatusPress(oEvent) {
+            const oSource = oEvent && oEvent.getSource && oEvent.getSource();
+            const sAwardStatus = oSource && oSource.data && oSource.data("awardStatus");
+
+            if (!sAwardStatus) {
+                this._showToast(this._getText("msgKpiAwardFilterUnknown") || "알 수 없는 KPI 필터입니다.");
+                return Promise.resolve(null);
+            }
+
+            this._applyHeaderQuickAwardStatusFilter(sAwardStatus);
+            this._showToast(this._getText("msgKpiAwardFilterApplied") || "KPI 채택상태 필터를 적용했습니다.");
+
+            return Promise.resolve(sAwardStatus);
+        },
+
+        /**
+         * KPI로 적용한 채택상태 빠른 필터를 해제한다.
+         *
+         * 검색조건 전체 초기화가 아니라 채택상태 조건만 비운 뒤 현재 다른 조회조건은 유지하고 재조회한다.
+         */
+        onClearAwardStatusQuickFilter() {
+            this._applyHeaderQuickAwardStatusFilter("");
+            this._showToast(this._getText("msgKpiAwardFilterCleared") || "KPI 채택상태 필터를 해제했습니다.");
+
+            return Promise.resolve(null);
+        },
+
+        /**
+         * RFQ Header Table 정렬/그룹 설정 Dialog를 연다.
+         *
+         * Dialog는 Fragment로 분리하고 최초 1회만 생성해 재사용한다.
+         */
+        onOpenRfqHeaderTableSettings() {
+            const oView = this.getView();
+
+            if (!this._pRfqHeaderTableSettingsDialog) {
+                this._pRfqHeaderTableSettingsDialog = Fragment.load({
+                    id: oView.getId(),
+                    name: "code.d3.quotecomparison.fragment.RfqHeaderTableSettings",
+                    controller: this
+                }).then((oDialog) => {
+                    if (oView.addDependent) {
+                        oView.addDependent(oDialog);
+                    }
+
+                    return oDialog;
+                });
+            }
+
+            return this._pRfqHeaderTableSettingsDialog.then((oDialog) => {
+                oDialog.open();
+                return oDialog;
+            });
+        },
+
+        /**
+         * ViewSettingsDialog의 선택값을 sap.m.Table Binding Sorter로 변환한다.
+         */
+        onRfqHeaderTableSettingsConfirm(oEvent) {
+            const oSortItem = oEvent.getParameter("sortItem");
+            const oGroupItem = oEvent.getParameter("groupItem");
+            const sSortKey = oSortItem && oSortItem.getKey();
+            const sGroupKey = oGroupItem && oGroupItem.getKey();
+            const bSortDescending = oEvent.getParameter("sortDescending");
+            const bGroupDescending = oEvent.getParameter("groupDescending");
+
+            this._applyHeaderTableSorters(sSortKey, bSortDescending, sGroupKey, bGroupDescending);
+        },
+
+        /**
+         * RFQ Header Table의 정렬/그룹만 초기화한다.
+         *
+         * 조회조건과 조회 결과는 유지하고, 사용자가 바꾼 Table 표시 방식만 원복한다.
+         */
+        onResetRfqHeaderTableSettings() {
+            this._resetHeaderTableSettings();
+            this._showToast(this._getText("msgTableSettingsResetDone") || "정렬/그룹 조건을 초기화했습니다.");
         },
 
         /**
@@ -419,8 +515,9 @@ sap.ui.define([
 
             return this._readEntitySet("/RFQHeaderSet", aFilters).then((aRows) => {
                 oWorkModel.setProperty("/RfqHeaders", aRows);
-                this._updateRfqHeaderCountFromRows();
+                this._applyHeaderQuickAwardStatusFilter("", true);
                 this._updateHeaderKpis(aRows);
+                this._reapplyHeaderTableSorters();
 
                 if (!bKeepComparisonContext && aRows.length === 1) {
                     /*
@@ -433,7 +530,7 @@ sap.ui.define([
                 return aRows;
             }).catch((oError) => {
                 oWorkModel.setProperty("/RfqHeaders", []);
-                this._updateRfqHeaderCountFromRows();
+                this._applyHeaderQuickAwardStatusFilter("", true);
                 this._updateHeaderKpis([]);
                 this._showToast(this._getText("msgLoadRfqHeaderError") || "RFQ Header 조회 중 오류가 발생했습니다.");
                 throw oError;
@@ -667,6 +764,312 @@ sap.ui.define([
             return aRows.find((oRow) => {
                 return oRow.RecommendYn === "X" && oRow.CanSelect === "X";
             }) || null;
+        },
+
+        /**
+         * RFQ Header sap.m.Table에 정렬/그룹 Sorter를 적용한다.
+         *
+         * SAPUI5 Table/List 정렬은 별도 테이블 데이터를 다시 만들지 않고,
+         * Binding에 Sorter 배열을 전달하는 방식으로 처리한다.
+         */
+        /**
+         * KPI 카드로 선택한 채택상태를 RFQ Header Table에만 적용한다.
+         *
+         * 중요:
+         * - 이 필터는 DynamicPage Header의 조회조건(`filter` 모델)을 바꾸지 않는다.
+         * - 따라서 KPI 숫자는 마지막 조회 버튼으로 읽어온 RFQHeaderSet 결과 기준을 유지한다.
+         * - 화면 목록만 좁혀 보여주기 위해 sap.m.Table의 items binding에 Application filter를 건다.
+         */
+        _applyHeaderQuickAwardStatusFilter(sAwardStatus, bSuppressToast) {
+            const oView = this.getView();
+            const oViewModel = oView.getModel("view");
+            const oTable = this.byId("idRfqHeaderTable");
+            const oBinding = oTable && oTable.getBinding && oTable.getBinding("items");
+            const aTableFilters = sAwardStatus ? [
+                new Filter("AwardStatus", FilterOperator.EQ, sAwardStatus)
+            ] : [];
+
+            if (oViewModel) {
+                oViewModel.setProperty("/HeaderTableQuickAwardStatus", sAwardStatus || "");
+            }
+
+            if (oBinding && typeof oBinding.filter === "function") {
+                oBinding.filter(aTableFilters, "Application");
+            }
+
+            this._updateRfqHeaderCountForQuickFilter(sAwardStatus);
+            this._updateHeaderTableStateSummary();
+
+            return bSuppressToast === true ? null : aTableFilters;
+        },
+
+        /**
+         * RFQ Header 목록 제목의 (N)은 현재 화면에 보이는 목록 건수를 의미한다.
+         *
+         * KPI 숫자는 조회 결과 기준으로 유지하지만, 테이블 제목은 사용자가 보고 있는
+         * 목록의 건수와 맞아야 하므로 빠른 필터가 있으면 해당 상태만 다시 센다.
+         */
+        _updateRfqHeaderCountForQuickFilter(sAwardStatus) {
+            const oWorkModel = this.getView().getModel("work");
+            const aRows = oWorkModel ? (oWorkModel.getProperty("/RfqHeaders") || []) : [];
+            const iCount = sAwardStatus
+                ? aRows.filter((oRow) => oRow && oRow.AwardStatus === sAwardStatus).length
+                : aRows.length;
+
+            if (oWorkModel) {
+                oWorkModel.setProperty("/RfqHeaderCount", iCount);
+            }
+        },
+
+        _applyHeaderTableSorters(sSortKey, bSortDescending, sGroupKey, bGroupDescending) {
+            const oTable = this.byId("idRfqHeaderTable");
+            const oBinding = oTable && oTable.getBinding && oTable.getBinding("items");
+            const aSorters = [];
+
+            this._setHeaderTableSortGroupState(sSortKey, bSortDescending, sGroupKey, bGroupDescending);
+
+            if (!oBinding) {
+                return;
+            }
+
+            if (sGroupKey) {
+                /*
+                 * 그룹 Sorter는 배열의 첫 번째에 둔다.
+                 * 그래야 같은 그룹이 먼저 모이고, 그 안에서 별도 정렬 조건이 적용된다.
+                 */
+                aSorters.push(this._createHeaderTableSorter(
+                    sGroupKey,
+                    bGroupDescending,
+                    this._getHeaderTableGroup.bind(this, sGroupKey)
+                ));
+            }
+
+            if (sSortKey && sSortKey !== sGroupKey) {
+                aSorters.push(this._createHeaderTableSorter(sSortKey, bSortDescending));
+            }
+
+            oBinding.sort(aSorters);
+        },
+
+        _reapplyHeaderTableSorters() {
+            const oViewModel = this.getView().getModel("view");
+
+            if (!oViewModel) {
+                return;
+            }
+
+            this._applyHeaderTableSorters(
+                oViewModel.getProperty("/HeaderTableSortKey"),
+                oViewModel.getProperty("/HeaderTableSortDescending"),
+                oViewModel.getProperty("/HeaderTableGroupKey"),
+                oViewModel.getProperty("/HeaderTableGroupDescending")
+            );
+        },
+
+        _resetHeaderTableSettings() {
+            this._applyHeaderTableSorters("", false, "", false);
+            this._resetHeaderTableSettingsDialog();
+        },
+
+        _resetHeaderTableSettingsDialog() {
+            const oDialog = this.byId("idRfqHeaderTableSettingsDialog");
+
+            if (!oDialog) {
+                return;
+            }
+
+            if (typeof oDialog.setSortDescending === "function") {
+                oDialog.setSortDescending(false);
+            }
+
+            if (typeof oDialog.setGroupDescending === "function") {
+                oDialog.setGroupDescending(false);
+            }
+
+            this._clearViewSettingsItems(oDialog.getSortItems && oDialog.getSortItems());
+            this._clearViewSettingsItems(oDialog.getGroupItems && oDialog.getGroupItems());
+        },
+
+        _clearViewSettingsItems(aItems) {
+            (aItems || []).forEach((oItem) => {
+                if (oItem && typeof oItem.setSelected === "function") {
+                    oItem.setSelected(false);
+                }
+            });
+        },
+
+        _createHeaderTableSorter(sKey, bDescending, vGroup) {
+            /*
+             * Gateway Decimal/Integer가 문자열로 들어올 수 있는 필드는 숫자 comparator를 사용한다.
+             * 예: "10"과 "2"를 문자열 비교하면 10이 2보다 앞서는 문제가 생길 수 있다.
+             */
+            const fnComparator = this._isHeaderNumericSortKey(sKey) ? this._compareNumericValues.bind(this) : undefined;
+
+            return new Sorter(sKey, bDescending, vGroup, fnComparator);
+        },
+
+        _isHeaderNumericSortKey(sKey) {
+            return [
+                "RfqItemCount",
+                "MqCount",
+                "VendorCount",
+                "AwardItemCount",
+                "PoItemCount"
+            ].indexOf(sKey) > -1;
+        },
+
+        _compareNumericValues(vA, vB) {
+            let fA = Number(vA);
+            let fB = Number(vB);
+
+            if (Number.isNaN(fA)) {
+                fA = 0;
+            }
+
+            if (Number.isNaN(fB)) {
+                fB = 0;
+            }
+
+            if (fA < fB) {
+                return -1;
+            }
+
+            if (fA > fB) {
+                return 1;
+            }
+
+            return 0;
+        },
+
+        _getHeaderTableGroup(sProperty, oContext) {
+            const oRow = oContext && oContext.getObject ? oContext.getObject() : {};
+            let sKey = oRow[sProperty] || "";
+            let sText = sKey || this._getText("notAvailable") || "N/A";
+
+            if (sProperty === "AwardStatus") {
+                sText = oRow.AwardStatusText || this._getAwardStatusTextByCode(sKey);
+            } else if (sProperty === "DocDate") {
+                sText = formatter.formatDate(oRow.DocDate);
+                sKey = sText;
+            } else if (sProperty === "Bukrs" && oRow.Butxt) {
+                sText = sKey + " - " + oRow.Butxt;
+            } else if (sProperty === "Ekorg" && oRow.Ekotx) {
+                sText = sKey + " - " + oRow.Ekotx;
+            } else if (sProperty === "Ekgrp" && oRow.Eknam) {
+                sText = sKey + " - " + oRow.Eknam;
+            }
+
+            return {
+                key: sKey,
+                text: this._getHeaderTableSettingLabel(sProperty) + ": " + (sText || this._getText("notAvailable") || "N/A")
+            };
+        },
+
+        _setHeaderTableSortGroupState(sSortKey, bSortDescending, sGroupKey, bGroupDescending) {
+            const oViewModel = this.getView().getModel("view");
+
+            if (!oViewModel) {
+                return;
+            }
+
+            oViewModel.setProperty("/HeaderTableSortKey", sSortKey || "");
+            oViewModel.setProperty("/HeaderTableSortDescending", !!bSortDescending);
+            oViewModel.setProperty("/HeaderTableGroupKey", sGroupKey || "");
+            oViewModel.setProperty("/HeaderTableGroupDescending", !!bGroupDescending);
+
+            this._updateHeaderTableStateSummary();
+        },
+
+        _updateHeaderTableStateSummary() {
+            const oViewModel = this.getView().getModel("view");
+
+            if (!oViewModel) {
+                return;
+            }
+
+            oViewModel.setProperty("/HeaderTableStatusSummary", this._getHeaderTableStatusSummary());
+            oViewModel.setProperty("/HeaderTableSortGroupSummary", this._getHeaderTableSortGroupSummary());
+        },
+
+        _getHeaderTableStatusSummary() {
+            const oViewModel = this.getView().getModel("view");
+            const oFilterModel = this.getView().getModel("filter");
+            const sQuickAwardStatus = oViewModel && oViewModel.getProperty("/HeaderTableQuickAwardStatus");
+            const aAwardStatus = oFilterModel ? (oFilterModel.getProperty("/AwardStatus") || []) : [];
+
+            if (sQuickAwardStatus) {
+                return (this._getText("tableStatusSummaryPrefix") || "상태")
+                    + ": "
+                    + this._getAwardStatusTextByCode(sQuickAwardStatus);
+            }
+
+            if (!aAwardStatus.length) {
+                return this._getText("tableStatusSummaryAll") || "상태: 전체";
+            }
+
+            return (this._getText("tableStatusSummaryPrefix") || "상태")
+                + ": "
+                + aAwardStatus.map((sStatus) => this._getAwardStatusTextByCode(sStatus)).filter(Boolean).join(", ");
+        },
+
+        _getHeaderTableSortGroupSummary() {
+            const oViewModel = this.getView().getModel("view");
+            const aParts = [];
+            const sSortKey = oViewModel && oViewModel.getProperty("/HeaderTableSortKey");
+            const sGroupKey = oViewModel && oViewModel.getProperty("/HeaderTableGroupKey");
+
+            if (sSortKey) {
+                aParts.push(
+                    (this._getText("tableSortSummaryPrefix") || "정렬")
+                    + ": "
+                    + this._getHeaderTableSettingLabel(sSortKey)
+                    + " "
+                    + this._getOrderText(oViewModel.getProperty("/HeaderTableSortDescending"))
+                );
+            }
+
+            if (sGroupKey) {
+                aParts.push(
+                    (this._getText("tableGroupSummaryPrefix") || "그룹")
+                    + ": "
+                    + this._getHeaderTableSettingLabel(sGroupKey)
+                    + " "
+                    + this._getOrderText(oViewModel.getProperty("/HeaderTableGroupDescending"))
+                );
+            }
+
+            return aParts.length ? aParts.join(" / ") : (this._getText("tableSortGroupSummaryDefault") || "정렬/그룹: 기본");
+        },
+
+        _getHeaderTableSettingLabel(sKey) {
+            const mLabelKeyByProperty = {
+                RfqNo: "rfqNo",
+                DocDate: "docDate",
+                RfqItemCount: "rfqItemCount",
+                MqCount: "mqCount",
+                VendorCount: "vendorCount",
+                AwardStatus: "awardStatus",
+                Bukrs: "bukrs",
+                Ekorg: "ekorg",
+                Ekgrp: "ekgrp"
+            };
+
+            return mLabelKeyByProperty[sKey] ? this._getText(mLabelKeyByProperty[sKey]) : sKey;
+        },
+
+        _getOrderText(bDescending) {
+            return bDescending ? (this._getText("sortDescending") || "내림차순") : (this._getText("sortAscending") || "오름차순");
+        },
+
+        _getAwardStatusTextByCode(sStatus) {
+            const mTextKeyByStatus = {
+                N: "awardStatusN",
+                P: "awardStatusP",
+                A: "awardStatusA",
+                PO: "awardStatusPO"
+            };
+
+            return mTextKeyByStatus[sStatus] ? this._getText(mTextKeyByStatus[sStatus]) : sStatus;
         },
 
         /**

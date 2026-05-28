@@ -70,6 +70,158 @@ sap.ui.define([
 		assert.strictEqual(oFixture.models.view.getProperty("/AdvancedFilterVisible"), false, "Advanced filter is hidden after second toggle.");
 	});
 
+	QUnit.test("onKpiAwardStatusPress should filter only the RFQ header table without recalculating KPI counts", function (assert) {
+		var bSearchCalled = false;
+		var aAppliedFilters = null;
+		var sToastMessage = "";
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idRfqHeaderTable: {
+					getBinding: function (sAggregation) {
+						assert.strictEqual(sAggregation, "items", "RFQ Header table item binding is used.");
+						return {
+							filter: function (aFilters, sFilterType) {
+								aAppliedFilters = aFilters;
+								assert.strictEqual(sFilterType, "Application", "KPI filter is applied as an application-level table filter.");
+							}
+						};
+					}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.filter.setProperty("/AwardStatus", []);
+		oFixture.models.work.setProperty("/RfqHeaders", [
+			{ AwardStatus: "N" },
+			{ AwardStatus: "A" },
+			{ AwardStatus: "PO" }
+		]);
+		oFixture.models.work.setProperty("/Kpi", {
+			NotAwarded: 1,
+			PartiallyAwarded: 0,
+			Awarded: 1,
+			PoCreated: 1
+		});
+		oFixture.controller.onSearch = function () {
+			bSearchCalled = true;
+			return Promise.resolve([]);
+		};
+		oFixture.controller._showToast = function (sMessage) {
+			sToastMessage = sMessage;
+		};
+		oFixture.controller._getText = function (sKey) {
+			return sKey === "msgKpiAwardFilterApplied" ? "KPI 채택상태 필터를 적용했습니다." : "";
+		};
+
+		oFixture.controller.onKpiAwardStatusPress({
+			getSource: function () {
+				return {
+					data: function (sKey) {
+						return sKey === "awardStatus" ? "N" : "";
+					}
+				};
+			}
+		});
+		assert.deepEqual(oFixture.models.filter.getProperty("/AwardStatus"), [], "Search condition model is not changed by KPI quick filter.");
+		assert.strictEqual(bSearchCalled, false, "KPI tile does not trigger a new backend search.");
+		assert.strictEqual(aAppliedFilters.length, 1, "One table filter is applied.");
+		assert.strictEqual(aAppliedFilters[0].sPath, "AwardStatus", "The quick filter targets AwardStatus.");
+		assert.strictEqual(aAppliedFilters[0].oValue1, "N", "The selected KPI status is used as filter value.");
+		assert.deepEqual(oFixture.models.work.getProperty("/Kpi"), {
+			NotAwarded: 1,
+			PartiallyAwarded: 0,
+			Awarded: 1,
+			PoCreated: 1
+		}, "KPI counts stay based on the last Search result.");
+		assert.strictEqual(oFixture.models.work.getProperty("/RfqHeaderCount"), 1, "Header list count reflects the visible quick-filtered rows.");
+		assert.strictEqual(sToastMessage, "KPI 채택상태 필터를 적용했습니다.", "User is informed about the quick filter.");
+	});
+
+	QUnit.test("onClearAwardStatusQuickFilter should clear only the table quick filter without changing search conditions", function (assert) {
+		var bSearchCalled = false;
+		var aAppliedFilters = null;
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idRfqHeaderTable: {
+					getBinding: function (sAggregation) {
+						assert.strictEqual(sAggregation, "items", "RFQ Header table item binding is used.");
+						return {
+							filter: function (aFilters) {
+								aAppliedFilters = aFilters;
+							}
+						};
+					}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.filter.setProperty("/RfqNo", "RQ00000001");
+		oFixture.models.filter.setProperty("/AwardStatus", ["PO"]);
+		oFixture.models.work.setProperty("/RfqHeaders", [
+			{ AwardStatus: "N" },
+			{ AwardStatus: "A" },
+			{ AwardStatus: "PO" }
+		]);
+		oFixture.controller.onSearch = function () {
+			bSearchCalled = true;
+			return Promise.resolve([]);
+		};
+		oFixture.controller._showToast = function () {};
+
+		oFixture.controller.onClearAwardStatusQuickFilter();
+
+		assert.deepEqual(oFixture.models.filter.getProperty("/AwardStatus"), ["PO"], "Search condition award status remains unchanged.");
+		assert.strictEqual(oFixture.models.filter.getProperty("/RfqNo"), "RQ00000001", "Other search conditions remain unchanged.");
+		assert.strictEqual(bSearchCalled, false, "Clearing the quick filter does not trigger a backend search.");
+		assert.deepEqual(aAppliedFilters, [], "Table application filters are cleared.");
+		assert.strictEqual(oFixture.models.work.getProperty("/RfqHeaderCount"), 3, "Header list count returns to the last Search result row count.");
+	});
+
+	QUnit.test("_applyHeaderTableSorters should apply group sorter before sort sorter and update summaries", function (assert) {
+		var aAppliedSorters = null;
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idRfqHeaderTable: {
+					getBinding: function (sAggregation) {
+						assert.strictEqual(sAggregation, "items", "RFQ Header table item binding is used.");
+						return {
+							sort: function (aSorters) {
+								aAppliedSorters = aSorters;
+							}
+						};
+					}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.controller._getText = function (sKey) {
+			var mText = {
+				tableSortSummaryPrefix: "?뺣젹",
+				tableGroupSummaryPrefix: "洹몃９",
+				sortAscending: "?ㅻ쫫李⑥닚",
+				sortDescending: "?대┝李⑥닚",
+				tableStatusSummaryAll: "?곹깭: ?꾩껜",
+				rfqNo: "RFQ 踰덊샇",
+				awardStatus: "梨꾪깮?곹깭"
+			};
+
+			return mText[sKey] || sKey;
+		};
+
+		oFixture.controller._applyHeaderTableSorters("RfqNo", false, "AwardStatus", true);
+
+		assert.strictEqual(aAppliedSorters.length, 2, "Group sorter and sort sorter are both applied.");
+		assert.strictEqual(aAppliedSorters[0].sPath, "AwardStatus", "Group sorter is applied first.");
+		assert.strictEqual(aAppliedSorters[0].bDescending, true, "Group sort direction is kept.");
+		assert.strictEqual(aAppliedSorters[1].sPath, "RfqNo", "Sort sorter is applied second.");
+		assert.strictEqual(oFixture.models.view.getProperty("/HeaderTableGroupKey"), "AwardStatus", "Group state is stored.");
+		assert.strictEqual(oFixture.models.view.getProperty("/HeaderTableSortKey"), "RfqNo", "Sort state is stored.");
+		assert.strictEqual(oFixture.models.view.getProperty("/HeaderTableSortGroupSummary"), "?뺣젹: RFQ 踰덊샇 ?ㅻ쫫李⑥닚 / 洹몃９: 梨꾪깮?곹깭 ?대┝李⑥닚", "Sort/group summary is updated.");
+	});
+
 	QUnit.test("onRfqSelectionChange should open the Mid column", function (assert) {
 		var oFixture = createControllerWithFakeView({
 			odataModel: {
@@ -91,7 +243,7 @@ sap.ui.define([
 							getObject: function () {
 								return {
 									RfqNo: "5000000123",
-									AwardStatusText: "미채택"
+									AwardStatusText: "Not awarded"
 								};
 							}
 						};
@@ -108,14 +260,14 @@ sap.ui.define([
 		var done = assert.async();
 		var oRfq = {
 			RfqNo: "5000000123",
-			AwardStatusText: "미채택"
+			AwardStatusText: "Not awarded",
 		};
 		var aItems = [{
 			RfqNo: "5000000123",
 			RfqItem: "00010",
 			Matnr: "100001",
 			Maktx: "Bolt M10",
-			ItemStatusText: "미채택",
+			ItemStatusText: "Not awarded",
 			ItemStatusState: "None"
 		}];
 		var oFixture = createControllerWithFakeView({
@@ -175,7 +327,7 @@ sap.ui.define([
 			UiSelected: true
 		}]);
 		oFixture.models.work.setProperty("/ChartRows", [{
-			Name1: "기존 공급업체",
+			Name1: "湲곗〈 怨듦툒?낆껜",
 			NetwrKrw: 1000
 		}]);
 
@@ -213,7 +365,7 @@ sap.ui.define([
 			MqNo: "MQ70000001",
 			MqItem: "00010",
 			Lifnr: "V001",
-			Name1: "삼만리 부품"
+			Name1: "Supplier A"
 		}];
 		var oFixture = createControllerWithFakeView({
 			odataModel: {
@@ -255,7 +407,7 @@ sap.ui.define([
 				MqNo: "MQ70000001",
 				MqItem: "00010",
 				Lifnr: "V001",
-				Name1: "삼만리 부품",
+				Name1: "Supplier A",
 				UiSelected: false
 			}], "MQ compare rows are stored with no selected MQ yet.");
 			assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), {}, "No MQ is selected automatically.");
@@ -403,7 +555,7 @@ sap.ui.define([
 			MqNo: "MQ70000002",
 			MqItem: "00010",
 			CanSelect: "",
-			BlockReason: "미응답 MQ는 채택할 수 없습니다.",
+			BlockReason: "誘몄쓳??MQ??梨꾪깮?????놁뒿?덈떎.",
 			UiSelected: false
 		}];
 		var oFixture = createControllerWithFakeView();
@@ -584,7 +736,7 @@ sap.ui.define([
 			MqNo: "MQ70000003",
 			MqItem: "00010",
 			CanSelect: "",
-			BlockReason: "이미 채택된 견적입니다.",
+			BlockReason: "?대? 梨꾪깮??寃ъ쟻?낅땲??",
 			UiSelected: false
 		}];
 		var oFixture = createControllerWithFakeView();
@@ -596,7 +748,7 @@ sap.ui.define([
 			MqNo: "MQ70000003",
 			MqItem: "00010",
 			CanSelect: "",
-			BlockReason: "이미 채택된 견적입니다."
+			BlockReason: "?대? 梨꾪깮??寃ъ쟻?낅땲??"
 		});
 		oFixture.controller.onCloseMqDetailDialog = function () {
 			bDialogClosed = true;
@@ -620,7 +772,7 @@ sap.ui.define([
 			Name1: "Supplier A",
 			RecommendYn: "X",
 			CanSelect: "",
-			BlockReason: "이미 채택된 견적입니다.",
+			BlockReason: "?대? 梨꾪깮??寃ъ쟻?낅땲??",
 			UiSelected: false
 		}, {
 			RfqNo: "5000000123",
@@ -667,7 +819,7 @@ sap.ui.define([
 			MqItem: "00010",
 			RecommendYn: "X",
 			CanSelect: "",
-			BlockReason: "미응답 MQ는 채택할 수 없습니다.",
+			BlockReason: "誘몄쓳??MQ??梨꾪깮?????놁뒿?덈떎.",
 			UiSelected: false
 		}];
 		var oFixture = createControllerWithFakeView();
@@ -679,7 +831,7 @@ sap.ui.define([
 			sToastMessage = sMessage;
 		};
 		oFixture.controller._getText = function (sKey) {
-			return sKey === "msgNoSelectableRecommend" ? "선택 가능한 추천 MQ가 없습니다." : "";
+			return sKey === "msgNoSelectableRecommend" ? "?좏깮 媛?ν븳 異붿쿇 MQ媛 ?놁뒿?덈떎." : "";
 		};
 
 		oFixture.controller.onApplyAutoRecommend();
@@ -687,7 +839,7 @@ sap.ui.define([
 		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/0/UiSelected"), true, "Previous selection remains selected.");
 		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/1/UiSelected"), false, "Unselectable recommended MQ is not selected.");
 		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), oPreviousSelectedMq, "Selected MQ is not overwritten.");
-		assert.strictEqual(sToastMessage, "선택 가능한 추천 MQ가 없습니다.", "User is informed when no selectable recommendation exists.");
+		assert.strictEqual(sToastMessage, "?좏깮 媛?ν븳 異붿쿇 MQ媛 ?놁뒿?덈떎.", "User is informed when no selectable recommendation exists.");
 	});
 
 	QUnit.test("onSaveAward should MERGE AWARD for the selected MQ and refresh comparison data", function (assert) {
@@ -726,11 +878,11 @@ sap.ui.define([
 			sToastMessage = sMessage;
 		};
 		oFixture.controller._getText = function (sKey) {
-			return sKey === "msgAwardSuccess" ? "견적이 채택되었습니다." : "선택한 MQ를 채택하시겠습니까?";
+			return sKey === "msgAwardSuccess" ? "寃ъ쟻??梨꾪깮?섏뿀?듬땲??" : "?좏깮??MQ瑜?梨꾪깮?섏떆寃좎뒿?덇퉴?";
 		};
 
 		oFixture.controller.onSaveAward().then(function () {
-			assert.strictEqual(sToastMessage, "견적이 채택되었습니다.", "Success message is shown after successful MERGE.");
+			assert.strictEqual(sToastMessage, "寃ъ쟻??梨꾪깮?섏뿀?듬땲??", "Success message is shown after successful MERGE.");
 			assert.ok(bRefreshed, "RFQ item and MQ comparison data are refreshed after successful AWARD.");
 			assert.strictEqual(oFixture.models.view.getProperty("/Busy"), false, "Busy state is cleared after the update flow.");
 			done();
@@ -753,12 +905,12 @@ sap.ui.define([
 			sToastMessage = sMessage;
 		};
 		oFixture.controller._getText = function (sKey) {
-			return sKey === "msgSelectMq" ? "채택할 MQ를 선택하세요." : "";
+			return sKey === "msgSelectMq" ? "梨꾪깮??MQ瑜??좏깮?섏꽭??" : "";
 		};
 
 		return oFixture.controller.onSaveAward().then(function () {
 			assert.notOk(bUpdateCalled, "Backend update is not called without a selected MQ.");
-			assert.strictEqual(sToastMessage, "채택할 MQ를 선택하세요.", "User is asked to select an MQ first.");
+			assert.strictEqual(sToastMessage, "梨꾪깮??MQ瑜??좏깮?섏꽭??", "User is asked to select an MQ first.");
 		});
 	});
 
@@ -801,18 +953,18 @@ sap.ui.define([
 		};
 		oFixture.controller._getText = function (sKey) {
 			if (sKey === "msgCancelSuccess") {
-				return "견적 채택이 취소되었습니다.";
+				return "寃ъ쟻 梨꾪깮??痍⑥냼?섏뿀?듬땲??";
 			}
 
 			if (sKey === "msgConfirmCancel") {
-				return "현재 채택된 MQ를 채택취소하시겠습니까?";
+				return "?꾩옱 梨꾪깮??MQ瑜?梨꾪깮痍⑥냼?섏떆寃좎뒿?덇퉴?";
 			}
 
 			return "";
 		};
 
 		oFixture.controller.onCancelAward().then(function () {
-			assert.strictEqual(sToastMessage, "견적 채택이 취소되었습니다.", "Success message is shown after successful CANCEL.");
+			assert.strictEqual(sToastMessage, "寃ъ쟻 梨꾪깮??痍⑥냼?섏뿀?듬땲??", "Success message is shown after successful CANCEL.");
 			assert.ok(bRefreshed, "RFQ item and MQ comparison data are refreshed after successful CANCEL.");
 			assert.strictEqual(oFixture.models.view.getProperty("/Busy"), false, "Busy state is cleared after the update flow.");
 			done();
@@ -840,12 +992,12 @@ sap.ui.define([
 			sToastMessage = sMessage;
 		};
 		oFixture.controller._getText = function (sKey) {
-			return sKey === "msgNoAwardToCancel" ? "채택취소할 MQ가 없습니다." : "";
+			return sKey === "msgNoAwardToCancel" ? "梨꾪깮痍⑥냼??MQ媛 ?놁뒿?덈떎." : "";
 		};
 
 		return oFixture.controller.onCancelAward().then(function () {
 			assert.notOk(bUpdateCalled, "Backend update is not called without a cancellable awarded MQ.");
-			assert.strictEqual(sToastMessage, "채택취소할 MQ가 없습니다.", "User is informed that there is no award to cancel.");
+			assert.strictEqual(sToastMessage, "梨꾪깮痍⑥냼??MQ媛 ?놁뒿?덈떎.", "User is informed that there is no award to cancel.");
 		});
 	});
 
@@ -1048,7 +1200,7 @@ sap.ui.define([
 			MqCount: 8,
 			VendorCount: 3,
 			AwardStatus: "N",
-			AwardStatusText: "미채택",
+			AwardStatusText: "Not awarded",
 			AwardStatusState: "None"
 		};
 		var oFixture = createControllerWithFakeView({
@@ -1082,5 +1234,4 @@ sap.ui.define([
 			done();
 		});
 	});
-
 });

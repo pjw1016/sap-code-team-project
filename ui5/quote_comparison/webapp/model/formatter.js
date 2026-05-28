@@ -151,6 +151,27 @@ sap.ui.define([
             }
 
             return ValueState.None;
+        },
+
+        /**
+         * Converts RFQ header award status to the sap.m.ColumnListItem highlight state.
+         * @param {string} sStatus RFQ header award status from backend
+         * @returns {sap.ui.core.ValueState} Row highlight state
+         */
+        formatAwardHighlight: function (sStatus) {
+            if (sStatus === "N") {
+                return ValueState.Error;
+            }
+
+            if (sStatus === "P") {
+                return ValueState.Warning;
+            }
+
+            if (sStatus === "A" || sStatus === "PO") {
+                return ValueState.Success;
+            }
+
+            return ValueState.None;
         }
     };
 });
