@@ -147,6 +147,50 @@ sap.ui.define([
 		});
 	});
 
+	QUnit.test("onRfqItemSelectionChange should keep selected item and clear stale MQ data", function (assert) {
+		var oFixture = createControllerWithFakeView();
+		var oRfqItem = {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			Matnr: "100001",
+			Maktx: "Bolt M10",
+			CanCancelAward: "X"
+		};
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedMq", {
+			MqNo: "MQ70000001",
+			MqItem: "00010"
+		});
+		oFixture.models.work.setProperty("/MqCompareRows", [{
+			MqNo: "MQ70000001",
+			UiSelected: true
+		}]);
+		oFixture.models.work.setProperty("/ChartRows", [{
+			Name1: "기존 공급업체",
+			NetwrKrw: 1000
+		}]);
+
+		oFixture.controller.onRfqItemSelectionChange({
+			getParameter: function () {
+				return {
+					getBindingContext: function () {
+						return {
+							getObject: function () {
+								return oRfqItem;
+							}
+						};
+					}
+				};
+			}
+		});
+
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedRfqItem"), oRfqItem, "Selected RFQ item is stored for the comparison area.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), {}, "Previous MQ selection is cleared.");
+		assert.deepEqual(oFixture.models.work.getProperty("/MqCompareRows"), [], "Previous MQ compare rows are cleared.");
+		assert.deepEqual(oFixture.models.work.getProperty("/ChartRows"), [], "Previous chart rows are cleared.");
+	});
+
 	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
 		var oFixture = createControllerWithFakeView();
 

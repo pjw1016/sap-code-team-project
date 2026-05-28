@@ -189,7 +189,8 @@ sap.ui.define([
          * RFQ Item 선택 이벤트.
          *
          * 실제 MQCompareSet 조회는 다음 단계에서 연결한다.
-         * 지금은 선택된 RFQ Item을 work 모델에 보관하여 하단 버튼/상세 영역 바인딩이 깨지지 않게 한다.
+         * 지금은 선택된 RFQ Item을 work 모델에 보관하고,
+         * 이전 Item에서 남은 MQ 선택/비교표/차트 데이터만 초기화한다.
          */
         onRfqItemSelectionChange(oEvent) {
             const oSelectedItem = this._getSelectedObjectFromEvent(oEvent);
@@ -197,6 +198,9 @@ sap.ui.define([
 
             if (oSelectedItem && oWorkModel) {
                 oWorkModel.setProperty("/SelectedRfqItem", oSelectedItem);
+                oWorkModel.setProperty("/SelectedMq", {});
+                oWorkModel.setProperty("/MqCompareRows", []);
+                oWorkModel.setProperty("/ChartRows", []);
             }
         },
 
