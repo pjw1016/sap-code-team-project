@@ -233,9 +233,21 @@ sap.ui.define([
         /**
          * 자동추천 적용 버튼 이벤트.
          *
-         * Backend RecommendYn 값을 기준으로 선택 가능한 MQ를 자동 선택하는 로직은 다음 단계에서 작성한다.
+         * 설계서 기준으로 자동추천은 UI5에서 가격/납기 조건을 다시 계산하지 않는다.
+         * Backend가 계산해서 내려준 RecommendYn과 CanSelect만 신뢰한다.
+         *
+         * RecommendYn = X 이더라도 이미 채택됐거나, 미응답이거나, PO 생성 등으로
+         * CanSelect가 X가 아니면 채택 대상으로 자동 지정하지 않는다.
          */
         onApplyAutoRecommend() {
+            const oRecommendedRow = this._findSelectableRecommendedMq();
+
+            if (!oRecommendedRow) {
+                this._showToast(this._getText("msgNoSelectableRecommend") || "선택 가능한 추천 MQ가 없습니다.");
+                return;
+            }
+
+            this._setSelectedMq(oRecommendedRow);
         },
 
         /**
@@ -586,6 +598,15 @@ sap.ui.define([
 
             return aRows.find((oRow) => {
                 return oRow.MqNo === sMqNo && oRow.MqItem === sMqItem;
+            }) || null;
+        },
+
+        _findSelectableRecommendedMq() {
+            const oWorkModel = this.getView().getModel("work");
+            const aRows = oWorkModel ? (oWorkModel.getProperty("/MqCompareRows") || []) : [];
+
+            return aRows.find((oRow) => {
+                return oRow.RecommendYn === "X" && oRow.CanSelect === "X";
             }) || null;
         },
 

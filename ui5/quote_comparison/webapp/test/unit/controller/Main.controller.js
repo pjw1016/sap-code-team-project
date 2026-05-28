@@ -610,6 +610,86 @@ sap.ui.define([
 		assert.notOk(bDialogClosed, "Dialog stays open so the user can read the block reason.");
 	});
 
+	QUnit.test("onApplyAutoRecommend should select the recommended MQ only when it is selectable", function (assert) {
+		var aRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000001",
+			MqItem: "00010",
+			Lifnr: "V001",
+			Name1: "Supplier A",
+			RecommendYn: "X",
+			CanSelect: "",
+			BlockReason: "이미 채택된 견적입니다.",
+			UiSelected: false
+		}, {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			Lifnr: "V002",
+			Name1: "Supplier B",
+			RecommendYn: "X",
+			CanSelect: "X",
+			CurrentAwardYn: "",
+			UiSelected: false
+		}];
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/MqCompareRows", aRows);
+
+		oFixture.controller.onApplyAutoRecommend();
+
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/0/UiSelected"), false, "Recommended but unselectable MQ remains unselected.");
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/1/UiSelected"), true, "Recommended and selectable MQ is selected.");
+		assert.strictEqual(oFixture.models.work.getProperty("/SelectedMq/MqNo"), "MQ70000002", "Selectable recommended MQ becomes the award target.");
+	});
+
+	QUnit.test("onApplyAutoRecommend should keep the current selection when no selectable recommendation exists", function (assert) {
+		var sToastMessage = "";
+		var oPreviousSelectedMq = {
+			MqNo: "MQ70000001",
+			MqItem: "00010"
+		};
+		var aRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000001",
+			MqItem: "00010",
+			RecommendYn: "",
+			CanSelect: "X",
+			UiSelected: true
+		}, {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000003",
+			MqItem: "00010",
+			RecommendYn: "X",
+			CanSelect: "",
+			BlockReason: "미응답 MQ는 채택할 수 없습니다.",
+			UiSelected: false
+		}];
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/MqCompareRows", aRows);
+		oFixture.models.work.setProperty("/SelectedMq", oPreviousSelectedMq);
+		oFixture.controller._showToast = function (sMessage) {
+			sToastMessage = sMessage;
+		};
+		oFixture.controller._getText = function (sKey) {
+			return sKey === "msgNoSelectableRecommend" ? "선택 가능한 추천 MQ가 없습니다." : "";
+		};
+
+		oFixture.controller.onApplyAutoRecommend();
+
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/0/UiSelected"), true, "Previous selection remains selected.");
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/1/UiSelected"), false, "Unselectable recommended MQ is not selected.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), oPreviousSelectedMq, "Selected MQ is not overwritten.");
+		assert.strictEqual(sToastMessage, "선택 가능한 추천 MQ가 없습니다.", "User is informed when no selectable recommendation exists.");
+	});
+
 	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
 		var oFixture = createControllerWithFakeView();
 

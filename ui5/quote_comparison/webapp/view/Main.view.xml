@@ -743,6 +743,17 @@
                                                         unit="{work>Meins}"/>
                                                 </table:template>
                                             </table:Column>
+                                            <!-- 가격단위(PEINH)는 단가가 몇 단위 기준인지 나타낸다.
+                                                 예: 견적수량 12, 단가 100,000, 가격단위 2이면 총액은 12 / 2 * 100,000 = 600,000 이다. -->
+                                            <table:Column width="7rem">
+                                                <table:label>
+                                                    <Label text="{i18n>peinh}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectNumber
+                                                        number="{path: 'work>Peinh', formatter: '.formatter.formatQuantity'}"/>
+                                                </table:template>
+                                            </table:Column>
                                             <table:Column width="8rem">
                                                 <table:label>
                                                     <Label text="{i18n>netpr}"/>
