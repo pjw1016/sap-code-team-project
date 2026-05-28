@@ -694,6 +694,8 @@
                                                     <RadioButton
                                                         selected="{work>UiSelected}"
                                                         enabled="{= ${work>CanSelect} === 'X' }"
+                                                        groupName="mqCompareSelection"
+                                                        tooltip="{work>BlockReason}"
                                                         select=".onMqRadioSelect"/>
                                                 </table:template>
                                             </table:Column>

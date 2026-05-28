@@ -212,7 +212,14 @@ sap.ui.define([
          *
          * sap.ui.table.Table의 행 컨텍스트 처리와 단일 선택 제어는 MQ 비교 기능 구현 단계에서 작성한다.
          */
-        onMqRadioSelect() {
+        onMqRadioSelect(oEvent) {
+            const oSelectedRow = this._getObjectFromEventSource(oEvent);
+
+            if (!oSelectedRow || oSelectedRow.CanSelect !== "X") {
+                return;
+            }
+
+            this._setSelectedMq(oSelectedRow);
         },
 
         /**
@@ -487,6 +494,39 @@ sap.ui.define([
             }, []);
         },
 
+        _setSelectedMq(oSelectedRow) {
+            const oWorkModel = this.getView().getModel("work");
+            const sMqNo = oSelectedRow && oSelectedRow.MqNo;
+            const sMqItem = oSelectedRow && oSelectedRow.MqItem;
+
+            if (!oWorkModel || !sMqNo || !sMqItem) {
+                return;
+            }
+
+            const aUpdatedRows = (oWorkModel.getProperty("/MqCompareRows") || []).map((oRow) => {
+                return Object.assign({}, oRow, {
+                    UiSelected: oRow.MqNo === sMqNo && oRow.MqItem === sMqItem
+                });
+            });
+            const oSelectedFromRows = aUpdatedRows.find((oRow) => {
+                return oRow.MqNo === sMqNo && oRow.MqItem === sMqItem;
+            }) || oSelectedRow;
+
+            oWorkModel.setProperty("/MqCompareRows", aUpdatedRows);
+            oWorkModel.setProperty("/SelectedMq", {
+                RfqNo: oSelectedFromRows.RfqNo,
+                RfqItem: oSelectedFromRows.RfqItem,
+                MqNo: oSelectedFromRows.MqNo,
+                MqItem: oSelectedFromRows.MqItem,
+                Lifnr: oSelectedFromRows.Lifnr,
+                Name1: oSelectedFromRows.Name1,
+                CanSelect: oSelectedFromRows.CanSelect,
+                BlockReason: oSelectedFromRows.BlockReason,
+                RecommendYn: oSelectedFromRows.RecommendYn,
+                CurrentAwardYn: oSelectedFromRows.CurrentAwardYn
+            });
+        },
+
         /**
          * RFQ Item 하위 단계의 선택/비교 데이터를 비운다.
          *
@@ -709,6 +749,18 @@ sap.ui.define([
             }
 
             oContext = oListItem.getBindingContext("work") || oListItem.getBindingContext();
+
+            if (!oContext || !oContext.getObject) {
+                return null;
+            }
+
+            return oContext.getObject();
+        },
+
+        _getObjectFromEventSource(oEvent) {
+            const oSource = oEvent && oEvent.getSource && oEvent.getSource();
+            const oContext = oSource && oSource.getBindingContext &&
+                (oSource.getBindingContext("work") || oSource.getBindingContext());
 
             if (!oContext || !oContext.getObject) {
                 return null;

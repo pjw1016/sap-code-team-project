@@ -330,6 +330,111 @@ sap.ui.define([
 		});
 	});
 
+	QUnit.test("onMqRadioSelect should keep only one selectable MQ selected", function (assert) {
+		var aRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000001",
+			MqItem: "00010",
+			Lifnr: "V001",
+			Name1: "Supplier A",
+			CanSelect: "X",
+			RecommendYn: "",
+			CurrentAwardYn: "",
+			UiSelected: true
+		}, {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			Lifnr: "V002",
+			Name1: "Supplier B",
+			CanSelect: "X",
+			RecommendYn: "X",
+			CurrentAwardYn: "",
+			UiSelected: false
+		}];
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/MqCompareRows", aRows);
+
+		oFixture.controller.onMqRadioSelect({
+			getSource: function () {
+				return {
+					getBindingContext: function () {
+						return {
+							getObject: function () {
+								return aRows[1];
+							}
+						};
+					}
+				};
+			}
+		});
+
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/0/UiSelected"), false, "Previous MQ selection is cleared.");
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/1/UiSelected"), true, "Selected MQ row remains selected.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			Lifnr: "V002",
+			Name1: "Supplier B",
+			CanSelect: "X",
+			BlockReason: undefined,
+			RecommendYn: "X",
+			CurrentAwardYn: ""
+		}, "Selected MQ is stored for award actions.");
+	});
+
+	QUnit.test("onMqRadioSelect should ignore MQ rows that cannot be selected", function (assert) {
+		var aRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000001",
+			MqItem: "00010",
+			CanSelect: "X",
+			UiSelected: true
+		}, {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			CanSelect: "",
+			BlockReason: "미응답 MQ는 채택할 수 없습니다.",
+			UiSelected: false
+		}];
+		var oFixture = createControllerWithFakeView();
+		var oPreviousSelectedMq = {
+			MqNo: "MQ70000001",
+			MqItem: "00010"
+		};
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/MqCompareRows", aRows);
+		oFixture.models.work.setProperty("/SelectedMq", oPreviousSelectedMq);
+
+		oFixture.controller.onMqRadioSelect({
+			getSource: function () {
+				return {
+					getBindingContext: function () {
+						return {
+							getObject: function () {
+								return aRows[1];
+							}
+						};
+					}
+				};
+			}
+		});
+
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/0/UiSelected"), true, "Previous valid selection is kept.");
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/1/UiSelected"), false, "Unselectable MQ row is not selected.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), oPreviousSelectedMq, "Selected MQ model is not overwritten by an unselectable row.");
+	});
+
 	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
 		var oFixture = createControllerWithFakeView();
 
