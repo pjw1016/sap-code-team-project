@@ -518,6 +518,98 @@ sap.ui.define([
 		});
 	});
 
+	QUnit.test("onSelectMqFromDialog should select a selectable detail MQ from the compare rows", function (assert) {
+		var bDialogClosed = false;
+		var aRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000001",
+			MqItem: "00010",
+			Lifnr: "V001",
+			Name1: "Supplier A",
+			CanSelect: "X",
+			RecommendYn: "",
+			CurrentAwardYn: "",
+			UiSelected: false
+		}, {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			Lifnr: "V002",
+			Name1: "Supplier B",
+			CanSelect: "X",
+			RecommendYn: "X",
+			CurrentAwardYn: "",
+			UiSelected: false
+		}];
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/MqCompareRows", aRows);
+		oFixture.models.detail.setProperty("/MqDetail", {
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			CanSelect: "X"
+		});
+		oFixture.controller.onCloseMqDetailDialog = function () {
+			bDialogClosed = true;
+		};
+
+		oFixture.controller.onSelectMqFromDialog();
+
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/0/UiSelected"), false, "Other MQ rows remain unselected.");
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/1/UiSelected"), true, "Dialog MQ row is selected in the compare table.");
+		assert.strictEqual(oFixture.models.work.getProperty("/SelectedMq/MqNo"), "MQ70000002", "Dialog MQ is stored as the award target.");
+		assert.strictEqual(oFixture.models.work.getProperty("/SelectedMq/RecommendYn"), "X", "Selected MQ uses the compare row data, not only the detail payload.");
+		assert.ok(bDialogClosed, "Dialog is closed after a successful selectable MQ selection.");
+	});
+
+	QUnit.test("onSelectMqFromDialog should ignore an unselectable detail MQ", function (assert) {
+		var bDialogClosed = false;
+		var oPreviousSelectedMq = {
+			MqNo: "MQ70000001",
+			MqItem: "00010"
+		};
+		var aRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000001",
+			MqItem: "00010",
+			CanSelect: "X",
+			UiSelected: true
+		}, {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000003",
+			MqItem: "00010",
+			CanSelect: "",
+			BlockReason: "이미 채택된 견적입니다.",
+			UiSelected: false
+		}];
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/MqCompareRows", aRows);
+		oFixture.models.work.setProperty("/SelectedMq", oPreviousSelectedMq);
+		oFixture.models.detail.setProperty("/MqDetail", {
+			MqNo: "MQ70000003",
+			MqItem: "00010",
+			CanSelect: "",
+			BlockReason: "이미 채택된 견적입니다."
+		});
+		oFixture.controller.onCloseMqDetailDialog = function () {
+			bDialogClosed = true;
+		};
+
+		oFixture.controller.onSelectMqFromDialog();
+
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/0/UiSelected"), true, "Previous selection remains selected.");
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/1/UiSelected"), false, "Unselectable detail MQ is not selected.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), oPreviousSelectedMq, "Selected MQ is not overwritten.");
+		assert.notOk(bDialogClosed, "Dialog stays open so the user can read the block reason.");
+	});
+
 	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
 		var oFixture = createControllerWithFakeView();
 

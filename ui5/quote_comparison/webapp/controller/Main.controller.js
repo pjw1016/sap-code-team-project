@@ -281,11 +281,29 @@ sap.ui.define([
         },
 
         /**
-         * 상세 Dialog 안의 "이 Item 선택" 버튼 이벤트.
+         * 상세 Dialog 안의 "이 MQ 선택" 버튼 이벤트.
          *
          * Dialog에서 MQ를 선택한 뒤 비교표의 선택 상태와 맞추는 로직은 상세 팝업 연결 단계에서 작성한다.
          */
         onSelectMqFromDialog() {
+            const oDetailModel = this.getView().getModel("detail");
+            const oMqDetail = oDetailModel ? (oDetailModel.getProperty("/MqDetail") || {}) : {};
+            const oCompareRow = this._findMqCompareRow(oMqDetail.MqNo, oMqDetail.MqItem);
+
+            /*
+             * Dialog의 "이 MQ 선택"은 상세 조회가 아니라 채택 대상 지정 기능이다.
+             * 따라서 UI에서 임의로 가능 여부를 재계산하지 않고, Backend가 내려준
+             * MQ 비교 행의 CanSelect 값을 다시 확인한다.
+             *
+             * 이미 채택된 MQ, 미응답 MQ, PO 생성 MQ처럼 CanSelect가 X가 아닌 행은
+             * 상세 조회만 허용하고 work>/SelectedMq는 덮어쓰지 않는다.
+             */
+            if (!oCompareRow || oCompareRow.CanSelect !== "X") {
+                return;
+            }
+
+            this._setSelectedMq(oCompareRow);
+            this.onCloseMqDetailDialog();
         },
 
         /**
@@ -556,6 +574,19 @@ sap.ui.define([
                 RecommendYn: oSelectedFromRows.RecommendYn,
                 CurrentAwardYn: oSelectedFromRows.CurrentAwardYn
             });
+        },
+
+        _findMqCompareRow(sMqNo, sMqItem) {
+            const oWorkModel = this.getView().getModel("work");
+            const aRows = oWorkModel ? (oWorkModel.getProperty("/MqCompareRows") || []) : [];
+
+            if (!sMqNo || !sMqItem) {
+                return null;
+            }
+
+            return aRows.find((oRow) => {
+                return oRow.MqNo === sMqNo && oRow.MqItem === sMqItem;
+            }) || null;
         },
 
         /**
