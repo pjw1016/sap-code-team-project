@@ -435,12 +435,14 @@ sap.ui.define([
 
                 if (oWorkModel) {
                     oWorkModel.setProperty("/MqCompareRows", aPreparedRows);
+                    oWorkModel.setProperty("/ChartRows", this._prepareChartRows(aPreparedRows));
                 }
 
                 return aPreparedRows;
             }).catch((oError) => {
                 if (oWorkModel) {
                     oWorkModel.setProperty("/MqCompareRows", []);
+                    oWorkModel.setProperty("/ChartRows", []);
                 }
 
                 this._showToast(this._getText("msgLoadMqCompareError") || "MQ 비교 목록 조회 중 오류가 발생했습니다.");
@@ -460,6 +462,29 @@ sap.ui.define([
             this._addTextFilter(aFilters, "RfqItem", sRfqItem, FilterOperator.EQ);
 
             return aFilters;
+        },
+
+        _prepareChartRows(aRows) {
+            return (aRows || []).reduce((aChartRows, oRow) => {
+                const iNetwrKrw = Number(oRow && oRow.NetwrKrw);
+
+                if (!oRow || oRow.ResponseStatus === "N" || !Number.isFinite(iNetwrKrw) || iNetwrKrw <= 0) {
+                    return aChartRows;
+                }
+
+                aChartRows.push({
+                    RfqNo: oRow.RfqNo,
+                    RfqItem: oRow.RfqItem,
+                    MqNo: oRow.MqNo,
+                    MqItem: oRow.MqItem,
+                    Name1: oRow.Name1 || oRow.MqNo,
+                    NetwrKrw: iNetwrKrw,
+                    RecommendYn: oRow.RecommendYn,
+                    CurrentAwardYn: oRow.CurrentAwardYn
+                });
+
+                return aChartRows;
+            }, []);
         },
 
         /**

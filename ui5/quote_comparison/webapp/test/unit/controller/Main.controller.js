@@ -263,6 +263,73 @@ sap.ui.define([
 		});
 	});
 
+	QUnit.test("onRfqItemSelectionChange should prepare chart rows from valid MQ compare rows", function (assert) {
+		var done = assert.async();
+		var oRfqItem = {
+			RfqNo: "5000000123",
+			RfqItem: "00010"
+		};
+		var aMqRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000001",
+			MqItem: "00010",
+			Name1: "Supplier A",
+			NetwrKrw: "120000",
+			ResponseStatus: "R",
+			RecommendYn: "X",
+			CurrentAwardYn: ""
+		}, {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			Name1: "Supplier B",
+			NetwrKrw: "0",
+			ResponseStatus: "N",
+			RecommendYn: "",
+			CurrentAwardYn: ""
+		}];
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				read: function (sPath, mParameters) {
+					assert.strictEqual(sPath, "/MQCompareSet", "RFQ item selection reads MQCompareSet.");
+					mParameters.success({
+						results: aMqRows
+					});
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+
+		oFixture.controller.onRfqItemSelectionChange({
+			getParameter: function () {
+				return {
+					getBindingContext: function () {
+						return {
+							getObject: function () {
+								return oRfqItem;
+							}
+						};
+					}
+				};
+			}
+		}).then(function () {
+			assert.deepEqual(oFixture.models.work.getProperty("/ChartRows"), [{
+				RfqNo: "5000000123",
+				RfqItem: "00010",
+				MqNo: "MQ70000001",
+				MqItem: "00010",
+				Name1: "Supplier A",
+				NetwrKrw: 120000,
+				RecommendYn: "X",
+				CurrentAwardYn: ""
+			}], "Only valid responded MQ rows with KRW amount are prepared for the chart.");
+			done();
+		});
+	});
+
 	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
 		var oFixture = createControllerWithFakeView();
 
