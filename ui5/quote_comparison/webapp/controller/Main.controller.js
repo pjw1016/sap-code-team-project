@@ -4,8 +4,9 @@ sap.ui.define([
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "sap/m/MessageToast",
+    "sap/ui/core/Fragment",
     "code/d3/quotecomparison/model/formatter"
-], (Controller, JSONModel, Filter, FilterOperator, MessageToast, formatter) => {
+], (Controller, JSONModel, Filter, FilterOperator, MessageToast, Fragment, formatter) => {
     "use strict";
 
     return Controller.extend("code.d3.quotecomparison.controller.Main", {
@@ -31,6 +32,7 @@ sap.ui.define([
             oView.setModel(new JSONModel(this._createInitialViewData()), "view");
             oView.setModel(new JSONModel(this._createInitialFilterData()), "filter");
             oView.setModel(new JSONModel(this._createInitialWorkData()), "work");
+            oView.setModel(new JSONModel(this._createInitialDetailData()), "detail");
         },
 
         /**
@@ -95,6 +97,12 @@ sap.ui.define([
                 SelectedRfq: {},
                 SelectedRfqItem: {},
                 SelectedMq: {}
+            };
+        },
+
+        _createInitialDetailData() {
+            return {
+                MqDetail: {}
             };
         },
 
@@ -236,6 +244,24 @@ sap.ui.define([
          * Fragment 로딩과 MQDetailSet 단건 조회는 상세 팝업 연결 단계에서 작성한다.
          */
         onOpenMqDetail() {
+            const oSelectedMq = this.getView().getModel("work").getProperty("/SelectedMq");
+
+            if (!oSelectedMq || !oSelectedMq.MqNo || !oSelectedMq.MqItem) {
+                this._showToast(this._getText("msgSelectMq") || "채택할 MQ를 선택하세요.");
+                return Promise.resolve(null);
+            }
+
+            return this._loadMqDetail(oSelectedMq.MqNo, oSelectedMq.MqItem);
+        },
+
+        onOpenMqDetailFromRow(oEvent) {
+            const oRow = this._getObjectFromEventSource(oEvent);
+
+            if (!oRow || !oRow.MqNo || !oRow.MqItem) {
+                return Promise.resolve(null);
+            }
+
+            return this._loadMqDetail(oRow.MqNo, oRow.MqItem);
         },
 
         /**
@@ -268,6 +294,11 @@ sap.ui.define([
          * 실제 Dialog close 처리는 Fragment 연결 단계에서 작성한다.
          */
         onCloseMqDetailDialog() {
+            const oDialog = this.byId("idMqDetailDialog");
+
+            if (oDialog && oDialog.close) {
+                oDialog.close();
+            }
         },
 
         /**
@@ -603,6 +634,99 @@ sap.ui.define([
                     },
                     error: reject
                 });
+            });
+        },
+
+        _readEntity(sPath) {
+            const oModel = this.getOwnerComponent().getModel();
+
+            return new Promise((resolve, reject) => {
+                if (!oModel || !oModel.read) {
+                    reject(new Error("Default ODataModel is not available."));
+                    return;
+                }
+
+                oModel.read(sPath, {
+                    success: (oData) => {
+                        resolve(oData || {});
+                    },
+                    error: reject
+                });
+            });
+        },
+
+        _loadMqDetail(sMqNo, sMqItem) {
+            const oView = this.getView();
+            const oViewModel = oView.getModel("view");
+            const oDetailModel = oView.getModel("detail");
+            const sPath = this._createMqDetailPath(sMqNo, sMqItem);
+
+            if (!sPath) {
+                return Promise.resolve(null);
+            }
+
+            if (oViewModel) {
+                oViewModel.setProperty("/Busy", true);
+            }
+
+            return this._readEntity(sPath).then((oData) => {
+                if (oDetailModel) {
+                    oDetailModel.setProperty("/MqDetail", oData || {});
+                }
+
+                return this._openMqDetailDialog().then(() => oData);
+            }).catch((oError) => {
+                if (oDetailModel) {
+                    oDetailModel.setProperty("/MqDetail", {});
+                }
+
+                this._showToast(this._getText("msgLoadMqDetailError") || "MQ 상세정보 조회 중 오류가 발생했습니다.");
+                throw oError;
+            }).finally(() => {
+                if (oViewModel) {
+                    oViewModel.setProperty("/Busy", false);
+                }
+            });
+        },
+
+        _createMqDetailPath(sMqNo, sMqItem) {
+            const oModel = this.getOwnerComponent().getModel();
+
+            if (!sMqNo || !sMqItem) {
+                return "";
+            }
+
+            if (oModel && oModel.createKey) {
+                return oModel.createKey("/MQDetailSet", {
+                    MqNo: sMqNo,
+                    MqItem: sMqItem
+                });
+            }
+
+            return "/MQDetailSet(MqNo='" + this._escapeODataKeyValue(sMqNo) + "',MqItem='" + this._escapeODataKeyValue(sMqItem) + "')";
+        },
+
+        _escapeODataKeyValue(sValue) {
+            return String(sValue).replace(/'/g, "''");
+        },
+
+        _openMqDetailDialog() {
+            const oView = this.getView();
+
+            if (!this._pMqDetailDialog) {
+                this._pMqDetailDialog = Fragment.load({
+                    id: oView.getId(),
+                    name: "code.d3.quotecomparison.fragment.MQDetailDialog",
+                    controller: this
+                }).then((oDialog) => {
+                    oView.addDependent(oDialog);
+                    return oDialog;
+                });
+            }
+
+            return this._pMqDetailDialog.then((oDialog) => {
+                oDialog.open();
+                return oDialog;
             });
         },
 

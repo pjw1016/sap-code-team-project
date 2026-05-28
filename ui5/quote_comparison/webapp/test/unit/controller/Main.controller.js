@@ -435,6 +435,89 @@ sap.ui.define([
 		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), oPreviousSelectedMq, "Selected MQ model is not overwritten by an unselectable row.");
 	});
 
+	QUnit.test("onOpenMqDetailFromRow should read detail for the clicked MQ row regardless of selectability", function (assert) {
+		var done = assert.async();
+		var oClickedRow = {
+			MqNo: "MQ70000003",
+			MqItem: "00020",
+			CanSelect: "",
+			CurrentAwardYn: "X"
+		};
+		var oDetail = {
+			MqNo: "MQ70000003",
+			MqItem: "00020",
+			Name1: "Awarded Supplier",
+			CanSelect: "",
+			CurrentAwardYn: "X"
+		};
+		var bDialogOpened = false;
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				read: function (sPath, mParameters) {
+					assert.strictEqual(sPath, "/MQDetailSet(MqNo='MQ70000003',MqItem='00020')", "The clicked MQ row is used as the detail key.");
+					mParameters.success(oDetail);
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.controller._openMqDetailDialog = function () {
+			bDialogOpened = true;
+			return Promise.resolve();
+		};
+
+		oFixture.controller.onOpenMqDetailFromRow({
+			getSource: function () {
+				return {
+					getBindingContext: function () {
+						return {
+							getObject: function () {
+								return oClickedRow;
+							}
+						};
+					}
+				};
+			}
+		}).then(function () {
+			assert.deepEqual(oFixture.models.detail.getProperty("/MqDetail"), oDetail, "MQ detail data is stored in the detail model.");
+			assert.ok(bDialogOpened, "MQ detail dialog is opened after the detail read.");
+			done();
+		});
+	});
+
+	QUnit.test("onOpenMqDetail should read detail for the currently selected MQ", function (assert) {
+		var done = assert.async();
+		var oSelectedMq = {
+			MqNo: "MQ70000004",
+			MqItem: "00010"
+		};
+		var oDetail = {
+			MqNo: "MQ70000004",
+			MqItem: "00010",
+			Name1: "Selected Supplier",
+			CanSelect: "X"
+		};
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				read: function (sPath, mParameters) {
+					assert.strictEqual(sPath, "/MQDetailSet(MqNo='MQ70000004',MqItem='00010')", "Selected MQ is used as the detail key.");
+					mParameters.success(oDetail);
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedMq", oSelectedMq);
+		oFixture.controller._openMqDetailDialog = function () {
+			return Promise.resolve();
+		};
+
+		oFixture.controller.onOpenMqDetail().then(function () {
+			assert.deepEqual(oFixture.models.detail.getProperty("/MqDetail"), oDetail, "Selected MQ detail data is stored in the detail model.");
+			done();
+		});
+	});
+
 	QUnit.test("Mid column navigation actions should switch the FCL layout", function (assert) {
 		var oFixture = createControllerWithFakeView();
 

@@ -699,6 +699,20 @@
                                                         select=".onMqRadioSelect"/>
                                                 </table:template>
                                             </table:Column>
+                                            <table:Column
+                                                width="4rem"
+                                                hAlign="Center">
+                                                <table:label>
+                                                    <Label text="{i18n>mqDetail}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <Button
+                                                        icon="sap-icon://detail-view"
+                                                        type="Transparent"
+                                                        tooltip="{i18n>mqDetail}"
+                                                        press=".onOpenMqDetailFromRow"/>
+                                                </table:template>
+                                            </table:Column>
                                             <table:Column width="9rem">
                                                 <table:label>
                                                     <Label text="{i18n>mqNo}"/>
