@@ -33,6 +33,12 @@ sap.ui.define([
 	QUnit.test("numeric helpers return blank text for invalid values", function (assert) {
 		assert.strictEqual(formatter.formatQuantity("ABC"), "");
 		assert.strictEqual(formatter.formatAmount(undefined), "");
+		assert.strictEqual(formatter.formatExchangeRate(undefined), "");
 		assert.strictEqual(formatter.formatCurrencyAmount("ABC", "KRW"), "");
+	});
+
+	QUnit.test("formatExchangeRate keeps at least two decimal places", function (assert) {
+		assert.strictEqual(formatter.formatExchangeRate("1507.9"), "1,507.90");
+		assert.strictEqual(formatter.formatExchangeRate("1507.98765"), "1,507.98765");
 	});
 });

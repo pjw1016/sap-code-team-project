@@ -1,7 +1,6 @@
 <core:FragmentDefinition
     xmlns="sap.m"
-    xmlns:core="sap.ui.core"
-    xmlns:form="sap.ui.layout.form">
+    xmlns:core="sap.ui.core">
     <Dialog
         id="idMqDetailDialog"
         title="{= ${detail>/MqDetail/MqNo} ? ${i18n>mqDetail} + ' - ' + ${detail>/MqDetail/MqNo} : ${i18n>mqDetail} }"
@@ -18,165 +17,214 @@
                     <Title
                         text="{i18n>detailBasicInfo}"
                         level="H3"/>
-                    <form:SimpleForm
-                        editable="false"
-                        layout="ResponsiveGridLayout"
-                        labelSpanXL="3"
-                        labelSpanL="3"
-                        labelSpanM="4"
-                        emptySpanXL="0"
-                        emptySpanL="0"
-                        emptySpanM="0"
-                        columnsXL="2"
-                        columnsL="2"
-                        columnsM="2">
-                        <Label text="{i18n>rfqNo}"/>
-                        <Text text="{detail>/MqDetail/RfqNo}"/>
-                        <Label text="{i18n>rfqItem}"/>
-                        <Text text="{detail>/MqDetail/RfqItem}"/>
-                        <Label text="{i18n>mqNo}"/>
-                        <Text text="{detail>/MqDetail/MqNo}"/>
-                        <Label text="{i18n>mqItem}"/>
-                        <Text text="{detail>/MqDetail/MqItem}"/>
-                        <Label text="{i18n>lifnr}"/>
-                        <Text text="{detail>/MqDetail/Lifnr}"/>
-                        <Label text="{i18n>name1}"/>
-                        <Text text="{detail>/MqDetail/Name1}"/>
-                        <Label text="{i18n>matnr}"/>
-                        <Text text="{detail>/MqDetail/Matnr}"/>
-                        <Label text="{i18n>maktx}"/>
-                        <Text text="{detail>/MqDetail/Maktx}"/>
-                        <Label text="{i18n>werks}"/>
-                        <Text text="{detail>/MqDetail/Werks} {detail>/MqDetail/WerksName}"/>
-                        <Label text="{i18n>lgort}"/>
-                        <Text text="{detail>/MqDetail/Lgort} {detail>/MqDetail/Lgobe}"/>
-                    </form:SimpleForm>
+                    <!-- 팝업 폭을 효율적으로 쓰기 위해 라벨/값 한 쌍을 27rem 단위로 묶고, FlexBox가 두 묶음씩 좌우 배치하도록 한다. -->
+                    <FlexBox
+                        wrap="Wrap"
+                        renderType="Bare">
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>rfqNo}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/RfqNo}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>rfqItem}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/RfqItem}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>mqNo}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/MqNo}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>mqItem}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/MqItem}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>lifnr}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/Lifnr}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>name1}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text
+                                text="{detail>/MqDetail/Name1}"
+                                wrapping="true"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>matnr}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/Matnr}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>maktx}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text
+                                text="{detail>/MqDetail/Maktx}"
+                                wrapping="true"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>werks}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text
+                                text="{detail>/MqDetail/Werks} {detail>/MqDetail/WerksName}"
+                                wrapping="true"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>lgort}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text
+                                text="{detail>/MqDetail/Lgort} {detail>/MqDetail/Lgobe}"
+                                wrapping="true"/>
+                        </HBox>
+                    </FlexBox>
 
                     <Title
                         text="{i18n>detailQuotationInfo}"
                         level="H3"
                         class="sapUiSmallMarginTop"/>
-                    <form:SimpleForm
-                        editable="false"
-                        layout="ResponsiveGridLayout"
-                        labelSpanXL="3"
-                        labelSpanL="3"
-                        labelSpanM="4"
-                        emptySpanXL="0"
-                        emptySpanL="0"
-                        emptySpanM="0"
-                        columnsXL="2"
-                        columnsL="2"
-                        columnsM="2">
-                        <Label text="{i18n>quoteQty}"/>
-                        <ObjectNumber
-                            number="{path: 'detail>/MqDetail/QuoteQty', formatter: '.formatter.formatQuantity'}"
-                            unit="{detail>/MqDetail/Meins}"/>
-                        <Label text="{i18n>netpr}"/>
-                        <ObjectNumber
-                            number="{path: 'detail>/MqDetail/Netpr', formatter: '.formatter.formatAmount'}"
-                            unit="{detail>/MqDetail/Waers}"/>
-                        <Label text="{i18n>peinh}"/>
-                        <ObjectNumber
-                            number="{path: 'detail>/MqDetail/Peinh', formatter: '.formatter.formatQuantity'}"/>
-                        <Label text="{i18n>netwr}"/>
-                        <ObjectNumber
-                            number="{path: 'detail>/MqDetail/Netwr', formatter: '.formatter.formatAmount'}"
-                            unit="{detail>/MqDetail/Waers}"/>
-                        <Label text="{i18n>exchangeDate}"/>
-                        <Text text="{path: 'detail>/MqDetail/ExchangeDate', formatter: '.formatter.formatDate'}"/>
-                        <Label text="{i18n>kursf}"/>
-                        <ObjectNumber
-                            number="{path: 'detail>/MqDetail/Kursf', formatter: '.formatter.formatAmount'}"/>
-                        <Label text="{i18n>netprKrw}"/>
-                        <ObjectNumber
-                            number="{path: 'detail>/MqDetail/NetprKrw', formatter: '.formatter.formatAmount'}"
-                            unit="{detail>/MqDetail/Kwaers}"/>
-                        <Label text="{i18n>netwrKrw}"/>
-                        <ObjectNumber
-                            number="{path: 'detail>/MqDetail/NetwrKrw', formatter: '.formatter.formatAmount'}"
-                            unit="{detail>/MqDetail/Kwaers}"/>
-                        <Label text="{i18n>eindt}"/>
-                        <Text text="{path: 'detail>/MqDetail/Eindt', formatter: '.formatter.formatDate'}"/>
-                    </form:SimpleForm>
+                    <!-- 견적 금액 영역도 기본정보와 같은 2열 규칙을 사용해 환율, 단가, 환산총액을 한눈에 비교하게 한다. -->
+                    <FlexBox
+                        wrap="Wrap"
+                        renderType="Bare">
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>quoteQty}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectNumber
+                                number="{path: 'detail>/MqDetail/QuoteQty', formatter: '.formatter.formatQuantity'}"
+                                unit="{detail>/MqDetail/Meins}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>netpr}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectNumber
+                                number="{path: 'detail>/MqDetail/Netpr', formatter: '.formatter.formatAmount'}"
+                                unit="{detail>/MqDetail/Waers}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>peinh}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectNumber
+                                number="{path: 'detail>/MqDetail/Peinh', formatter: '.formatter.formatQuantity'}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>netwr}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectNumber
+                                number="{path: 'detail>/MqDetail/Netwr', formatter: '.formatter.formatAmount'}"
+                                unit="{detail>/MqDetail/Waers}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>exchangeDate}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{path: 'detail>/MqDetail/ExchangeDate', formatter: '.formatter.formatDate'}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>kursf}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <!-- 환율은 Scale=5인 값이므로 금액 formatter가 아니라 환율 전용 formatter로 표시한다. -->
+                            <ObjectNumber
+                                number="{path: 'detail>/MqDetail/Kursf', formatter: '.formatter.formatExchangeRate'}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>netprKrw}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectNumber
+                                number="{path: 'detail>/MqDetail/NetprKrw', formatter: '.formatter.formatAmount'}"
+                                unit="{detail>/MqDetail/Kwaers}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>netwrKrw}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectNumber
+                                number="{path: 'detail>/MqDetail/NetwrKrw', formatter: '.formatter.formatAmount'}"
+                                unit="{detail>/MqDetail/Kwaers}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>eindt}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{path: 'detail>/MqDetail/Eindt', formatter: '.formatter.formatDate'}"/>
+                        </HBox>
+                    </FlexBox>
 
                     <Title
                         text="{i18n>detailReferenceInfo}"
                         level="H3"
                         class="sapUiSmallMarginTop"/>
-                    <form:SimpleForm
-                        editable="false"
-                        layout="ResponsiveGridLayout"
-                        labelSpanXL="3"
-                        labelSpanL="3"
-                        labelSpanM="4"
-                        emptySpanXL="0"
-                        emptySpanL="0"
-                        emptySpanM="0"
-                        columnsXL="2"
-                        columnsL="2"
-                        columnsM="2">
-                        <Label text="{i18n>bukrs}"/>
-                        <Text text="{detail>/MqDetail/Bukrs} {detail>/MqDetail/Butxt}"/>
-                        <Label text="{i18n>ekorg}"/>
-                        <Text text="{detail>/MqDetail/Ekorg} {detail>/MqDetail/Ekotx}"/>
-                        <Label text="{i18n>ekgrp}"/>
-                        <Text text="{detail>/MqDetail/Ekgrp} {detail>/MqDetail/Eknam}"/>
-                        <Label text="{i18n>banfn}"/>
-                        <Text text="{detail>/MqDetail/Banfn}"/>
-                        <Label text="{i18n>zterm}"/>
-                        <Text text="{detail>/MqDetail/Zterm}"/>
-                        <Label text="{i18n>headTxt}"/>
-                        <Text
-                            text="{detail>/MqDetail/HeadTxt}"
-                            wrapping="true"/>
-                    </form:SimpleForm>
+                    <!-- 참조정보의 긴 설명 필드는 줄바꿈을 허용하고, 일반 필드는 기본 2열 배치에 맞춘다. -->
+                    <FlexBox
+                        wrap="Wrap"
+                        renderType="Bare">
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>bukrs}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text
+                                text="{detail>/MqDetail/Bukrs} {detail>/MqDetail/Butxt}"
+                                wrapping="true"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>ekorg}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text
+                                text="{detail>/MqDetail/Ekorg} {detail>/MqDetail/Ekotx}"
+                                wrapping="true"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>ekgrp}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text
+                                text="{detail>/MqDetail/Ekgrp} {detail>/MqDetail/Eknam}"
+                                wrapping="true"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>banfn}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/Banfn}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>zterm}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/Zterm}"/>
+                        </HBox>
+                        <HBox width="54rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>headTxt}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text
+                                text="{detail>/MqDetail/HeadTxt}"
+                                wrapping="true"/>
+                        </HBox>
+                    </FlexBox>
 
                     <Title
                         text="{i18n>detailStatusInfo}"
                         level="H3"
                         class="sapUiSmallMarginTop"/>
-                    <form:SimpleForm
-                        editable="false"
-                        layout="ResponsiveGridLayout"
-                        labelSpanXL="3"
-                        labelSpanL="3"
-                        labelSpanM="4"
-                        emptySpanXL="0"
-                        emptySpanL="0"
-                        emptySpanM="0"
-                        columnsXL="2"
-                        columnsL="2"
-                        columnsM="2">
-                        <Label text="{i18n>responseStatus}"/>
-                        <ObjectStatus
-                            text="{detail>/MqDetail/ResponseStatusText}"
-                            state="{path: 'detail>/MqDetail/ResponseStatus', formatter: '.formatter.formatResponseState'}"/>
-                        <Label text="{i18n>currentAward}"/>
-                        <ObjectStatus
-                            text="{path: 'detail>/MqDetail/CurrentAwardYn', formatter: '.formatter.formatBooleanText'}"
-                            state="{path: 'detail>/MqDetail/CurrentAwardYn', formatter: '.formatter.formatBooleanState'}"/>
-                        <Label text="{i18n>recommend}"/>
-                        <ObjectStatus
-                            text="{path: 'detail>/MqDetail/RecommendYn', formatter: '.formatter.formatBooleanText'}"
-                            state="{path: 'detail>/MqDetail/RecommendYn', formatter: '.formatter.formatBooleanState'}"/>
-                        <Label text="{i18n>poCreated}"/>
-                        <ObjectStatus
-                            text="{path: 'detail>/MqDetail/PoCreatedYn', formatter: '.formatter.formatBooleanText'}"
-                            state="{path: 'detail>/MqDetail/PoCreatedYn', formatter: '.formatter.formatBooleanState'}"/>
-                        <Label text="{i18n>poNo}"/>
-                        <Text text="{detail>/MqDetail/PoNo}"/>
-                        <Label text="{i18n>poItem}"/>
-                        <Text text="{detail>/MqDetail/PoItem}"/>
-                        <Label text="{i18n>canSelect}"/>
-                        <ObjectStatus
-                            text="{path: 'detail>/MqDetail/CanSelect', formatter: '.formatter.formatCanSelectText'}"
-                            state="{path: 'detail>/MqDetail/CanSelect', formatter: '.formatter.formatCanSelectState'}"/>
-                        <Label text="{i18n>blockReason}"/>
-                        <Text
-                            text="{detail>/MqDetail/BlockReason}"
-                            wrapping="true"/>
-                    </form:SimpleForm>
+                    <!-- 상태정보는 채택 가능 여부와 차단 사유를 함께 확인해야 하므로 상세 팝업 안에 계속 노출한다. -->
+                    <FlexBox
+                        wrap="Wrap"
+                        renderType="Bare">
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>responseStatus}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectStatus
+                                text="{detail>/MqDetail/ResponseStatusText}"
+                                state="{path: 'detail>/MqDetail/ResponseStatus', formatter: '.formatter.formatResponseState'}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>currentAward}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectStatus
+                                text="{path: 'detail>/MqDetail/CurrentAwardYn', formatter: '.formatter.formatBooleanText'}"
+                                state="{path: 'detail>/MqDetail/CurrentAwardYn', formatter: '.formatter.formatBooleanState'}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>recommend}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectStatus
+                                text="{path: 'detail>/MqDetail/RecommendYn', formatter: '.formatter.formatBooleanText'}"
+                                state="{path: 'detail>/MqDetail/RecommendYn', formatter: '.formatter.formatBooleanState'}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>poCreated}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectStatus
+                                text="{path: 'detail>/MqDetail/PoCreatedYn', formatter: '.formatter.formatBooleanText'}"
+                                state="{path: 'detail>/MqDetail/PoCreatedYn', formatter: '.formatter.formatBooleanState'}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>poNo}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/PoNo}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>poItem}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text text="{detail>/MqDetail/PoItem}"/>
+                        </HBox>
+                        <HBox width="27rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>canSelect}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <ObjectStatus
+                                text="{path: 'detail>/MqDetail/CanSelect', formatter: '.formatter.formatCanSelectText'}"
+                                state="{path: 'detail>/MqDetail/CanSelect', formatter: '.formatter.formatCanSelectState'}"/>
+                        </HBox>
+                        <HBox width="54rem" class="sapUiTinyMarginBottom">
+                            <Label text="{i18n>blockReason}" width="8rem" textAlign="End" class="sapUiTinyMarginEnd"/>
+                            <Text
+                                text="{detail>/MqDetail/BlockReason}"
+                                wrapping="true"/>
+                        </HBox>
+                    </FlexBox>
                 </VBox>
             </ScrollContainer>
         </content>

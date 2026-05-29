@@ -362,7 +362,7 @@
                                                             value="{work>/Kpi/PartiallyAwarded}"
                                                             scale="{i18n>countUnit}"
                                                             valueColor="Critical"
-                                                            icon="sap-icon://split-segmentation"/>
+                                                            icon="sap-icon://order-status"/>
                                                     </TileContent>
                                                 </GenericTile>
                                                 <GenericTile
@@ -773,12 +773,12 @@
                                                 <Button
                                                     text="{i18n>autoRecommend}"
                                                     type="Transparent"
-                                                    press=".onApplyAutoRecommend"/> <!-- icon="sap-icon://sys-enter-2" -->
+                                                    press=".onApplyAutoRecommend"/>
                                                 <Button
                                                     text="{i18n>mqDetail}"
                                                     type="Transparent"
                                                     enabled="{= !!${work>/SelectedMq/MqNo} }"
-                                                    press=".onOpenMqDetail"/>  <!-- icon="sap-icon://detail-view" -->
+                                                    press=".onOpenMqDetail"/>
                                             </OverflowToolbar>
                                         </table:extension>
                                         <table:columns>
@@ -858,6 +858,16 @@
                                                     <ObjectNumber
                                                         number="{path: 'work>Netpr', formatter: '.formatter.formatAmount'}"
                                                         unit="{work>Waers}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="8rem">
+                                                <table:label>
+                                                    <Label text="{i18n>kursf}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <!-- 환율은 금액과 달리 소수점 끝자리 0도 의미가 있으므로 환율 전용 formatter를 사용한다. -->
+                                                    <ObjectNumber
+                                                        number="{path: 'work>Kursf', formatter: '.formatter.formatExchangeRate'}"/>
                                                 </table:template>
                                             </table:Column>
                                             <table:Column width="9rem">

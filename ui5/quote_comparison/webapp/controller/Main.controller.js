@@ -688,6 +688,13 @@ sap.ui.define([
             return aFilters;
         },
 
+        /**
+         * MQ 비교 목록에서 금액 비교 차트에 필요한 행만 추려낸다.
+         *
+         * 미응답 MQ와 환산총액이 없는 MQ는 차트에 표시해도 비교 의미가 약하므로 제외한다.
+         * 차트 X축에는 긴 공급업체명 대신 공급업체코드를 사용하고,
+         * 막대 순서는 MQ 비교 목록과 동일하게 KRW 환산총액 오름차순으로 맞춘다.
+         */
         _prepareChartRows(aRows) {
             const aChartRows = (aRows || []).reduce((aPreparedChartRows, oRow) => {
                 const iNetwrKrw = Number(oRow && oRow.NetwrKrw);
@@ -714,6 +721,12 @@ sap.ui.define([
             return this._sortMqCompareRowsByNetwrKrw(aChartRows);
         },
 
+        /**
+         * MQ 비교 목록과 차트 데이터를 KRW 환산총액 기준 오름차순으로 정렬한다.
+         *
+         * 사용자는 가장 낮은 견적부터 검토하는 흐름이 자연스럽기 때문에,
+         * 테이블 행과 차트 막대가 모두 같은 순서를 갖도록 한 곳에서 정렬한다.
+         */
         _sortMqCompareRowsByNetwrKrw(aRows) {
             return (aRows || []).slice().sort((oLeft, oRight) => {
                 const iLeftNetwrKrw = this._getNetwrKrwSortValue(oLeft);
@@ -730,6 +743,11 @@ sap.ui.define([
             });
         },
 
+        /**
+         * KRW 환산총액 정렬용 숫자 값을 반환한다.
+         *
+         * 값이 비어 있거나 숫자로 바꿀 수 없으면 맨 뒤로 보내기 위해 무한대 값을 사용한다.
+         */
         _getNetwrKrwSortValue(oRow) {
             const iNetwrKrw = Number(oRow && oRow.NetwrKrw);
 

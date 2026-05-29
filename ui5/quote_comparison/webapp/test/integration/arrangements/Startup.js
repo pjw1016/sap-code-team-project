@@ -8,10 +8,10 @@ sap.ui.define([
 		iStartMyApp: function (oOptionsParameter) {
 			var oOptions = oOptionsParameter || {};
 
-			// start the app with a minimal delay to make tests fast but still async to discover basic timing issues
+			// 테스트 속도는 유지하되 비동기 타이밍 문제도 드러나도록 최소 지연 시간을 둔다.
 			oOptions.delay = oOptions.delay || 50;
 
-			// start the app UI component
+			// 실제 앱과 같은 Component 설정으로 OPA 테스트 대상 UI를 시작한다.
 			this.iStartMyUIComponent({
 				componentConfig: {
 					name: "code.d3.quotecomparison",
