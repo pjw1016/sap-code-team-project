@@ -343,7 +343,7 @@
                                                             value="{work>/Kpi/NotAwarded}"
                                                             scale="{i18n>countUnit}"
                                                             valueColor="Error"
-                                                            icon="sap-icon://pending"/>
+                                                            icon="sap-icon://document"/>
                                                     </TileContent>
                                                 </GenericTile>
                                                 <GenericTile
@@ -381,7 +381,7 @@
                                                             value="{work>/Kpi/Awarded}"
                                                             scale="{i18n>countUnit}"
                                                             valueColor="Good"
-                                                            icon="sap-icon://accept"/>
+                                                            icon="sap-icon://accounting-document-verification"/>
                                                     </TileContent>
                                                 </GenericTile>
                                                 <GenericTile
