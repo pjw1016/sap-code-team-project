@@ -302,18 +302,18 @@
                 </uxap:headerContent>
 
                 <uxap:sections>
-                    <uxap:ObjectPageSection>
+                    <uxap:ObjectPageSection showTitle="false">
                         <uxap:subSections>
                             <uxap:ObjectPageSubSection>
                                 <uxap:blocks>
-                                    <Panel backgroundDesign="Solid" class="sapUiSmallMargin">
+                                    <Panel backgroundDesign="Solid" class="sapUiSmallMarginBottom">
                                         <content>
                                         <!--
                                             KPI 영역은 RFQ Header Table과 별도 block으로 둔다.
                                             GenericTile의 press 이벤트는 빠른 채택상태 필터로 동작한다.
                                         -->
                                         <VBox class="sapUiSmallMarginBottom">
-                                            <OverflowToolbar>
+                                            <OverflowToolbar class="sapUiSmallMarginBottom">
                                                 <Title text="{i18n>kpiSectionTitle}" level="H3"/>
                                                 <ToolbarSpacer/>
                                                 <Button
@@ -325,11 +325,16 @@
                                             <FlexBox
                                                 wrap="Wrap"
                                                 renderType="Bare"
-                                                justifyContent="SpaceBetween">
+                                                justifyContent="SpaceBetween"
+                                                alignItems="Stretch">
                                                 <GenericTile
                                                     header="{i18n>kpiNotAwarded}"
                                                     press=".onKpiAwardStatusPress"
+                                                    sizeBehavior="Responsive"
                                                     class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                                    <layoutData>
+                                                        <FlexItemData growFactor="1" />
+                                                    </layoutData>
                                                     <customData>
                                                         <core:CustomData key="awardStatus" value="N"/>
                                                     </customData>
@@ -344,7 +349,11 @@
                                                 <GenericTile
                                                     header="{i18n>kpiPartiallyAwarded}"
                                                     press=".onKpiAwardStatusPress"
+                                                    sizeBehavior="Responsive"
                                                     class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                                    <layoutData>
+                                                        <FlexItemData growFactor="1" />
+                                                    </layoutData>
                                                     <customData>
                                                         <core:CustomData key="awardStatus" value="P"/>
                                                     </customData>
@@ -359,7 +368,11 @@
                                                 <GenericTile
                                                     header="{i18n>kpiAwarded}"
                                                     press=".onKpiAwardStatusPress"
+                                                    sizeBehavior="Responsive"
                                                     class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                                    <layoutData>
+                                                        <FlexItemData growFactor="1" />
+                                                    </layoutData>
                                                     <customData>
                                                         <core:CustomData key="awardStatus" value="A"/>
                                                     </customData>
@@ -374,7 +387,11 @@
                                                 <GenericTile
                                                     header="{i18n>kpiPoCreated}"
                                                     press=".onKpiAwardStatusPress"
+                                                    sizeBehavior="Responsive"
                                                     class="sapUiTinyMarginBottom">
+                                                    <layoutData>
+                                                        <FlexItemData growFactor="1" />
+                                                    </layoutData>
                                                     <customData>
                                                         <core:CustomData key="awardStatus" value="PO"/>
                                                     </customData>
@@ -394,7 +411,7 @@
                             </uxap:ObjectPageSubSection>
                             <uxap:ObjectPageSubSection>
                                 <uxap:blocks>
-                                    <Panel backgroundDesign="Solid" class="sapUiSmallMargin">
+                                    <Panel backgroundDesign="Solid" class="sapUiSmallMarginBottom">
                                         <content>
                                         <Table
                                             id="idRfqHeaderTable"
