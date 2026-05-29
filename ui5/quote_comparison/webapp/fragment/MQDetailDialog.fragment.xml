@@ -4,7 +4,7 @@
     xmlns:form="sap.ui.layout.form">
     <Dialog
         id="idMqDetailDialog"
-        title="{i18n>mqDetail}"
+        title="{= ${detail>/MqDetail/MqNo} ? ${i18n>mqDetail} + ' - ' + ${detail>/MqDetail/MqNo} : ${i18n>mqDetail} }"
         contentWidth="60rem"
         contentHeight="42rem"
         draggable="true"
@@ -21,8 +21,15 @@
                     <form:SimpleForm
                         editable="false"
                         layout="ResponsiveGridLayout"
+                        labelSpanXL="3"
+                        labelSpanL="3"
+                        labelSpanM="4"
+                        emptySpanXL="0"
+                        emptySpanL="0"
+                        emptySpanM="0"
+                        columnsXL="2"
                         columnsL="2"
-                        columnsM="1">
+                        columnsM="2">
                         <Label text="{i18n>rfqNo}"/>
                         <Text text="{detail>/MqDetail/RfqNo}"/>
                         <Label text="{i18n>rfqItem}"/>
@@ -52,8 +59,15 @@
                     <form:SimpleForm
                         editable="false"
                         layout="ResponsiveGridLayout"
+                        labelSpanXL="3"
+                        labelSpanL="3"
+                        labelSpanM="4"
+                        emptySpanXL="0"
+                        emptySpanL="0"
+                        emptySpanM="0"
+                        columnsXL="2"
                         columnsL="2"
-                        columnsM="1">
+                        columnsM="2">
                         <Label text="{i18n>quoteQty}"/>
                         <ObjectNumber
                             number="{path: 'detail>/MqDetail/QuoteQty', formatter: '.formatter.formatQuantity'}"
@@ -93,8 +107,15 @@
                     <form:SimpleForm
                         editable="false"
                         layout="ResponsiveGridLayout"
+                        labelSpanXL="3"
+                        labelSpanL="3"
+                        labelSpanM="4"
+                        emptySpanXL="0"
+                        emptySpanL="0"
+                        emptySpanM="0"
+                        columnsXL="2"
                         columnsL="2"
-                        columnsM="1">
+                        columnsM="2">
                         <Label text="{i18n>bukrs}"/>
                         <Text text="{detail>/MqDetail/Bukrs} {detail>/MqDetail/Butxt}"/>
                         <Label text="{i18n>ekorg}"/>
@@ -118,8 +139,15 @@
                     <form:SimpleForm
                         editable="false"
                         layout="ResponsiveGridLayout"
+                        labelSpanXL="3"
+                        labelSpanL="3"
+                        labelSpanM="4"
+                        emptySpanXL="0"
+                        emptySpanL="0"
+                        emptySpanM="0"
+                        columnsXL="2"
                         columnsL="2"
-                        columnsM="1">
+                        columnsM="2">
                         <Label text="{i18n>responseStatus}"/>
                         <ObjectStatus
                             text="{detail>/MqDetail/ResponseStatusText}"

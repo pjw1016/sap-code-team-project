@@ -451,6 +451,24 @@
                                                 <Column width="8rem">
                                                     <Text text="{i18n>rfqNo}"/>
                                                 </Column>
+                                                <Column
+                                                    width="9rem"
+                                                    minScreenWidth="Tablet"
+                                                    demandPopin="true">
+                                                    <Text text="{i18n>bukrs}"/>
+                                                </Column>
+                                                <Column
+                                                    width="9rem"
+                                                    minScreenWidth="Desktop"
+                                                    demandPopin="true">
+                                                    <Text text="{i18n>ekorg}"/>
+                                                </Column>
+                                                <Column
+                                                    width="9rem"
+                                                    minScreenWidth="Desktop"
+                                                    demandPopin="true">
+                                                    <Text text="{i18n>ekgrp}"/>
+                                                </Column>
                                                 <Column minScreenWidth="Tablet" demandPopin="true">
                                                     <Text text="{i18n>docDate}"/>
                                                 </Column>
@@ -474,8 +492,16 @@
                                                     highlightText="{work>AwardStatusText}">
                                                     <cells>
                                                         <ObjectIdentifier
-                                                            title="{work>RfqNo}"
-                                                            text="{work>Bukrs} {work>Ekorg} {work>Ekgrp}"/>
+                                                            title="{work>RfqNo}"/>
+                                                        <ObjectIdentifier
+                                                            title="{work>Bukrs}"
+                                                            text="{work>Butxt}"/>
+                                                        <ObjectIdentifier
+                                                            title="{work>Ekorg}"
+                                                            text="{work>Ekotx}"/>
+                                                        <ObjectIdentifier
+                                                            title="{work>Ekgrp}"
+                                                            text="{work>Eknam}"/>
                                                         <Text text="{path: 'work>DocDate', formatter: '.formatter.formatDate'}"/>
                                                         <ObjectNumber number="{work>RfqItemCount}"/>
                                                         <ObjectNumber number="{work>MqCount}"/>
@@ -575,19 +601,19 @@
                             justifyContent="Center"
                             class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                             <Label text="{i18n>bukrs}"/>
-                            <Text text="{work>/SelectedRfq/Bukrs}"/>
+                            <Text text="{= ${work>/SelectedRfq/Butxt} ? ${work>/SelectedRfq/Bukrs} + ' (' + ${work>/SelectedRfq/Butxt} + ')' : ${work>/SelectedRfq/Bukrs} }"/>
                         </VBox>
                         <VBox
                             justifyContent="Center"
                             class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                             <Label text="{i18n>ekorg}"/>
-                            <Text text="{work>/SelectedRfq/Ekorg}"/>
+                            <Text text="{= ${work>/SelectedRfq/Ekotx} ? ${work>/SelectedRfq/Ekorg} + ' (' + ${work>/SelectedRfq/Ekotx} + ')' : ${work>/SelectedRfq/Ekorg} }"/>
                         </VBox>
                         <VBox
                             justifyContent="Center"
                             class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                             <Label text="{i18n>ekgrp}"/>
-                            <Text text="{work>/SelectedRfq/Ekgrp}"/>
+                            <Text text="{= ${work>/SelectedRfq/Eknam} ? ${work>/SelectedRfq/Ekgrp} + ' (' + ${work>/SelectedRfq/Eknam} + ')' : ${work>/SelectedRfq/Ekgrp} }"/>
                         </VBox>
                         <VBox
                             justifyContent="Center"
@@ -638,9 +664,6 @@
                                             <Column minScreenWidth="Tablet" demandPopin="true">
                                                 <Text text="{i18n>matnr}"/>
                                             </Column>
-                                            <Column>
-                                                <Text text="{i18n>maktx}"/>
-                                            </Column>
                                             <Column minScreenWidth="Desktop" demandPopin="true">
                                                 <Text text="{i18n>reqQty}"/>
                                             </Column>
@@ -661,7 +684,6 @@
                                                     <ObjectIdentifier
                                                         title="{work>Matnr}"
                                                         text="{work>Maktx}"/>
-                                                    <Text text="{work>Maktx}"/>
                                                     <ObjectNumber
                                                         number="{path: 'work>ReqQty', formatter: '.formatter.formatQuantity'}"
                                                         unit="{work>Meins}"/>
@@ -696,15 +718,15 @@
                                                 title: { visible: false },
                                                 legend: { visible: false },
                                                 plotArea: { dataLabel: { visible: true } },
-                                                valueAxis: { title: { visible: true, text: 'KRW' } },
-                                                categoryAxis: { title: { visible: true, text: 'Supplier' } }
+                                                valueAxis: { title: { visible: true, text: 'KRW 환산총액' } },
+                                                categoryAxis: { title: { visible: true, text: '공급업체' } }
                                             }">
                                             <viz:dataset>
                                                 <viz.data:FlattenedDataset data="{work>/ChartRows}">
                                                     <viz.data:dimensions>
                                                         <viz.data:DimensionDefinition
                                                             name="Supplier"
-                                                            value="{work>Name1}"/>
+                                                            value="{work>Lifnr}"/>
                                                     </viz.data:dimensions>
                                                     <viz.data:measures>
                                                         <viz.data:MeasureDefinition
@@ -750,15 +772,13 @@
                                                 <ToolbarSpacer/>
                                                 <Button
                                                     text="{i18n>autoRecommend}"
-                                                    icon="sap-icon://sys-enter-2"
                                                     type="Transparent"
-                                                    press=".onApplyAutoRecommend"/>
+                                                    press=".onApplyAutoRecommend"/> <!-- icon="sap-icon://sys-enter-2" -->
                                                 <Button
                                                     text="{i18n>mqDetail}"
-                                                    icon="sap-icon://detail-view"
                                                     type="Transparent"
                                                     enabled="{= !!${work>/SelectedMq/MqNo} }"
-                                                    press=".onOpenMqDetail"/>
+                                                    press=".onOpenMqDetail"/>  <!-- icon="sap-icon://detail-view" -->
                                             </OverflowToolbar>
                                         </table:extension>
                                         <table:columns>
@@ -776,7 +796,7 @@
                                                 </table:template>
                                             </table:Column>
                                             <table:Column
-                                                width="4rem"
+                                                width="6rem"
                                                 hAlign="Center">
                                                 <table:label>
                                                     <Label text="{i18n>mqDetail}"/>
@@ -801,12 +821,12 @@
                                             </table:Column>
                                             <table:Column width="11rem">
                                                 <table:label>
-                                                    <Label text="{i18n>name1}"/>
+                                                    <Label text="{i18n>vendor}"/>
                                                 </table:label>
                                                 <table:template>
                                                     <ObjectIdentifier
-                                                        title="{work>Name1}"
-                                                        text="{work>Lifnr}"/>
+                                                        title="{work>Lifnr}"
+                                                        text="{work>Name1}"/>
                                                 </table:template>
                                             </table:Column>
                                             <table:Column width="7rem">
@@ -860,16 +880,6 @@
                                             </table:Column>
                                             <table:Column width="8rem">
                                                 <table:label>
-                                                    <Label text="{i18n>responseStatus}"/>
-                                                </table:label>
-                                                <table:template>
-                                                    <ObjectStatus
-                                                        text="{work>ResponseStatusText}"
-                                                        state="{path: 'work>ResponseStatus', formatter: '.formatter.formatResponseState'}"/>
-                                                </table:template>
-                                            </table:Column>
-                                            <table:Column width="8rem">
-                                                <table:label>
                                                     <Label text="{i18n>currentAward}"/>
                                                 </table:label>
                                                 <table:template>
@@ -886,16 +896,6 @@
                                                     <ObjectStatus
                                                         text="{path: 'work>RecommendYn', formatter: '.formatter.formatBooleanText'}"
                                                         state="{path: 'work>RecommendYn', formatter: '.formatter.formatBooleanState'}"/>
-                                                </table:template>
-                                            </table:Column>
-                                            <table:Column width="9rem">
-                                                <table:label>
-                                                    <Label text="{i18n>canSelect}"/>
-                                                </table:label>
-                                                <table:template>
-                                                    <ObjectStatus
-                                                        text="{path: 'work>CanSelect', formatter: '.formatter.formatCanSelectText'}"
-                                                        state="{path: 'work>CanSelect', formatter: '.formatter.formatCanSelectState'}"/>
                                                 </table:template>
                                             </table:Column>
                                         </table:columns>

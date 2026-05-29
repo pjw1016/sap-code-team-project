@@ -426,16 +426,29 @@ sap.ui.define([
 			RfqItem: "00010",
 			MqNo: "MQ70000001",
 			MqItem: "00010",
+			Lifnr: "V001",
 			Name1: "Supplier A",
-			NetwrKrw: "120000",
+			NetwrKrw: "240000",
 			ResponseStatus: "R",
 			RecommendYn: "X",
 			CurrentAwardYn: ""
 		}, {
 			RfqNo: "5000000123",
 			RfqItem: "00010",
+			MqNo: "MQ70000003",
+			MqItem: "00010",
+			Lifnr: "V003",
+			Name1: "Supplier C",
+			NetwrKrw: "120000",
+			ResponseStatus: "R",
+			RecommendYn: "",
+			CurrentAwardYn: ""
+		}, {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
 			MqNo: "MQ70000002",
 			MqItem: "00010",
+			Lifnr: "V002",
 			Name1: "Supplier B",
 			NetwrKrw: "0",
 			ResponseStatus: "N",
@@ -471,15 +484,50 @@ sap.ui.define([
 			assert.deepEqual(oFixture.models.work.getProperty("/ChartRows"), [{
 				RfqNo: "5000000123",
 				RfqItem: "00010",
+				MqNo: "MQ70000003",
+				MqItem: "00010",
+				Lifnr: "V003",
+				Name1: "Supplier C",
+				NetwrKrw: 120000,
+				RecommendYn: "",
+				CurrentAwardYn: ""
+			}, {
+				RfqNo: "5000000123",
+				RfqItem: "00010",
 				MqNo: "MQ70000001",
 				MqItem: "00010",
+				Lifnr: "V001",
 				Name1: "Supplier A",
-				NetwrKrw: 120000,
+				NetwrKrw: 240000,
 				RecommendYn: "X",
 				CurrentAwardYn: ""
-			}], "Only valid responded MQ rows with KRW amount are prepared for the chart.");
+			}], "Only valid responded MQ rows with KRW amount are prepared for the chart in ascending amount order.");
 			done();
 		});
+	});
+
+	QUnit.test("_sortMqCompareRowsByNetwrKrw should sort MQ compare rows by KRW amount ascending", function (assert) {
+		var oFixture = createControllerWithFakeView();
+		var aSortedRows;
+
+		oFixture.controller.onInit();
+		aSortedRows = oFixture.controller._sortMqCompareRowsByNetwrKrw([{
+			MqNo: "MQ00000005",
+			MqItem: "00020",
+			NetwrKrw: "600000"
+		}, {
+			MqNo: "MQ70000004",
+			MqItem: "00020",
+			NetwrKrw: "587100"
+		}, {
+			MqNo: "MQ00000006",
+			MqItem: "00020",
+			NetwrKrw: ""
+		}]);
+
+		assert.deepEqual(aSortedRows.map(function (oRow) {
+			return oRow.MqNo;
+		}), ["MQ70000004", "MQ00000005", "MQ00000006"], "Rows with numeric KRW amounts come first in ascending order; missing amounts stay last.");
 	});
 
 	QUnit.test("onMqRadioSelect should keep only one selectable MQ selected", function (assert) {

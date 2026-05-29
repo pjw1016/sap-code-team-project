@@ -653,9 +653,9 @@ sap.ui.define([
             }
 
             return this._readEntitySet("/MQCompareSet", aFilters).then((aRows) => {
-                const aPreparedRows = (aRows || []).map((oRow) => Object.assign({}, oRow, {
+                const aPreparedRows = this._sortMqCompareRowsByNetwrKrw((aRows || []).map((oRow) => Object.assign({}, oRow, {
                     UiSelected: false
-                }));
+                })));
 
                 if (oWorkModel) {
                     oWorkModel.setProperty("/MqCompareRows", aPreparedRows);
@@ -689,26 +689,51 @@ sap.ui.define([
         },
 
         _prepareChartRows(aRows) {
-            return (aRows || []).reduce((aChartRows, oRow) => {
+            const aChartRows = (aRows || []).reduce((aPreparedChartRows, oRow) => {
                 const iNetwrKrw = Number(oRow && oRow.NetwrKrw);
 
                 if (!oRow || oRow.ResponseStatus === "N" || !Number.isFinite(iNetwrKrw) || iNetwrKrw <= 0) {
-                    return aChartRows;
+                    return aPreparedChartRows;
                 }
 
-                aChartRows.push({
+                aPreparedChartRows.push({
                     RfqNo: oRow.RfqNo,
                     RfqItem: oRow.RfqItem,
                     MqNo: oRow.MqNo,
                     MqItem: oRow.MqItem,
+                    Lifnr: oRow.Lifnr || oRow.MqNo,
                     Name1: oRow.Name1 || oRow.MqNo,
                     NetwrKrw: iNetwrKrw,
                     RecommendYn: oRow.RecommendYn,
                     CurrentAwardYn: oRow.CurrentAwardYn
                 });
 
-                return aChartRows;
+                return aPreparedChartRows;
             }, []);
+
+            return this._sortMqCompareRowsByNetwrKrw(aChartRows);
+        },
+
+        _sortMqCompareRowsByNetwrKrw(aRows) {
+            return (aRows || []).slice().sort((oLeft, oRight) => {
+                const iLeftNetwrKrw = this._getNetwrKrwSortValue(oLeft);
+                const iRightNetwrKrw = this._getNetwrKrwSortValue(oRight);
+                const iAmountCompare = iLeftNetwrKrw - iRightNetwrKrw;
+
+                if (iAmountCompare !== 0) {
+                    return iAmountCompare;
+                }
+
+                // 환산총액이 같은 경우에도 화면 순서가 흔들리지 않도록 MQ 번호와 품목을 보조 정렬 기준으로 둔다.
+                return String((oLeft && oLeft.MqNo) || "").localeCompare(String((oRight && oRight.MqNo) || "")) ||
+                    String((oLeft && oLeft.MqItem) || "").localeCompare(String((oRight && oRight.MqItem) || ""));
+            });
+        },
+
+        _getNetwrKrwSortValue(oRow) {
+            const iNetwrKrw = Number(oRow && oRow.NetwrKrw);
+
+            return Number.isFinite(iNetwrKrw) ? iNetwrKrw : Number.POSITIVE_INFINITY;
         },
 
         _setSelectedMq(oSelectedRow) {
