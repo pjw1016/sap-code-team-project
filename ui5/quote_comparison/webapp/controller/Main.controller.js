@@ -1500,7 +1500,9 @@ sap.ui.define([
          */
         _showToast(sMessage) {
             if (sMessage) {
-                MessageToast.show(sMessage);
+                MessageToast.show(sMessage, {
+                    width: "50em"
+                });
             }
         },
 
