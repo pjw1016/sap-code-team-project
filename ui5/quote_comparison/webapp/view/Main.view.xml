@@ -782,7 +782,7 @@
                                             </OverflowToolbar>
                                         </table:extension>
                                         <table:columns>
-                                            <table:Column width="5rem">
+                                            <table:Column width="6rem">
                                                 <table:label>
                                                     <Label text="{i18n>selectedMq}"/>
                                                 </table:label>
@@ -796,7 +796,7 @@
                                                 </table:template>
                                             </table:Column>
                                             <table:Column
-                                                width="6rem"
+                                                width="8rem"
                                                 hAlign="Center">
                                                 <table:label>
                                                     <Label text="{i18n>mqDetail}"/>
@@ -809,7 +809,7 @@
                                                         press=".onOpenMqDetailFromRow"/>
                                                 </table:template>
                                             </table:Column>
-                                            <table:Column width="9rem">
+                                            <table:Column width="8rem">
                                                 <table:label>
                                                     <Label text="{i18n>mqNo}"/>
                                                 </table:label>
@@ -819,7 +819,7 @@
                                                         text="{work>MqItem}"/>
                                                 </table:template>
                                             </table:Column>
-                                            <table:Column width="11rem">
+                                            <table:Column width="8rem">
                                                 <table:label>
                                                     <Label text="{i18n>vendor}"/>
                                                 </table:label>
@@ -829,7 +829,7 @@
                                                         text="{work>Name1}"/>
                                                 </table:template>
                                             </table:Column>
-                                            <table:Column width="7rem">
+                                            <table:Column width="6rem">
                                                 <table:label>
                                                     <Label text="{i18n>quoteQty}"/>
                                                 </table:label>
@@ -841,7 +841,7 @@
                                             </table:Column>
                                             <!-- 가격단위(PEINH)는 단가가 몇 단위 기준인지 나타낸다.
                                                  예: 견적수량 12, 단가 100,000, 가격단위 2이면 총액은 12 / 2 * 100,000 = 600,000 이다. -->
-                                            <table:Column width="7rem">
+                                            <table:Column width="6rem">
                                                 <table:label>
                                                     <Label text="{i18n>peinh}"/>
                                                 </table:label>
@@ -870,7 +870,7 @@
                                                         number="{path: 'work>Kursf', formatter: '.formatter.formatExchangeRate'}"/>
                                                 </table:template>
                                             </table:Column>
-                                            <table:Column width="9rem">
+                                            <table:Column width="8rem">
                                                 <table:label>
                                                     <Label text="{i18n>netwrKrw}"/>
                                                 </table:label>
@@ -880,7 +880,7 @@
                                                         unit="{work>Kwaers}"/>
                                                 </table:template>
                                             </table:Column>
-                                            <table:Column width="8rem">
+                                            <table:Column width="6rem">
                                                 <table:label>
                                                     <Label text="{i18n>eindt}"/>
                                                 </table:label>
@@ -888,7 +888,7 @@
                                                     <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
                                                 </table:template>
                                             </table:Column>
-                                            <table:Column width="8rem">
+                                            <table:Column width="6rem">
                                                 <table:label>
                                                     <Label text="{i18n>currentAward}"/>
                                                 </table:label>
@@ -898,7 +898,7 @@
                                                         state="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatBooleanState'}"/>
                                                 </table:template>
                                             </table:Column>
-                                            <table:Column width="8rem">
+                                            <table:Column width="4rem">
                                                 <table:label>
                                                     <Label text="{i18n>recommend}"/>
                                                 </table:label>
@@ -920,16 +920,15 @@
                     <OverflowToolbar>
                         <ToolbarSpacer/>
                         <Button
-                            text="{i18n>cancelAward}"
-                            icon="sap-icon://sys-cancel"
-                            enabled="{= ${work>/SelectedRfqItem/CanCancelAward} === 'X' }"
-                            press=".onCancelAward"/>
-                        <Button
                             text="{i18n>saveAward}"
-                            icon="sap-icon://accept"
-                            type="Emphasized"
+                            type="Accept"
                             enabled="{= !!${work>/SelectedMq/MqNo} }"
                             press=".onSaveAward"/>
+                        <Button
+                            text="{i18n>cancelAward}"
+                            type="Reject"
+                            enabled="{= ${work>/SelectedRfqItem/CanCancelAward} === 'X' }"
+                            press=".onCancelAward"/>
                     </OverflowToolbar>
                 </uxap:footer>
             </uxap:ObjectPageLayout>

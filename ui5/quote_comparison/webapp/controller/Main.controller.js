@@ -1543,8 +1543,15 @@ sap.ui.define([
          */
         _showToast(sMessage) {
             if (sMessage) {
+                /*
+                 * sap.m.MessageToast의 기본 폭은 짧은 성공 메시지에 맞춰져 있어
+                 * 한국어 업무 메시지가 쉽게 2~3줄로 줄바꿈된다.
+                 * SAP 검사 기준에서 권장되는 최대 폭인 35em을 사용해
+                 * 메시지를 넓게 보여주되 Fiori 표준 범위는 넘지 않게 한다.
+                 */
                 MessageToast.show(sMessage, {
-                    width: "50em"
+                    width: "35em",
+                    duration: 4000
                 });
             }
         },
