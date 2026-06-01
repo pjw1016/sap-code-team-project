@@ -75,7 +75,13 @@
                                     id="idRfqNoInput"
                                     value="{filter>/RfqNo}"
                                     maxLength="10"
-                                    placeholder="{i18n>rfqSearchPlaceholder}"/>
+                                    showValueHelp="true"
+                                    valueHelpRequest=".onValueHelpRequest"
+                                    placeholder="{i18n>rfqSearchPlaceholder}">
+                                    <customData>
+                                        <core:CustomData key="helpType" value="RFQ"/>
+                                    </customData>
+                                </Input>
                             </VBox>
 
                             <VBox
@@ -258,7 +264,13 @@
                                         id="idMqNoInput"
                                         value="{filter>/MqNo}"
                                         maxLength="10"
-                                        placeholder="{i18n>inputPlaceholder}"/>
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest"
+                                        placeholder="{i18n>inputPlaceholder}">
+                                        <customData>
+                                            <core:CustomData key="helpType" value="MQ"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox
@@ -290,7 +302,13 @@
                                         id="idEkorgInput"
                                         value="{filter>/Ekorg}"
                                         maxLength="4"
-                                        placeholder="{i18n>inputPlaceholder}"/>
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest"
+                                        placeholder="{i18n>inputPlaceholder}">
+                                        <customData>
+                                            <core:CustomData key="helpType" value="PURCH_ORG"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox
@@ -303,7 +321,13 @@
                                         id="idEkgrpInput"
                                         value="{filter>/Ekgrp}"
                                         maxLength="3"
-                                        placeholder="{i18n>inputPlaceholder}"/>
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest"
+                                        placeholder="{i18n>inputPlaceholder}">
+                                        <customData>
+                                            <core:CustomData key="helpType" value="PURCH_GROUP"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
                             </FlexBox>
                         </VBox>

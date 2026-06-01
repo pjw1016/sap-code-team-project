@@ -58,6 +58,34 @@
         "settings": {
           "odataVersion": "2.0"
         }
+      },
+      "rfqHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0021_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "mqHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0022_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "purchOrgHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0023_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      },
+      "purchGroupHelpService": {
+        "uri": "/sap/opu/odata/sap/ZCDS_D3_MM_0024_CDS/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
       }
     }
   },
@@ -140,6 +168,38 @@
       },
       "companyHelp": {
         "dataSource": "companyHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "rfqHelp": {
+        "dataSource": "rfqHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "mqHelp": {
+        "dataSource": "mqHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "purchOrgHelp": {
+        "dataSource": "purchOrgHelpService",
+        "preload": true,
+        "settings": {
+          "useBatch": false,
+          "defaultCountMode": "None"
+        }
+      },
+      "purchGroupHelp": {
+        "dataSource": "purchGroupHelpService",
         "preload": true,
         "settings": {
           "useBatch": false,

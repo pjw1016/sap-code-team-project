@@ -1691,6 +1691,47 @@ sap.ui.define([
          */
         _getValueHelpConfig(sHelpType) {
             const mConfig = {
+                RFQ: {
+                    model: "rfqHelp",
+                    path: "/ZCDS_D3_MM_0021",
+                    title: this._getText("valueHelpRfqTitle") || "RFQ 검색",
+                    searchFields: ["RfqNo", "Bukrs", "BukrsName", "Ekorg", "EkorgName", "Ekgrp", "EkgrpName"],
+                    columns: [
+                        { label: this._getText("rfqNo") || "RFQ번호", property: "RfqNo" },
+                        { label: this._getText("docDate") || "문서일자", property: "DocDate", formatter: "date" },
+                        { label: this._getText("bukrs") || "회사코드", property: "Bukrs" },
+                        { label: this._getText("bukrsName") || "회사명", property: "BukrsName" },
+                        { label: this._getText("ekorg") || "구매조직", property: "Ekorg" },
+                        { label: this._getText("ekgrp") || "구매그룹", property: "Ekgrp" }
+                    ],
+                    targetFields: {
+                        RfqNo: {
+                            path: "/RfqNo",
+                            controlId: "idRfqNoInput"
+                        }
+                    }
+                },
+                MQ: {
+                    model: "mqHelp",
+                    path: "/ZCDS_D3_MM_0022",
+                    title: this._getText("valueHelpMqTitle") || "MQ 검색",
+                    searchFields: ["MqNo", "Lifnr", "Name1", "Bukrs", "BukrsName", "Ekorg", "EkorgName", "Ekgrp", "EkgrpName"],
+                    columns: [
+                        { label: this._getText("mqNo") || "MM견적(MQ)번호", property: "MqNo" },
+                        { label: this._getText("lifnr") || "공급업체코드", property: "Lifnr" },
+                        { label: this._getText("name1") || "공급업체명", property: "Name1" },
+                        { label: this._getText("docDate") || "문서일자", property: "DocDate", formatter: "date" },
+                        { label: this._getText("bukrs") || "회사코드", property: "Bukrs" },
+                        { label: this._getText("ekorg") || "구매조직", property: "Ekorg" },
+                        { label: this._getText("ekgrp") || "구매그룹", property: "Ekgrp" }
+                    ],
+                    targetFields: {
+                        MqNo: {
+                            path: "/MqNo",
+                            controlId: "idMqNoInput"
+                        }
+                    }
+                },
                 PLANT: {
                     model: "plantHelp",
                     path: "/ZCDS_D3_MM_0012",
@@ -1768,6 +1809,38 @@ sap.ui.define([
                         Bukrs: {
                             path: "/Bukrs",
                             controlId: "idBukrsInput"
+                        }
+                    }
+                },
+                PURCH_ORG: {
+                    model: "purchOrgHelp",
+                    path: "/ZCDS_D3_MM_0023",
+                    title: this._getText("valueHelpPurchOrgTitle") || "구매조직 검색",
+                    searchFields: ["Ekorg", "EkorgName"],
+                    columns: [
+                        { label: this._getText("ekorg") || "구매조직", property: "Ekorg" },
+                        { label: this._getText("ekotx") || "구매조직명", property: "EkorgName" }
+                    ],
+                    targetFields: {
+                        Ekorg: {
+                            path: "/Ekorg",
+                            controlId: "idEkorgInput"
+                        }
+                    }
+                },
+                PURCH_GROUP: {
+                    model: "purchGroupHelp",
+                    path: "/ZCDS_D3_MM_0024",
+                    title: this._getText("valueHelpPurchGroupTitle") || "구매그룹 검색",
+                    searchFields: ["Ekgrp", "EkgrpName"],
+                    columns: [
+                        { label: this._getText("ekgrp") || "구매그룹", property: "Ekgrp" },
+                        { label: this._getText("eknam") || "구매그룹명", property: "EkgrpName" }
+                    ],
+                    targetFields: {
+                        Ekgrp: {
+                            path: "/Ekgrp",
+                            controlId: "idEkgrpInput"
                         }
                     }
                 }
@@ -1947,6 +2020,20 @@ sap.ui.define([
         _getSearchHelpCodeValidationConfigs() {
             return [
                 {
+                    helpType: "RFQ",
+                    filterPath: "/RfqNo",
+                    property: "RfqNo",
+                    controlId: "idRfqNoInput",
+                    labelKey: "rfqNo"
+                },
+                {
+                    helpType: "MQ",
+                    filterPath: "/MqNo",
+                    property: "MqNo",
+                    controlId: "idMqNoInput",
+                    labelKey: "mqNo"
+                },
+                {
                     helpType: "COMPANY",
                     filterPath: "/Bukrs",
                     property: "Bukrs",
@@ -1974,6 +2061,20 @@ sap.ui.define([
                     controlId: "idMatnrInput",
                     labelKey: "matnr",
                     alpha: true
+                },
+                {
+                    helpType: "PURCH_ORG",
+                    filterPath: "/Ekorg",
+                    property: "Ekorg",
+                    controlId: "idEkorgInput",
+                    labelKey: "ekorg"
+                },
+                {
+                    helpType: "PURCH_GROUP",
+                    filterPath: "/Ekgrp",
+                    property: "Ekgrp",
+                    controlId: "idEkgrpInput",
+                    labelKey: "ekgrp"
                 }
             ];
         },
@@ -2084,6 +2185,10 @@ sap.ui.define([
         _formatValueHelpCell(oColumnConfig, vValue) {
             if (oColumnConfig.formatter === "matnrExternal") {
                 return this._toExternalMatnr(vValue);
+            }
+
+            if (oColumnConfig.formatter === "date") {
+                return formatter.formatDate(vValue);
             }
 
             return vValue || "";

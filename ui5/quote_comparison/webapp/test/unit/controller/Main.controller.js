@@ -1537,6 +1537,34 @@ sap.ui.define([
 		});
 	});
 
+	QUnit.test("Search Help config should include RFQ, MQ, purchasing organization, and purchasing group", function (assert) {
+		var oFixture = createControllerWithFakeView();
+		var oRfqConfig;
+		var oMqConfig;
+		var oPurchOrgConfig;
+		var oPurchGroupConfig;
+
+		oFixture.controller.onInit();
+		oFixture.controller._getText = function (sKey) {
+			return sKey;
+		};
+
+		oRfqConfig = oFixture.controller._getValueHelpConfig("RFQ");
+		oMqConfig = oFixture.controller._getValueHelpConfig("MQ");
+		oPurchOrgConfig = oFixture.controller._getValueHelpConfig("PURCH_ORG");
+		oPurchGroupConfig = oFixture.controller._getValueHelpConfig("PURCH_GROUP");
+
+		assert.strictEqual(oRfqConfig.model, "rfqHelp", "RFQ Search Help uses the RFQ named model.");
+		assert.strictEqual(oRfqConfig.path, "/ZCDS_D3_MM_0021", "RFQ Search Help reads the new CDS entity set.");
+		assert.strictEqual(oRfqConfig.targetFields.RfqNo.controlId, "idRfqNoInput", "RFQ number is written to the RFQ input.");
+		assert.strictEqual(oMqConfig.model, "mqHelp", "MQ Search Help uses the MQ named model.");
+		assert.strictEqual(oMqConfig.path, "/ZCDS_D3_MM_0022", "MQ Search Help reads the new CDS entity set.");
+		assert.strictEqual(oPurchOrgConfig.model, "purchOrgHelp", "Purchasing organization uses its named model.");
+		assert.strictEqual(oPurchOrgConfig.targetFields.Ekorg.path, "/Ekorg", "Purchasing organization writes to filter>/Ekorg.");
+		assert.strictEqual(oPurchGroupConfig.model, "purchGroupHelp", "Purchasing group uses its named model.");
+		assert.strictEqual(oPurchGroupConfig.targetFields.Ekgrp.path, "/Ekgrp", "Purchasing group writes to filter>/Ekgrp.");
+	});
+
 	QUnit.test("onSearch should load RFQHeaderSet and update Begin column models", function (assert) {
 		var done = assert.async();
 		var oHeader = {
@@ -1550,6 +1578,18 @@ sap.ui.define([
 			AwardStatusState: "None"
 		};
 		var oFixture = createControllerWithFakeView({
+			namedModels: {
+				rfqHelp: {
+					read: function (sPath, mParameters) {
+						assert.strictEqual(sPath, "/ZCDS_D3_MM_0021", "RFQ existence validation uses the RFQ Help CDS.");
+						assert.strictEqual(mParameters.filters[0].sPath, "RfqNo", "RFQ existence validation filters by RfqNo.");
+						assert.strictEqual(mParameters.filters[0].oValue1, "5000000123", "Typed RFQ number is checked.");
+						mParameters.success({
+							results: [{ RfqNo: "5000000123" }]
+						});
+					}
+				}
+			},
 			odataModel: {
 				read: function (sPath, mParameters) {
 					if (sPath === "/RFQHeaderSet") {
