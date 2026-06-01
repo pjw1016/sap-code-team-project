@@ -6,9 +6,11 @@ sap.ui.define([
     "sap/ui/model/Sorter",
     "sap/m/MessageToast",
     "sap/m/MessageBox",
+    "sap/m/MessagePopover",
+    "sap/m/MessageItem",
     "sap/ui/core/Fragment",
     "code/d3/quotecomparison/model/formatter"
-], (Controller, JSONModel, Filter, FilterOperator, Sorter, MessageToast, MessageBox, Fragment, formatter) => {
+], (Controller, JSONModel, Filter, FilterOperator, Sorter, MessageToast, MessageBox, MessagePopover, MessageItem, Fragment, formatter) => {
     "use strict";
 
     return Controller.extend("code.d3.quotecomparison.controller.Main", {
@@ -17,6 +19,18 @@ sap.ui.define([
         onInit() {
             this._initViewModels();
             this._applyHeaderQuickAwardStatusFilter("", true);
+        },
+
+        onExit() {
+            /*
+             * 유효성 검증 MessagePopover는 후속 단계에서 사용자가 오류 버튼을 누를 때 동적으로 생성한다.
+             * 동적 컨트롤은 View가 종료될 때 명시적으로 destroy해야 화면을 다시 열었을 때
+             * 이전 Popover 인스턴스와 이벤트 핸들러가 남지 않는다.
+             */
+            if (this._oValidationMessagePopover) {
+                this._oValidationMessagePopover.destroy();
+                this._oValidationMessagePopover = null;
+            }
         },
 
         /**
@@ -36,6 +50,7 @@ sap.ui.define([
             oView.setModel(new JSONModel(this._createInitialFilterData()), "filter");
             oView.setModel(new JSONModel(this._createInitialWorkData()), "work");
             oView.setModel(new JSONModel(this._createInitialDetailData()), "detail");
+            oView.setModel(new JSONModel(this._createEmptyValidationMessages()), "messages");
         },
 
         /**
@@ -117,13 +132,53 @@ sap.ui.define([
         },
 
         /**
+         * 조회조건 유효성 검증 메시지 모델의 초기값을 반환한다.
+         *
+         * SAPUI5의 sap.m.MessagePopover는 목록 바인딩으로 MessageItem 배열을 표시한다.
+         * 따라서 화면에는 오류 목록(items)과 Footer 버튼 표시용 요약값(count, buttonText 등)을 함께 둔다.
+         * 1단계에서는 모델 구조만 준비하고, 실제 오류 누적과 Footer 연결은 다음 단계에서 붙인다.
+         */
+        _createEmptyValidationMessages() {
+            return {
+                items: [],
+                count: 0,
+                buttonText: "",
+                buttonIcon: "sap-icon://message-popup",
+                buttonType: "Transparent"
+            };
+        },
+
+        /**
          * 조회 버튼 이벤트.
          *
-         * 이번 단계에서는 Begin Column에 필요한 RFQHeaderSet만 조회한다.
-         * Header 행을 클릭했을 때 RFQItemSet을 읽는 로직은 다음 단계에서 붙인다.
+         * RFQ Header 조회 전에 조회조건 유효성 검증을 먼저 수행한다.
+         * 잘못된 날짜 조건으로 Gateway 조회를 보내면 사용자는 빈 결과와 입력 오류를 구분하기 어렵다.
+         * 따라서 Frontend에서 명확히 판단 가능한 날짜 오류는 여기서 차단한다.
          */
         onSearch() {
+            this._clearSearchValidationStates();
+
+            if (!this._validateSearchConditions()) {
+                this._openValidationMessagePopoverDelayed();
+                return Promise.resolve(false);
+            }
+
             return this._loadRfqHeaders();
+        },
+
+        /**
+         * 조회조건 유효성 메시지 버튼 이벤트.
+         *
+         * MessagePopover는 오류가 있을 때만 필요한 컨트롤이므로 최초 클릭 시점에 생성한다.
+         * SAPUI5 SDK의 MessagePopover 패턴처럼 버튼을 기준 컨트롤로 넘겨 openBy 처리하면
+         * Popover가 Footer 버튼 위치에 맞춰 안정적으로 열린다.
+         */
+        onMessagePopoverPress(oEvent) {
+            const oSource = oEvent && oEvent.getSource && oEvent.getSource();
+
+            if (oSource) {
+                this._getValidationMessagePopover().openBy(oSource);
+            }
         },
 
         /**
@@ -135,8 +190,18 @@ sap.ui.define([
         onReset() {
             const oView = this.getView();
             const oViewModel = oView.getModel("view");
+            const oFilterModel = oView.getModel("filter");
+            const oInitialFilterData = this._createInitialFilterData();
 
-            oView.setModel(new JSONModel(this._createInitialFilterData()), "filter");
+            if (oFilterModel) {
+                oFilterModel.setData(oInitialFilterData);
+                oFilterModel.updateBindings(true);
+            } else {
+                oView.setModel(new JSONModel(oInitialFilterData), "filter");
+            }
+
+            this._resetSearchConditionControlValues();
+            this._clearSearchValidationStates();
 
             if (oViewModel) {
                 oViewModel.setProperty("/AdvancedFilterVisible", false);
@@ -1533,6 +1598,423 @@ sap.ui.define([
             const oBundle = oI18nModel && oI18nModel.getResourceBundle && oI18nModel.getResourceBundle();
 
             return oBundle && oBundle.getText ? oBundle.getText(sKey, aArgs) : "";
+        },
+
+        /**
+         * 조회조건 오류 목록을 표시할 MessagePopover를 반환한다.
+         *
+         * MessagePopover는 messages 모델의 /items 배열을 sap.m.MessageItem 목록으로 표시한다.
+         * 현재 단계에서는 Footer 버튼과 Popover 골격만 연결하고,
+         * 실제 items 생성은 다음 유효성 검증 단계에서 수행한다.
+         */
+        _getValidationMessagePopover() {
+            if (!this._oValidationMessagePopover) {
+                this._oValidationMessagePopover = new MessagePopover({
+                    items: {
+                        path: "messages>/items",
+                        template: new MessageItem({
+                            type: "{messages>type}",
+                            title: "{messages>title}",
+                            subtitle: "{messages>subtitle}",
+                            description: "{messages>description}"
+                        })
+                    },
+                    itemSelect: function (oEvent) {
+                        this._focusValidationTarget(oEvent);
+                    }.bind(this)
+                });
+
+                this.getView().addDependent(this._oValidationMessagePopover);
+            }
+
+            return this._oValidationMessagePopover;
+        },
+
+        /**
+         * 유효성 검증 직후 MessagePopover를 자동으로 열기 위한 헬퍼다.
+         *
+         * messages 모델이 갱신된 직후에는 Footer 버튼이 아직 렌더링되지 않았을 수 있다.
+         * 그래서 짧게 지연한 뒤 버튼을 찾아 openBy 기준 컨트롤로 사용한다.
+         */
+        _openValidationMessagePopoverDelayed() {
+            setTimeout(function () {
+                const oButton = this.byId("idValidationMessageButton");
+
+                if (oButton && oButton.getVisible()) {
+                    this._getValidationMessagePopover().openBy(oButton);
+                }
+            }.bind(this), 0);
+        },
+
+        /**
+         * 조회조건 전체 유효성 검증 진입점이다.
+         *
+         * 3단계에서는 날짜 조건만 검증한다.
+         * 코드 길이/형식 검증과 Search Help 기반 존재 여부 검증은 다음 단계에서 같은 반환 구조를 재사용한다.
+         */
+        _validateSearchConditions() {
+            const aErrors = [];
+
+            aErrors.push.apply(aErrors, this._validateDateRange({
+                fromControlId: "idDocDateFromPicker",
+                toControlId: "idDocDateToPicker",
+                fromPath: "/DocDateFrom",
+                toPath: "/DocDateTo",
+                fromLabelKey: "docDateFrom",
+                toLabelKey: "docDateTo",
+                rangeMessageKey: "validationDocDateRangeInvalid"
+            }));
+            aErrors.push.apply(aErrors, this._validateDateRange({
+                fromControlId: "idEindtFromPicker",
+                toControlId: "idEindtToPicker",
+                fromPath: "/EindtFrom",
+                toPath: "/EindtTo",
+                fromLabelKey: "eindtFrom",
+                toLabelKey: "eindtTo",
+                rangeMessageKey: "validationEindtRangeInvalid"
+            }));
+
+            this._setValidationMessages(aErrors);
+
+            return aErrors.length === 0;
+        },
+
+        /**
+         * From/To 구조의 DatePicker 쌍을 검증한다.
+         *
+         * 검증 순서:
+         * 1. 사용자가 직접 입력한 문자열이 yyyy-MM-dd 형식의 실제 날짜인지 확인한다.
+         * 2. 정상 날짜이면 회사 기준일인 2020-03-15 이전인지 확인한다.
+         * 3. From과 To가 모두 정상 날짜일 때 From > To 여부를 확인한다.
+         */
+        _validateDateRange(oConfig) {
+            const oFilterModel = this.getView().getModel("filter");
+            const oCompanyStartDate = this._getCompanyStartDate();
+            const aDateFields = [
+                {
+                    controlId: oConfig.fromControlId,
+                    path: oConfig.fromPath,
+                    labelKey: oConfig.fromLabelKey,
+                    peerLabelKey: oConfig.toLabelKey
+                },
+                {
+                    controlId: oConfig.toControlId,
+                    path: oConfig.toPath,
+                    labelKey: oConfig.toLabelKey,
+                    peerLabelKey: oConfig.fromLabelKey
+                }
+            ];
+            const mInvalidByControlId = {};
+            const aErrors = [];
+            let oFromDate;
+            let oToDate;
+
+            aDateFields.forEach(function (oField) {
+                const sLabel = this._getText(oField.labelKey);
+                const oDate = oFilterModel && oFilterModel.getProperty(oField.path);
+
+                if (!this._isDateInputValueValid(oField.controlId)) {
+                    mInvalidByControlId[oField.controlId] = true;
+                    aErrors.push(this._createValidationError(
+                        oField.controlId,
+                        this._getText("validationDateFormatInvalid"),
+                        sLabel
+                    ));
+                    return;
+                }
+
+                if (this._isDateBefore(oDate, oCompanyStartDate)) {
+                    aErrors.push(this._createValidationError(
+                        oField.controlId,
+                        this._getText("validationDateBeforeCompanyStart"),
+                        sLabel
+                    ));
+                }
+            }.bind(this));
+
+            oFromDate = oFilterModel && oFilterModel.getProperty(oConfig.fromPath);
+            oToDate = oFilterModel && oFilterModel.getProperty(oConfig.toPath);
+
+            if (!mInvalidByControlId[oConfig.fromControlId]
+                && !mInvalidByControlId[oConfig.toControlId]
+                && this._isValidDateObject(oFromDate)
+                && this._isValidDateObject(oToDate)
+                && this._normalizeDate(oFromDate).getTime() > this._normalizeDate(oToDate).getTime()) {
+                const sRangeMessage = this._getText(oConfig.rangeMessageKey);
+
+                aErrors.push(
+                    this._createValidationError(
+                        oConfig.fromControlId,
+                        sRangeMessage,
+                        this._getText(oConfig.fromLabelKey)
+                    ),
+                    this._createValidationError(
+                        oConfig.toControlId,
+                        sRangeMessage,
+                        this._getText(oConfig.toLabelKey)
+                    )
+                );
+            }
+
+            return aErrors;
+        },
+
+        /**
+         * DatePicker에 사용자가 입력한 문자열이 정상 날짜인지 확인한다.
+         *
+         * DatePicker의 dateValue는 잘못된 문자열을 Date 객체로 변환하지 못할 수 있다.
+         * 그래서 사용자가 실제로 입력한 getValue 문자열을 기준으로 한 번 더 검증한다.
+         * 빈 값은 조회조건 미입력으로 보므로 오류가 아니다.
+         */
+        _isDateInputValueValid(sControlId) {
+            const oDatePicker = this.byId(sControlId);
+            const sValue = oDatePicker && typeof oDatePicker.getValue === "function"
+                ? String(oDatePicker.getValue() || "").trim()
+                : "";
+
+            return !sValue || this._isStrictDateString(sValue);
+        },
+
+        /**
+         * yyyy-MM-dd 형식과 실제 달력 날짜 여부를 함께 검증한다.
+         *
+         * 정규식만 사용하면 2026-05-32 같은 날짜도 형식상 통과할 수 있다.
+         * 따라서 Date 객체 생성 후 연/월/일이 입력값과 동일한지 다시 비교한다.
+         */
+        _isStrictDateString(sValue) {
+            const aMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(sValue || "").trim());
+            let iYear;
+            let iMonth;
+            let iDay;
+            let oDate;
+
+            if (!aMatch) {
+                return false;
+            }
+
+            iYear = Number(aMatch[1]);
+            iMonth = Number(aMatch[2]);
+            iDay = Number(aMatch[3]);
+            oDate = new Date(iYear, iMonth - 1, iDay);
+
+            return oDate.getFullYear() === iYear
+                && oDate.getMonth() === iMonth - 1
+                && oDate.getDate() === iDay;
+        },
+
+        /**
+         * 삼만리 모빌리티 프로젝트의 업무 기준일을 반환한다.
+         *
+         * 이전 납기지연 조회 프로그램과 동일하게 회사 기준일 이전 날짜는 조회조건으로 허용하지 않는다.
+         */
+        _getCompanyStartDate() {
+            return this._normalizeDate(new Date(2020, 2, 15));
+        },
+
+        /**
+         * 비교 대상 날짜가 기준일보다 과거인지 확인한다.
+         */
+        _isDateBefore(oDate, oMinDate) {
+            if (!this._isValidDateObject(oDate) || !this._isValidDateObject(oMinDate)) {
+                return false;
+            }
+
+            return this._normalizeDate(oDate).getTime() < this._normalizeDate(oMinDate).getTime();
+        },
+
+        /**
+         * JavaScript Date 객체가 실제 유효한 날짜인지 확인한다.
+         */
+        _isValidDateObject(oDate) {
+            return oDate instanceof Date && !isNaN(oDate.getTime());
+        },
+
+        /**
+         * MessagePopover와 ValueState 표시에서 함께 사용할 검증 오류 객체를 만든다.
+         */
+        _createValidationError(sControlId, sMessage, sSubtitle) {
+            return {
+                type: "Error",
+                title: sMessage,
+                subtitle: sSubtitle,
+                description: this._getText("validationMessageDescription"),
+                controlId: sControlId
+            };
+        },
+
+        /**
+         * 검증 오류 목록을 messages 모델에 반영하고 관련 필드의 ValueState도 갱신한다.
+         */
+        _setValidationMessages(aErrors) {
+            const oMessagesModel = this.getView().getModel("messages");
+            const iCount = (aErrors || []).length;
+
+            (aErrors || []).forEach(function (oError) {
+                this._setInputValueState(oError.controlId, "Error", oError.title);
+            }.bind(this));
+
+            if (oMessagesModel) {
+                oMessagesModel.setData({
+                    items: aErrors || [],
+                    count: iCount,
+                    buttonText: iCount ? this._getText("validationErrorCount", [iCount]) : "",
+                    buttonIcon: iCount ? "sap-icon://message-error" : "sap-icon://message-popup",
+                    buttonType: iCount ? "Negative" : "Transparent"
+                });
+            }
+        },
+
+        /**
+         * 조회조건 컨트롤의 ValueState와 ValueStateText를 설정한다.
+         */
+        _setInputValueState(sControlId, sState, sText) {
+            const oControl = sControlId && this.byId(sControlId);
+
+            if (!oControl) {
+                return;
+            }
+
+            if (typeof oControl.setValueState === "function") {
+                oControl.setValueState(sState);
+            }
+
+            if (typeof oControl.setValueStateText === "function") {
+                oControl.setValueStateText(sText || "");
+            }
+        },
+
+        /**
+         * 이전 조회 시 표시된 유효성 오류 상태를 초기화한다.
+         *
+         * 새 조회를 시작할 때는 과거 오류 표시가 남아 있으면 안 되므로,
+         * 날짜 필드 ValueState와 messages 모델을 먼저 비운다.
+         */
+        _clearSearchValidationStates() {
+            [
+                "idDocDateFromPicker",
+                "idDocDateToPicker",
+                "idEindtFromPicker",
+                "idEindtToPicker"
+            ].forEach(function (sControlId) {
+                this._setInputValueState(sControlId, "None", "");
+            }.bind(this));
+
+            const oMessagesModel = this.getView().getModel("messages");
+
+            if (oMessagesModel) {
+                oMessagesModel.setData(this._createEmptyValidationMessages());
+            }
+        },
+
+        /**
+         * 조회조건 컨트롤의 화면 표시값을 실제로 비운다.
+         *
+         * 모델만 초기화하면 일반 Input은 대부분 갱신되지만, DatePicker에 잘못된 날짜 문자열을 직접 입력한 경우
+         * 해당 문자열이 dateValue 모델에 반영되지 않고 컨트롤의 value에만 남을 수 있다.
+         * 그래서 초기화 버튼에서는 filter 모델과 함께 화면 컨트롤 값도 명시적으로 비워
+         * 사용자가 보는 조회조건과 내부 모델 상태가 항상 동일해지도록 한다.
+         */
+        _resetSearchConditionControlValues() {
+            const aTextInputIds = [
+                "idRfqNoInput",
+                "idLifnrInput",
+                "idName1Input",
+                "idMatnrInput",
+                "idMaktxInput",
+                "idWerksInput",
+                "idMqNoInput",
+                "idBukrsInput",
+                "idEkorgInput",
+                "idEkgrpInput"
+            ];
+            const aDatePickerIds = [
+                "idDocDateFromPicker",
+                "idDocDateToPicker",
+                "idEindtFromPicker",
+                "idEindtToPicker"
+            ];
+            const oAwardStatusCombo = this.byId("idAwardStatusCombo");
+
+            aTextInputIds.forEach(function (sControlId) {
+                const oControl = this.byId(sControlId);
+
+                if (oControl && typeof oControl.setValue === "function") {
+                    oControl.setValue("");
+                }
+            }.bind(this));
+
+            aDatePickerIds.forEach(function (sControlId) {
+                const oDatePicker = this.byId(sControlId);
+
+                if (!oDatePicker) {
+                    return;
+                }
+
+                if (typeof oDatePicker.setDateValue === "function") {
+                    oDatePicker.setDateValue(null);
+                }
+
+                if (typeof oDatePicker.setValue === "function") {
+                    oDatePicker.setValue("");
+                }
+            }.bind(this));
+
+            if (oAwardStatusCombo && typeof oAwardStatusCombo.setSelectedKeys === "function") {
+                oAwardStatusCombo.setSelectedKeys([]);
+            }
+        },
+
+        /**
+         * MessagePopover의 항목을 클릭했을 때 관련 조회조건 필드로 포커스를 이동한다.
+         *
+         * 상세조건 영역의 필드는 기본적으로 접혀 있을 수 있으므로,
+         * 먼저 상세조건을 펼친 뒤 다음 렌더링 타이밍에 focus를 준다.
+         */
+        _focusValidationTarget(oEvent) {
+            const oItem = oEvent.getParameter("item")
+                || oEvent.getParameter("messageItem")
+                || oEvent.getParameter("listItem");
+            const oContext = oItem && oItem.getBindingContext("messages");
+            const oMessage = oContext && oContext.getObject();
+            const sControlId = oMessage && (oMessage.controlId || oMessage.inputId);
+            const oViewModel = this.getView().getModel("view");
+            const oControl = sControlId && this.byId(sControlId);
+
+            if (!sControlId || !oControl) {
+                return;
+            }
+
+            if (this._isAdvancedFilterControl(sControlId) && oViewModel) {
+                oViewModel.setProperty("/AdvancedFilterVisible", true);
+            }
+
+            if (typeof oControl.focus === "function") {
+                setTimeout(function () {
+                    oControl.focus();
+                }, 0);
+            }
+        },
+
+        /**
+         * 전달받은 Control ID가 상세조건 영역의 필드인지 확인한다.
+         *
+         * MessagePopover 항목 선택 시 상세조건을 자동으로 펼쳐야 하는지 판단하기 위한 목록이다.
+         * 조회조건 필드가 추가되면 이 배열에 ID만 추가하면 된다.
+         */
+        _isAdvancedFilterControl(sControlId) {
+            return [
+                "idLifnrInput",
+                "idName1Input",
+                "idMatnrInput",
+                "idMaktxInput",
+                "idWerksInput",
+                "idEindtFromPicker",
+                "idEindtToPicker",
+                "idMqNoInput",
+                "idBukrsInput",
+                "idEkorgInput",
+                "idEkgrpInput"
+            ].indexOf(sControlId) > -1;
         },
 
         /**

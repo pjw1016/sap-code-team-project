@@ -179,6 +179,51 @@ sap.ui.define([
 		assert.strictEqual(oFixture.models.work.getProperty("/RfqHeaderCount"), 3, "Header list count returns to the last Search result row count.");
 	});
 
+	QUnit.test("onReset should clear visible search condition control values as well as the filter model", function (assert) {
+		var mClearedValues = {};
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idRfqNoInput: {
+					setValue: function (sValue) {
+						mClearedValues.RfqNo = sValue;
+					},
+					setValueState: function () {},
+					setValueStateText: function () {}
+				},
+				idDocDateFromPicker: {
+					setValue: function (sValue) {
+						mClearedValues.DocDateFrom = sValue;
+					},
+					setDateValue: function (oDate) {
+						mClearedValues.DocDateFromDate = oDate;
+					},
+					setValueState: function () {},
+					setValueStateText: function () {}
+				},
+				idAwardStatusCombo: {
+					setSelectedKeys: function (aKeys) {
+						mClearedValues.AwardStatus = aKeys;
+					}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.filter.setProperty("/RfqNo", "RQ00000001");
+		oFixture.models.filter.setProperty("/DocDateFrom", new Date(2026, 4, 32));
+		oFixture.models.filter.setProperty("/AwardStatus", ["N"]);
+
+		oFixture.controller.onReset();
+
+		assert.strictEqual(oFixture.models.filter.getProperty("/RfqNo"), "", "RFQ number model value is cleared.");
+		assert.strictEqual(oFixture.models.filter.getProperty("/DocDateFrom"), null, "Document date model value is cleared.");
+		assert.deepEqual(oFixture.models.filter.getProperty("/AwardStatus"), [], "Award status model value is cleared.");
+		assert.strictEqual(mClearedValues.RfqNo, "", "RFQ number input value is cleared.");
+		assert.strictEqual(mClearedValues.DocDateFrom, "", "DatePicker visible text is cleared.");
+		assert.strictEqual(mClearedValues.DocDateFromDate, null, "DatePicker dateValue is cleared.");
+		assert.deepEqual(mClearedValues.AwardStatus, [], "MultiComboBox selected keys are cleared.");
+	});
+
 	QUnit.test("_applyHeaderTableSorters should apply group sorter before sort sorter and update summaries", function (assert) {
 		var aAppliedSorters = null;
 		var oFixture = createControllerWithFakeView({
@@ -1237,6 +1282,146 @@ sap.ui.define([
 		assert.strictEqual(aFilters[2].sOperator, "LE", "Document date to uses LE operator.");
 		assert.notOk(oStatusFilter.bAnd, "Multiple award statuses are grouped with OR.");
 		assert.strictEqual(oStatusFilter.aFilters.length, 2, "Two selected award statuses create two inner filters.");
+	});
+
+	QUnit.test("onSearch should stop and show validation messages when document date text is invalid", function (assert) {
+		var bLoadCalled = false;
+		var bPopoverOpened = false;
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idDocDateFromPicker: {
+					getValue: function () {
+						return "2026-05-32";
+					},
+					setValueState: function (sState) {
+						this.valueState = sState;
+					},
+					setValueStateText: function (sText) {
+						this.valueStateText = sText;
+					}
+				},
+				idDocDateToPicker: {
+					getValue: function () {
+						return "";
+					},
+					setValueState: function () {},
+					setValueStateText: function () {}
+				},
+				idEindtFromPicker: {
+					getValue: function () {
+						return "";
+					},
+					setValueState: function () {},
+					setValueStateText: function () {}
+				},
+				idEindtToPicker: {
+					getValue: function () {
+						return "";
+					},
+					setValueState: function () {},
+					setValueStateText: function () {}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.controller._loadRfqHeaders = function () {
+			bLoadCalled = true;
+			return Promise.resolve([]);
+		};
+		oFixture.controller._openValidationMessagePopoverDelayed = function () {
+			bPopoverOpened = true;
+		};
+		oFixture.controller._getText = function (sKey, aArgs) {
+			var mText = {
+				docDateFrom: "문서일자 From",
+				validationDateFormatInvalid: "날짜 입력 필드는 yyyy-MM-dd 형식으로 입력해야합니다.",
+				validationMessageDescription: "메시지를 선택하면 해당 조회조건으로 이동합니다.",
+				validationErrorCount: "{0}"
+			};
+			var sText = mText[sKey] || sKey;
+
+			return aArgs ? sText.replace("{0}", aArgs[0]) : sText;
+		};
+
+		oFixture.controller.onSearch();
+
+		assert.strictEqual(bLoadCalled, false, "Backend search is not called for invalid date text.");
+		assert.strictEqual(bPopoverOpened, true, "Validation MessagePopover is requested.");
+		assert.strictEqual(oFixture.models.messages.getProperty("/count"), 1, "One validation message is stored.");
+		assert.strictEqual(oFixture.models.messages.getProperty("/buttonText"), "1", "Footer button shows only the error count.");
+		assert.strictEqual(oFixture.models.messages.getProperty("/items/0/controlId"), "idDocDateFromPicker", "The invalid date picker is linked.");
+		assert.strictEqual(oFixture.models.messages.getProperty("/items/0/title"), "날짜 입력 필드는 yyyy-MM-dd 형식으로 입력해야합니다.", "The invalid date message follows the delayed PO monitor wording.");
+	});
+
+	QUnit.test("onSearch should stop when date range is reversed", function (assert) {
+		var bLoadCalled = false;
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idDocDateFromPicker: {
+					getValue: function () {
+						return "2026-06-10";
+					},
+					setValueState: function () {},
+					setValueStateText: function () {}
+				},
+				idDocDateToPicker: {
+					getValue: function () {
+						return "2026-06-01";
+					},
+					setValueState: function () {},
+					setValueStateText: function () {}
+				},
+				idEindtFromPicker: {
+					getValue: function () {
+						return "";
+					},
+					setValueState: function () {},
+					setValueStateText: function () {}
+				},
+				idEindtToPicker: {
+					getValue: function () {
+						return "";
+					},
+					setValueState: function () {},
+					setValueStateText: function () {}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.filter.setProperty("/DocDateFrom", new Date(2026, 5, 10));
+		oFixture.models.filter.setProperty("/DocDateTo", new Date(2026, 5, 1));
+		oFixture.controller._loadRfqHeaders = function () {
+			bLoadCalled = true;
+			return Promise.resolve([]);
+		};
+		oFixture.controller._openValidationMessagePopoverDelayed = function () {};
+		oFixture.controller._getText = function (sKey, aArgs) {
+			var mText = {
+				docDateFrom: "문서일자 From",
+				docDateTo: "문서일자 To",
+				validationDocDateRangeInvalid: "문서일자 From은 문서일자 To보다 늦을 수 없습니다.",
+				validationMessageDescription: "메시지를 선택하면 해당 조회조건으로 이동합니다.",
+				validationErrorCount: "{0}"
+			};
+			var sText = mText[sKey] || sKey;
+
+			if (aArgs) {
+				aArgs.forEach(function (sArg, iIndex) {
+					sText = sText.replace("{" + iIndex + "}", sArg);
+				});
+			}
+
+			return sText;
+		};
+
+		oFixture.controller.onSearch();
+
+		assert.strictEqual(bLoadCalled, false, "Backend search is not called for reversed date range.");
+		assert.strictEqual(oFixture.models.messages.getProperty("/count"), 2, "Both date fields receive validation messages.");
+		assert.strictEqual(oFixture.models.messages.getProperty("/items/0/controlId"), "idDocDateFromPicker", "From field is linked.");
+		assert.strictEqual(oFixture.models.messages.getProperty("/items/1/controlId"), "idDocDateToPicker", "To field is linked.");
 	});
 
 	QUnit.test("onSearch should load RFQHeaderSet and update Begin column models", function (assert) {

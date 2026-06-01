@@ -36,6 +36,7 @@
                 headerContentPinnable="true"
                 toggleHeaderOnTitleClick="true"
                 showAnchorBar="false"
+                showFooter="{= ${messages>/count} > 0 }"
                 upperCaseAnchorBar="false">
 
                 <uxap:headerTitle>
@@ -520,6 +521,27 @@
                         </uxap:subSections>
                     </uxap:ObjectPageSection>
                 </uxap:sections>
+
+                <uxap:footer>
+                    <OverflowToolbar>
+                        <!--
+                            조회조건 유효성 검증 메시지 버튼.
+                            messages 모델에 오류가 들어왔을 때만 Begin Column footer에 표시된다.
+                            버튼 자체를 footer 안에 두면 사용자는 조회조건을 입력하던 화면 위치를 유지한 채
+                            오류 목록을 열고, 다음 단계에서 메시지 선택 시 해당 조회조건 필드로 이동할 수 있다.
+                        -->
+                        <Button
+                            id="idValidationMessageButton"
+                            icon="{messages>/buttonIcon}"
+                            type="{messages>/buttonType}"
+                            text="{messages>/buttonText}"
+                            tooltip="{i18n>validationMessageButtonTooltip}"
+                            visible="{= ${messages>/count} > 0 }"
+                            press=".onMessagePopoverPress"
+                            ariaHasPopup="Dialog"/>
+                        <ToolbarSpacer/>
+                    </OverflowToolbar>
+                </uxap:footer>
             </uxap:ObjectPageLayout>
         </f:beginColumnPages>
 
