@@ -1673,7 +1673,6 @@ sap.ui.define([
                 toLabelKey: "eindtTo",
                 rangeMessageKey: "validationEindtRangeInvalid"
             }));
-
             this._setValidationMessages(aErrors);
 
             return aErrors.length === 0;
@@ -1847,11 +1846,19 @@ sap.ui.define([
          */
         _setValidationMessages(aErrors) {
             const oMessagesModel = this.getView().getModel("messages");
+            const oViewModel = this.getView().getModel("view");
             const iCount = (aErrors || []).length;
+            const bHasAdvancedFilterError = (aErrors || []).some(function (oError) {
+                return this._isAdvancedFilterControl(oError.controlId);
+            }.bind(this));
 
             (aErrors || []).forEach(function (oError) {
                 this._setInputValueState(oError.controlId, "Error", oError.title);
             }.bind(this));
+
+            if (bHasAdvancedFilterError && oViewModel) {
+                oViewModel.setProperty("/AdvancedFilterVisible", true);
+            }
 
             if (oMessagesModel) {
                 oMessagesModel.setData({
@@ -1895,7 +1902,7 @@ sap.ui.define([
                 "idDocDateToPicker",
                 "idEindtFromPicker",
                 "idEindtToPicker"
-            ].forEach(function (sControlId) {
+            ].concat(this._getSearchCodeControlIds()).forEach(function (sControlId) {
                 this._setInputValueState(sControlId, "None", "");
             }.bind(this));
 
@@ -1904,6 +1911,25 @@ sap.ui.define([
             if (oMessagesModel) {
                 oMessagesModel.setData(this._createEmptyValidationMessages());
             }
+        },
+
+        /**
+         * Search Help 또는 코드 존재 여부 검증 대상이 되는 코드형 조회조건 Control ID 목록이다.
+         *
+         * 길이/문자 형식 검증은 하지 않는다.
+         * 향후 Search Help OData 연결 후에는 이 목록을 기준으로 실제 코드 존재 여부만 검증한다.
+         */
+        _getSearchCodeControlIds() {
+            return [
+                "idRfqNoInput",
+                "idLifnrInput",
+                "idMatnrInput",
+                "idWerksInput",
+                "idMqNoInput",
+                "idBukrsInput",
+                "idEkorgInput",
+                "idEkgrpInput"
+            ];
         },
 
         /**

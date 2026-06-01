@@ -197,7 +197,7 @@ Mid 컬럼에는 이미 채택/채택취소 Footer가 있다. 유효성 검증 M
 | 공급업체명 | 자유 텍스트, 필수 검증 없음 | 검증 제외 |
 | 자재코드 | 입력 시 최대 18자리, 영문/숫자만 허용 | ValueState Error |
 | 자재명 | 자유 텍스트, 필수 검증 없음 | 검증 제외 |
-| 플랜트 | 입력 시 최대 4자리, 영문/숫자만 허용 | ValueState Error |
+| 플랜트 | Search Help OData 연결 후 존재 여부 검증. 프로젝트 플랜트 코드는 `P00001`처럼 6자리까지 입력 가능 | ValueState Error |
 | 납기일 From | 입력 시 `yyyy-MM-dd` 실제 날짜 검증 | ValueState Error |
 | 납기일 To | 입력 시 `yyyy-MM-dd` 실제 날짜 검증 | ValueState Error |
 | 납기일 From/To | From <= To | 양쪽 또는 From 필드 Error |
@@ -592,10 +592,10 @@ _getValueHelpConfig: function (sHelpType) {
 4. 회사 기준일 `2020-03-15` 이전 입력 방지
 5. 오류 발생 시 ValueState Error 표시
 
-### 4단계. 코드형 필드 유효성 검증 구현
+### 4단계. 코드 존재 여부 검증 구현
 
-1. RFQ 번호, 공급업체코드, 자재코드, 플랜트, MQ 번호, 회사코드, 구매조직, 구매그룹 길이 검증
-2. 영문/숫자 형식 검증
+1. 공급업체코드, 자재코드, 플랜트, 회사코드, 구매조직, 구매그룹의 존재 여부 검증
+2. 존재 여부는 Search Help용 CDS OData를 기준으로 확인
 3. 상세조건 필드 오류 발생 시 상세조건 영역 자동 펼침
 4. `onSearch` 앞단에 검증 로직 연결
 
@@ -663,4 +663,3 @@ _getValueHelpConfig: function (sHelpType) {
 | 신규 OData 필요 | RFQ 번호, MQ 번호, 구매조직, 구매그룹 |
 | 자동 입력 | 공급업체명, 자재명 |
 | 개발 우선순위 | 유효성 검증 먼저, 이후 Search Help 구현 |
-

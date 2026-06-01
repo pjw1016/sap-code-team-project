@@ -200,7 +200,7 @@
                                     <Input
                                         id="idWerksInput"
                                         value="{filter>/Werks}"
-                                        maxLength="4"
+                                        maxLength="6"
                                         placeholder="{i18n>inputPlaceholder}"/>
                                 </VBox>
 
