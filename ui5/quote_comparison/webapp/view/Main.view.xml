@@ -151,7 +151,13 @@
                                         id="idLifnrInput"
                                         value="{filter>/Lifnr}"
                                         maxLength="10"
-                                        placeholder="{i18n>inputPlaceholder}"/>
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest"
+                                        placeholder="{i18n>inputPlaceholder}">
+                                        <customData>
+                                            <core:CustomData key="helpType" value="VENDOR"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox
@@ -176,7 +182,13 @@
                                         id="idMatnrInput"
                                         value="{filter>/Matnr}"
                                         maxLength="18"
-                                        placeholder="{i18n>inputPlaceholder}"/>
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest"
+                                        placeholder="{i18n>inputPlaceholder}">
+                                        <customData>
+                                            <core:CustomData key="helpType" value="MATERIAL"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox
@@ -201,7 +213,13 @@
                                         id="idWerksInput"
                                         value="{filter>/Werks}"
                                         maxLength="6"
-                                        placeholder="{i18n>inputPlaceholder}"/>
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest"
+                                        placeholder="{i18n>inputPlaceholder}">
+                                        <customData>
+                                            <core:CustomData key="helpType" value="PLANT"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox
@@ -253,7 +271,13 @@
                                         id="idBukrsInput"
                                         value="{filter>/Bukrs}"
                                         maxLength="4"
-                                        placeholder="{i18n>inputPlaceholder}"/>
+                                        showValueHelp="true"
+                                        valueHelpRequest=".onValueHelpRequest"
+                                        placeholder="{i18n>inputPlaceholder}">
+                                        <customData>
+                                            <core:CustomData key="helpType" value="COMPANY"/>
+                                        </customData>
+                                    </Input>
                                 </VBox>
 
                                 <VBox
@@ -452,38 +476,38 @@
                                                 <Column width="8rem">
                                                     <Text text="{i18n>rfqNo}"/>
                                                 </Column>
+                                                <Column minScreenWidth="20rem" demandPopin="true">
+                                                    <Text text="{i18n>docDate}"/>
+                                                </Column>
+                                                <Column minScreenWidth="25rem" demandPopin="true">
+                                                    <Text text="{i18n>awardStatus}"/>
+                                                </Column>
+                                                <Column minScreenWidth="30rem" demandPopin="true">
+                                                    <Text text="{i18n>rfqItemCount}"/>
+                                                </Column>
+                                                <Column minScreenWidth="35rem" demandPopin="true">
+                                                    <Text text="{i18n>vendorCount}"/>
+                                                </Column>
                                                 <Column
                                                     width="9rem"
-                                                    minScreenWidth="Tablet"
-                                                    demandPopin="true">
+                                                    minScreenWidth="40rem"
+                                                    demandPopin="true"
+                                                    importance="Low">
                                                     <Text text="{i18n>bukrs}"/>
                                                 </Column>
                                                 <Column
                                                     width="9rem"
-                                                    minScreenWidth="Desktop"
-                                                    demandPopin="true">
+                                                    minScreenWidth="45rem"
+                                                    demandPopin="true"
+                                                    importance="Low">
                                                     <Text text="{i18n>ekorg}"/>
                                                 </Column>
                                                 <Column
                                                     width="9rem"
-                                                    minScreenWidth="Desktop"
-                                                    demandPopin="true">
+                                                    minScreenWidth="50rem"
+                                                    demandPopin="true"
+                                                    importance="Low">
                                                     <Text text="{i18n>ekgrp}"/>
-                                                </Column>
-                                                <Column minScreenWidth="Tablet" demandPopin="true">
-                                                    <Text text="{i18n>docDate}"/>
-                                                </Column>
-                                                <Column minScreenWidth="Desktop" demandPopin="true">
-                                                    <Text text="{i18n>rfqItemCount}"/>
-                                                </Column>
-                                                <Column minScreenWidth="Desktop" demandPopin="true">
-                                                    <Text text="{i18n>mqCount}"/>
-                                                </Column>
-                                                <Column minScreenWidth="Tablet" demandPopin="true">
-                                                    <Text text="{i18n>vendorCount}"/>
-                                                </Column>
-                                                <Column minScreenWidth="Tablet" demandPopin="true">
-                                                    <Text text="{i18n>awardStatus}"/>
                                                 </Column>
                                             </columns>
                                             <items>
@@ -494,6 +518,12 @@
                                                     <cells>
                                                         <ObjectIdentifier
                                                             title="{work>RfqNo}"/>
+                                                        <Text text="{path: 'work>DocDate', formatter: '.formatter.formatDate'}"/>
+                                                        <ObjectStatus
+                                                            text="{work>AwardStatusText}"
+                                                            state="{path: 'work>AwardStatus', formatter: '.formatter.formatAwardStatusState'}"/>
+                                                        <ObjectNumber number="{work>RfqItemCount}"/>
+                                                        <ObjectNumber number="{work>VendorCount}"/>
                                                         <ObjectIdentifier
                                                             title="{work>Bukrs}"
                                                             text="{work>Butxt}"/>
@@ -503,13 +533,6 @@
                                                         <ObjectIdentifier
                                                             title="{work>Ekgrp}"
                                                             text="{work>Eknam}"/>
-                                                        <Text text="{path: 'work>DocDate', formatter: '.formatter.formatDate'}"/>
-                                                        <ObjectNumber number="{work>RfqItemCount}"/>
-                                                        <ObjectNumber number="{work>MqCount}"/>
-                                                        <ObjectNumber number="{work>VendorCount}"/>
-                                                        <ObjectStatus
-                                                            text="{work>AwardStatusText}"
-                                                            state="{work>AwardStatusState}"/>
                                                     </cells>
                                                 </ColumnListItem>
                                             </items>
@@ -655,7 +678,7 @@
                             <Label text="{i18n>awardStatus}"/>
                             <ObjectStatus
                                 text="{work>/SelectedRfq/AwardStatusText}"
-                                state="{work>/SelectedRfq/AwardStatusState}"/>
+                                state="{path: 'work>/SelectedRfq/AwardStatus', formatter: '.formatter.formatAwardStatusState'}"/>
                         </VBox>
                     </FlexBox>
                 </uxap:headerContent>
@@ -683,24 +706,33 @@
                                             <Column width="6rem">
                                                 <Text text="{i18n>rfqItem}"/>
                                             </Column>
-                                            <Column minScreenWidth="Tablet" demandPopin="true">
+                                            <Column minScreenWidth="20rem" demandPopin="true">
                                                 <Text text="{i18n>matnr}"/>
                                             </Column>
-                                            <Column minScreenWidth="Desktop" demandPopin="true">
+                                            <Column minScreenWidth="25rem" demandPopin="true">
                                                 <Text text="{i18n>reqQty}"/>
                                             </Column>
-                                            <Column minScreenWidth="Tablet" demandPopin="true">
+                                            <Column minScreenWidth="30rem" demandPopin="true">
                                                 <Text text="{i18n>eindt}"/>
                                             </Column>
-                                            <Column minScreenWidth="Desktop" demandPopin="true">
+                                            <Column minScreenWidth="35rem" demandPopin="true">
+                                                <Text text="{i18n>awardStatus}"/>
+                                            </Column>
+                                            <Column minScreenWidth="40rem" demandPopin="true">
                                                 <Text text="{i18n>awardVendor}"/>
                                             </Column>
-                                            <Column minScreenWidth="Tablet" demandPopin="true">
-                                                <Text text="{i18n>awardStatus}"/>
+                                            <Column minScreenWidth="45rem" demandPopin="true">
+                                                <Text text="{i18n>werks}"/>
+                                            </Column>
+                                            <Column minScreenWidth="50rem" demandPopin="true">
+                                                <Text text="{i18n>lgort}"/>
                                             </Column>
                                         </columns>
                                         <items>
-                                            <ColumnListItem type="Navigation">
+                                            <ColumnListItem
+                                                type="Navigation"
+                                                highlight="{path: 'work>ItemStatus', formatter: '.formatter.formatItemStatusState'}"
+                                                highlightText="{work>ItemStatusText}">
                                                 <cells>
                                                     <Text text="{work>RfqItem}"/>
                                                     <ObjectIdentifier
@@ -710,12 +742,18 @@
                                                         number="{path: 'work>ReqQty', formatter: '.formatter.formatQuantity'}"
                                                         unit="{work>Meins}"/>
                                                     <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
+                                                    <ObjectStatus
+                                                        text="{work>ItemStatusText}"
+                                                        state="{path: 'work>ItemStatus', formatter: '.formatter.formatItemStatusState'}"/>
                                                     <ObjectIdentifier
                                                         title="{work>AwardLifnr}"
                                                         text="{work>AwardName1}"/>
-                                                    <ObjectStatus
-                                                        text="{work>ItemStatusText}"
-                                                        state="{work>ItemStatusState}"/>
+                                                    <ObjectIdentifier
+                                                        title="{work>Werks}"
+                                                        text="{work>WerksName}"/>
+                                                    <ObjectIdentifier
+                                                        title="{work>Lgort}"
+                                                        text="{work>Lgobe}"/>
                                                 </cells>
                                             </ColumnListItem>
                                         </items>
@@ -843,12 +881,22 @@
                                             </table:Column>
                                             <table:Column width="8rem">
                                                 <table:label>
-                                                    <Label text="{i18n>vendor}"/>
+                                                    <Label text="{i18n>lifnr}"/>
                                                 </table:label>
                                                 <table:template>
                                                     <ObjectIdentifier
                                                         title="{work>Lifnr}"
                                                         text="{work>Name1}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="8rem">
+                                                <table:label>
+                                                    <Label text="{i18n>matnr}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectIdentifier
+                                                        title="{work>Matnr}"
+                                                        text="{work>Maktx}"/>
                                                 </table:template>
                                             </table:Column>
                                             <table:Column width="6rem">

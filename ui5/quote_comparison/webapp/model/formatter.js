@@ -179,6 +179,60 @@ sap.ui.define([
         },
 
         /**
+         * RFQ Item 채택상태를 ObjectStatus 상태값으로 변환한다.
+         *
+         * Backend의 공통 UI State 변환은 Header와 Item에서 함께 쓰이기 때문에
+         * 미채택(N)을 None으로 내려줄 수 있다.
+         * 하지만 RFQ Item 목록에서는 사용자가 미채택 품목을 빠르게 찾아야 하므로
+         * 화면 formatter에서 N을 Error로 보정해 빨간 텍스트로 표시한다.
+         *
+         * @param {string} sStatus Backend RFQ Item 상태. N, A, PO 중 하나가 내려온다.
+         * @returns {sap.ui.core.ValueState} ObjectStatus 상태값
+         */
+        formatItemStatusState: function (sStatus) {
+            if (sStatus === "N") {
+                return ValueState.Error;
+            }
+
+            if (sStatus === "A" || sStatus === "PO") {
+                return ValueState.Success;
+            }
+
+            return ValueState.None;
+        },
+
+        /**
+         * RFQ Header 채택상태를 ObjectStatus 상태값으로 변환한다.
+         *
+         * 상태 기준:
+         * - N  : 미채택 -> Error, 빨간색
+         * - P  : 일부채택 -> Warning, 노란색 계열
+         * - A  : 채택 -> Success, 초록색
+         * - PO : PO생성 -> Success, 초록색
+         *
+         * Backend의 AwardStatusState를 그대로 쓰면 N이 None으로 내려올 수 있으므로,
+         * 화면에서는 상태코드 기준 formatter로 색상을 일관되게 맞춘다.
+         *
+         * @param {string} sStatus Backend RFQ Header 채택상태
+         * @returns {sap.ui.core.ValueState} ObjectStatus 상태값
+         */
+        formatAwardStatusState: function (sStatus) {
+            if (sStatus === "N") {
+                return ValueState.Error;
+            }
+
+            if (sStatus === "P") {
+                return ValueState.Warning;
+            }
+
+            if (sStatus === "A" || sStatus === "PO") {
+                return ValueState.Success;
+            }
+
+            return ValueState.None;
+        },
+
+        /**
          * RFQ Header 채택상태를 sap.m.ColumnListItem의 행 강조 상태로 변환한다.
          * @param {string} sStatus Backend에서 받은 RFQ Header 채택상태
          * @returns {sap.ui.core.ValueState} 행 강조 상태값

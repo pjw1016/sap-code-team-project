@@ -8,9 +8,13 @@ sap.ui.define([
     "sap/m/MessageBox",
     "sap/m/MessagePopover",
     "sap/m/MessageItem",
+    "sap/m/TableSelectDialog",
+    "sap/m/ColumnListItem",
+    "sap/m/Column",
+    "sap/m/Text",
     "sap/ui/core/Fragment",
     "code/d3/quotecomparison/model/formatter"
-], (Controller, JSONModel, Filter, FilterOperator, Sorter, MessageToast, MessageBox, MessagePopover, MessageItem, Fragment, formatter) => {
+], (Controller, JSONModel, Filter, FilterOperator, Sorter, MessageToast, MessageBox, MessagePopover, MessageItem, TableSelectDialog, ColumnListItem, Column, Text, Fragment, formatter) => {
     "use strict";
 
     return Controller.extend("code.d3.quotecomparison.controller.Main", {
@@ -30,6 +34,11 @@ sap.ui.define([
             if (this._oValidationMessagePopover) {
                 this._oValidationMessagePopover.destroy();
                 this._oValidationMessagePopover = null;
+            }
+
+            if (this._oValueHelpDialog) {
+                this._oValueHelpDialog.destroy();
+                this._oValueHelpDialog = null;
             }
         },
 
@@ -163,7 +172,51 @@ sap.ui.define([
                 return Promise.resolve(false);
             }
 
-            return this._loadRfqHeaders();
+            return this._validateSearchHelpCodeExistence().then((aErrors) => {
+                if (aErrors.length > 0) {
+                    this._setValidationMessages(aErrors);
+                    this._openValidationMessagePopoverDelayed();
+                    return false;
+                }
+
+                return this._loadRfqHeaders();
+            }).catch(() => {
+                this._setValidationMessages([
+                    this._createValidationError(
+                        "",
+                        this._getText("validationTechnicalError") || "조회조건 검증 중 오류가 발생했습니다.",
+                        this._getText("searchConditionTitle") || "조회조건"
+                    )
+                ]);
+                this._openValidationMessagePopoverDelayed();
+                return false;
+            });
+        },
+
+        /**
+         * 조회조건 Input의 Search Help 요청 이벤트.
+         *
+         * XML View의 Input에는 core:CustomData로 helpType이 들어 있다.
+         * 예:
+         * - VENDOR   : 공급업체 Search Help
+         * - MATERIAL : 자재 Search Help
+         * - PLANT    : 플랜트 Search Help
+         * - COMPANY  : 회사코드 Search Help
+         *
+         * 실제 Dialog 생성은 공통 함수로 위임하여, 추후 RFQ/MQ/구매조직/구매그룹 Help가 추가되어도
+         * 설정 객체만 늘리면 같은 흐름을 재사용할 수 있게 한다.
+         */
+        onValueHelpRequest(oEvent) {
+            const oInput = oEvent && oEvent.getSource && oEvent.getSource();
+            const sHelpType = oInput && oInput.data("helpType");
+            const oConfig = this._getValueHelpConfig(sHelpType);
+
+            if (!oConfig) {
+                this._showToast(this._getText("valueHelpUnknown") || "알 수 없는 Search Help입니다.");
+                return;
+            }
+
+            this._openValueHelpDialog(oConfig);
         },
 
         /**
@@ -621,9 +674,9 @@ sap.ui.define([
             this._addDateFilter(aFilters, "DocDate", FilterOperator.GE, oFilter.DocDateFrom);
             this._addDateFilter(aFilters, "DocDate", FilterOperator.LE, oFilter.DocDateTo);
             this._addTextFilter(aFilters, "Lifnr", oFilter.Lifnr, FilterOperator.EQ);
-            this._addTextFilter(aFilters, "Name1", oFilter.Name1, FilterOperator.Contains);
+            this._addTextFilter(aFilters, "Name1", oFilter.Name1, FilterOperator.EQ);
             this._addTextFilter(aFilters, "Matnr", oFilter.Matnr, FilterOperator.EQ);
-            this._addTextFilter(aFilters, "Maktx", oFilter.Maktx, FilterOperator.Contains);
+            this._addTextFilter(aFilters, "Maktx", oFilter.Maktx, FilterOperator.EQ);
             this._addTextFilter(aFilters, "Werks", oFilter.Werks, FilterOperator.EQ);
             this._addDateFilter(aFilters, "Eindt", FilterOperator.GE, oFilter.EindtFrom);
             this._addDateFilter(aFilters, "Eindt", FilterOperator.LE, oFilter.EindtTo);
@@ -640,8 +693,14 @@ sap.ui.define([
          * 문자열 조건을 Filter 배열에 추가한다.
          *
          * 빈 값은 조회조건이 아니므로 Filter를 만들지 않는다.
-         * 공급업체명/자재명은 설계서 기준으로 부분 검색 성격이 있어 Contains를 사용하고,
-         * 코드성 필드는 정확히 일치해야 하므로 EQ를 사용한다.
+         * 공급업체명/자재명도 UI5에서는 EQ로 전송한다.
+         * 이유:
+         * - Backend DPC_EXT는 it_filter_select_options의 LOW 값을 읽은 뒤,
+         *   ABAP 내부에서 `NS` 비교로 부분검색을 수행한다.
+         * - UI5에서 Contains를 보내면 Gateway가 substringof 함수 형태로 변환할 수 있어,
+         *   현재 DPC_EXT의 단순 select_options 해석 방식과 맞지 않을 수 있다.
+         * - 따라서 납기지연 프로그램과 동일하게 문자열 값은 EQ로 전달하고,
+         *   실제 부분일치 판단은 Backend 로직에 맡긴다.
          */
         _addTextFilter(aFilters, sProperty, sValue, sOperator) {
             const sCleanValue = typeof sValue === "string" ? sValue.trim() : sValue;
@@ -1357,6 +1416,16 @@ sap.ui.define([
             return "/QuotationItemSet(MqNo='" + this._escapeODataKeyValue(sMqNo) + "',MqItem='" + this._escapeODataKeyValue(sMqItem) + "')";
         },
 
+        _findRfqHeaderByNo(aHeaders, sRfqNo) {
+            if (!sRfqNo) {
+                return null;
+            }
+
+            return (aHeaders || []).find((oHeader) => {
+                return oHeader && oHeader.RfqNo === sRfqNo;
+            }) || null;
+        },
+
         _refreshAfterAward() {
             const oView = this.getView();
             const oViewModel = oView.getModel("view");
@@ -1371,16 +1440,23 @@ sap.ui.define([
              * 채택 성공 후에는 Header KPI, Item 상태/채택 공급업체, MQ 비교 상태가 모두 바뀔 수 있다.
              * 따라서 Header -> Item -> MQ 순서로 다시 읽는다. Item 재조회 중 하위 영역이 초기화되므로,
              * 기존에 사용자가 보고 있던 RFQ와 RFQ Item 컨텍스트는 다시 세팅한 뒤 MQCompareSet을 호출한다.
-             */
+            */
             return this._loadRfqHeaders({
                 keepComparisonContext: true
-            }).then(() => {
+            }).then((aHeaders) => {
                 if (!sRfqNo) {
                     return null;
                 }
 
+                const oUpdatedRfq = this._findRfqHeaderByNo(aHeaders, sRfqNo) || oSelectedRfq;
+
                 if (oWorkModel) {
-                    oWorkModel.setProperty("/SelectedRfq", oSelectedRfq);
+                    /*
+                     * RFQ Header list is re-read after AWARD/CANCEL, so the Mid header must
+                     * point to the refreshed Header row. Keeping the old object leaves
+                     * AwardStatusText stale even though the Begin table already changed.
+                     */
+                    oWorkModel.setProperty("/SelectedRfq", oUpdatedRfq);
                 }
 
                 return this._loadRfqItemsForRfq(sRfqNo).then((aItems) => {
@@ -1389,7 +1465,7 @@ sap.ui.define([
                     }) || oSelectedRfqItem;
 
                     if (oWorkModel) {
-                        oWorkModel.setProperty("/SelectedRfq", oSelectedRfq);
+                        oWorkModel.setProperty("/SelectedRfq", oUpdatedRfq);
                         oWorkModel.setProperty("/SelectedRfqItem", oUpdatedItem || {});
                     }
 
@@ -1598,6 +1674,449 @@ sap.ui.define([
             const oBundle = oI18nModel && oI18nModel.getResourceBundle && oI18nModel.getResourceBundle();
 
             return oBundle && oBundle.getText ? oBundle.getText(sKey, aArgs) : "";
+        },
+
+        /**
+         * Search Help 설정을 반환한다.
+         *
+         * CDS OData Service는 manifest.json의 named model로 등록해 두고,
+         * 이 함수에서는 화면 Help Type과 OData 모델/EntitySet/표시 컬럼/입력 대상 필드의 관계만 정의한다.
+         *
+         * targetFields:
+         * - key     : Search Help OData 결과 Property
+         * - value   : filter JSONModel에 반영할 경로
+         * - control : ValueState를 초기화할 화면 Input ID
+         *
+         * 공급업체와 자재는 코드를 선택하면 명칭까지 함께 채운다.
+         */
+        _getValueHelpConfig(sHelpType) {
+            const mConfig = {
+                PLANT: {
+                    model: "plantHelp",
+                    path: "/ZCDS_D3_MM_0012",
+                    title: this._getText("valueHelpPlantTitle") || "플랜트 검색",
+                    searchFields: ["Werks", "WerksName"],
+                    columns: [
+                        { label: this._getText("werks") || "플랜트코드", property: "Werks" },
+                        { label: this._getText("werksName") || "플랜트명", property: "WerksName" }
+                    ],
+                    targetFields: {
+                        Werks: {
+                            path: "/Werks",
+                            controlId: "idWerksInput"
+                        }
+                    }
+                },
+                VENDOR: {
+                    model: "vendorHelp",
+                    path: "/ZCDS_D3_MM_0013",
+                    title: this._getText("valueHelpVendorTitle") || "공급업체 검색",
+                    searchFields: ["Lifnr", "Name1", "Land1", "Waers"],
+                    columns: [
+                        { label: this._getText("lifnr") || "공급업체코드", property: "Lifnr" },
+                        { label: this._getText("name1") || "공급업체명", property: "Name1" },
+                        { label: this._getText("land1") || "국가", property: "Land1" },
+                        { label: this._getText("waers") || "통화", property: "Waers" }
+                    ],
+                    targetFields: {
+                        Lifnr: {
+                            path: "/Lifnr",
+                            controlId: "idLifnrInput"
+                        },
+                        Name1: {
+                            path: "/Name1",
+                            controlId: "idName1Input"
+                        }
+                    }
+                },
+                MATERIAL: {
+                    model: "materialHelp",
+                    path: "/ZCDS_D3_MM_0014",
+                    title: this._getText("valueHelpMaterialTitle") || "자재 검색",
+                    searchFields: ["Matnr", "Maktx", "Maktg", "Mtart", "MtartName", "Matkl", "MatklName"],
+                    columns: [
+                        { label: this._getText("matnr") || "자재코드", property: "Matnr", formatter: "matnrExternal" },
+                        { label: this._getText("maktx") || "자재명", property: "Maktx" },
+                        { label: this._getText("mtart") || "자재유형", property: "Mtart" },
+                        { label: this._getText("mtartName") || "자재유형명", property: "MtartName" },
+                        { label: this._getText("meins") || "단위", property: "Meins" }
+                    ],
+                    targetFields: {
+                        Matnr: {
+                            path: "/Matnr",
+                            controlId: "idMatnrInput"
+                        },
+                        Maktx: {
+                            path: "/Maktx",
+                            controlId: "idMaktxInput"
+                        }
+                    },
+                    alpha: true
+                },
+                COMPANY: {
+                    model: "companyHelp",
+                    path: "/ZCDS_D3_MM_0016",
+                    title: this._getText("valueHelpCompanyTitle") || "회사코드 검색",
+                    searchFields: ["Bukrs", "BukrsName", "Waers", "Land1"],
+                    columns: [
+                        { label: this._getText("bukrs") || "회사코드", property: "Bukrs" },
+                        { label: this._getText("bukrsName") || "회사명", property: "BukrsName" },
+                        { label: this._getText("waers") || "통화", property: "Waers" },
+                        { label: this._getText("land1") || "국가", property: "Land1" }
+                    ],
+                    targetFields: {
+                        Bukrs: {
+                            path: "/Bukrs",
+                            controlId: "idBukrsInput"
+                        }
+                    }
+                }
+            };
+
+            return mConfig[sHelpType];
+        },
+
+        /**
+         * Search Help Dialog의 크기를 컬럼 수에 따라 정한다.
+         *
+         * 별도 CSS를 만들지 않고 TableSelectDialog의 표준 contentWidth/contentHeight 속성만 사용한다.
+         */
+        _getValueHelpDialogSize(oConfig) {
+            const iColumnCount = oConfig && Array.isArray(oConfig.columns) ? oConfig.columns.length : 0;
+
+            if (iColumnCount <= 2) {
+                return {
+                    contentWidth: "38rem",
+                    contentHeight: "18rem"
+                };
+            }
+
+            if (iColumnCount <= 4) {
+                return {
+                    contentWidth: "56rem",
+                    contentHeight: "24rem"
+                };
+            }
+
+            return {
+                contentWidth: "68rem",
+                contentHeight: "28rem"
+            };
+        },
+
+        /**
+         * sap.m.TableSelectDialog 기반 공통 Search Help Dialog를 연다.
+         *
+         * SAPUI5 SDK의 TableSelectDialog 사용 패턴과 동일하게
+         * items aggregation에 Help OData EntitySet을 바인딩하고, 검색과 선택 반영을 한 곳에서 처리한다.
+         */
+        _openValueHelpDialog(oConfig) {
+            const oHelpModel = this.getOwnerComponent().getModel(oConfig.model);
+            const aColumns = oConfig.columns || [];
+            const oDialogSize = this._getValueHelpDialogSize(oConfig);
+            let oTemplate;
+
+            if (!oHelpModel) {
+                this._showToast(this._getText("valueHelpModelMissing") || "Search Help 모델을 찾을 수 없습니다.");
+                return;
+            }
+
+            if (this._oValueHelpDialog) {
+                this._oValueHelpDialog.destroy();
+                this._oValueHelpDialog = null;
+            }
+
+            oTemplate = new ColumnListItem({
+                cells: aColumns.map(function (oColumnConfig) {
+                    return new Text({
+                        text: {
+                            path: oConfig.model + ">" + oColumnConfig.property,
+                            formatter: this._formatValueHelpCell.bind(this, oColumnConfig)
+                        },
+                        wrapping: false
+                    });
+                }.bind(this))
+            });
+
+            this._oValueHelpDialog = new TableSelectDialog({
+                title: oConfig.title,
+                noDataText: this._getText("valueHelpNoData") || "조회된 데이터가 없습니다.",
+                growing: true,
+                growingThreshold: 20,
+                multiSelect: false,
+                rememberSelections: false,
+                contentWidth: oDialogSize.contentWidth,
+                contentHeight: oDialogSize.contentHeight,
+                draggable: true,
+                resizable: true,
+                search: function (oEvent) {
+                    const sSearchValue = oEvent.getParameter("value");
+                    const oBinding = oEvent.getSource().getBinding("items");
+
+                    if (oBinding) {
+                        oBinding.filter(this._buildValueHelpFilters(oConfig, sSearchValue));
+                    }
+                }.bind(this),
+                confirm: function (oEvent) {
+                    this._applySelectedValueHelp(oConfig, oEvent.getParameter("selectedItem"));
+                }.bind(this)
+            });
+
+            aColumns.forEach(function (oColumnConfig) {
+                this._oValueHelpDialog.addColumn(new Column({
+                    header: new Text({
+                        text: oColumnConfig.label
+                    })
+                }));
+            }.bind(this));
+
+            this._oValueHelpDialog.setModel(oHelpModel, oConfig.model);
+            this._oValueHelpDialog.bindAggregation("items", {
+                path: oConfig.model + ">" + oConfig.path,
+                template: oTemplate,
+                templateShareable: false
+            });
+
+            this.getView().addDependent(this._oValueHelpDialog);
+            this._oValueHelpDialog.open();
+        },
+
+        /**
+         * Search Help Dialog 검색어를 OData Filter로 변환한다.
+         *
+         * 여러 검색 대상 필드는 OR 조건으로 묶는다.
+         * 자재코드는 DB 내부값이 ALPHA 형식일 수 있으므로, 숫자 검색어는 내부형식 검색 조건도 함께 추가한다.
+         */
+        _buildValueHelpFilters(oConfig, sSearchValue) {
+            const sValue = String(sSearchValue || "").trim();
+            let aFilters = [];
+            let sInternalMatnr;
+
+            if (!sValue) {
+                return [];
+            }
+
+            aFilters = (oConfig.searchFields || []).map(function (sProperty) {
+                return new Filter(sProperty, FilterOperator.Contains, sValue);
+            });
+
+            if (oConfig.alpha) {
+                sInternalMatnr = this._toInternalMatnr(sValue);
+
+                if (sInternalMatnr && sInternalMatnr !== sValue) {
+                    aFilters.push(new Filter("Matnr", FilterOperator.Contains, sInternalMatnr));
+                }
+            }
+
+            return aFilters.length ? [new Filter({
+                filters: aFilters,
+                and: false
+            })] : [];
+        },
+
+        /**
+         * Search Help가 연결된 코드형 조회조건의 존재 여부를 검증한다.
+         *
+         * 검증 대상은 현재 CDS/OData Help가 준비된 4개 코드 필드로 한정한다.
+         * - 회사코드(Bukrs)
+         * - 플랜트코드(Werks)
+         * - 공급업체코드(Lifnr)
+         * - 자재코드(Matnr)
+         *
+         * 공급업체명(Name1), 자재명(Maktx)은 부분검색 조건이므로 존재 검증 대상이 아니다.
+         */
+        _validateSearchHelpCodeExistence() {
+            const aValidationConfigs = this._getSearchHelpCodeValidationConfigs();
+
+            return Promise.all(aValidationConfigs.map(function (oConfig) {
+                return this._validateSingleSearchHelpCode(oConfig);
+            }.bind(this))).then(function (aResults) {
+                return aResults.reduce(function (aErrors, aResult) {
+                    return aErrors.concat(aResult || []);
+                }, []);
+            });
+        },
+
+        /**
+         * Search Help 존재 검증 대상 설정을 반환한다.
+         *
+         * helpType은 `_getValueHelpConfig`의 설정을 재사용한다.
+         * 이렇게 하면 Dialog와 존재 검증이 같은 named model / EntitySet을 바라보게 되어
+         * Search Help로 선택 가능한 값과 직접 입력 검증 기준이 어긋나지 않는다.
+         */
+        _getSearchHelpCodeValidationConfigs() {
+            return [
+                {
+                    helpType: "COMPANY",
+                    filterPath: "/Bukrs",
+                    property: "Bukrs",
+                    controlId: "idBukrsInput",
+                    labelKey: "bukrs"
+                },
+                {
+                    helpType: "PLANT",
+                    filterPath: "/Werks",
+                    property: "Werks",
+                    controlId: "idWerksInput",
+                    labelKey: "werks"
+                },
+                {
+                    helpType: "VENDOR",
+                    filterPath: "/Lifnr",
+                    property: "Lifnr",
+                    controlId: "idLifnrInput",
+                    labelKey: "lifnr"
+                },
+                {
+                    helpType: "MATERIAL",
+                    filterPath: "/Matnr",
+                    property: "Matnr",
+                    controlId: "idMatnrInput",
+                    labelKey: "matnr",
+                    alpha: true
+                }
+            ];
+        },
+
+        /**
+         * 단일 코드 필드의 존재 여부를 Help OData에서 확인한다.
+         *
+         * 빈 값은 조회조건 미입력으로 보므로 오류가 아니다.
+         * 자재코드는 화면 외부 형식(예: 100002)을 DB 내부 형식(예: 0000100002)으로 변환해 검증한다.
+         */
+        _validateSingleSearchHelpCode(oConfig) {
+            const oFilterModel = this.getView().getModel("filter");
+            const oHelpConfig = this._getValueHelpConfig(oConfig.helpType);
+            const sRawValue = String((oFilterModel && oFilterModel.getProperty(oConfig.filterPath)) || "").trim();
+            const sCheckValue = oConfig.alpha ? this._toInternalMatnr(sRawValue) : sRawValue;
+
+            if (!sRawValue) {
+                return Promise.resolve([]);
+            }
+
+            if (!oHelpConfig) {
+                return Promise.resolve([
+                    this._createCodeExistenceValidationError(oConfig)
+                ]);
+            }
+
+            return this._readNamedEntitySet(
+                oHelpConfig.model,
+                oHelpConfig.path,
+                [new Filter(oConfig.property, FilterOperator.EQ, sCheckValue)],
+                { "$top": 1 }
+            ).then(function (aRows) {
+                return aRows.length > 0 ? [] : [
+                    this._createCodeExistenceValidationError(oConfig)
+                ];
+            }.bind(this));
+        },
+
+        /**
+         * named OData model의 EntitySet을 Promise로 읽는다.
+         *
+         * Main ODataModel이 아닌 Search Help 전용 named model을 사용해야 하므로
+         * `_readEntitySet`과 분리했다.
+         */
+        _readNamedEntitySet(sModelName, sPath, aFilters, mUrlParameters) {
+            const oModel = this.getOwnerComponent().getModel(sModelName);
+
+            return new Promise(function (resolve, reject) {
+                if (!oModel || typeof oModel.read !== "function") {
+                    reject(new Error("Named ODataModel is not available: " + sModelName));
+                    return;
+                }
+
+                oModel.read(sPath, {
+                    filters: aFilters || [],
+                    urlParameters: mUrlParameters || {},
+                    success: function (oData) {
+                        resolve(oData && Array.isArray(oData.results) ? oData.results : []);
+                    },
+                    error: reject
+                });
+            });
+        },
+
+        /**
+         * 코드 존재 여부 검증 오류를 MessagePopover용 객체로 만든다.
+         */
+        _createCodeExistenceValidationError(oConfig) {
+            const sLabel = this._getText(oConfig.labelKey);
+
+            return this._createValidationError(
+                oConfig.controlId,
+                this._getText("validationCodeNotFound", [sLabel]) || sLabel + "에 존재하지 않는 값입니다.",
+                sLabel
+            );
+        },
+
+        /**
+         * Search Help에서 선택한 값을 filter 모델에 반영한다.
+         *
+         * 공급업체와 자재는 코드와 명칭을 함께 입력한다.
+         */
+        _applySelectedValueHelp(oConfig, oSelectedItem) {
+            const oContext = oSelectedItem && oSelectedItem.getBindingContext(oConfig.model);
+            const oData = oContext && oContext.getObject();
+            const oFilterModel = this.getView().getModel("filter");
+
+            if (!oData || !oFilterModel) {
+                return;
+            }
+
+            Object.keys(oConfig.targetFields || {}).forEach(function (sProperty) {
+                const oTarget = oConfig.targetFields[sProperty];
+                let vValue = oData[sProperty];
+
+                if (oConfig.alpha && sProperty === "Matnr") {
+                    vValue = this._toExternalMatnr(vValue);
+                }
+
+                oFilterModel.setProperty(oTarget.path, vValue || "");
+                this._setInputValueState(oTarget.controlId, "None", "");
+            }.bind(this));
+        },
+
+        /**
+         * Search Help Dialog 셀 표시값을 보정한다.
+         */
+        _formatValueHelpCell(oColumnConfig, vValue) {
+            if (oColumnConfig.formatter === "matnrExternal") {
+                return this._toExternalMatnr(vValue);
+            }
+
+            return vValue || "";
+        },
+
+        /**
+         * 자재코드를 DB 조회용 ALPHA 내부 형식으로 변환한다.
+         */
+        _toInternalMatnr(sValue) {
+            const sMatnr = String(sValue || "").trim();
+
+            if (!sMatnr) {
+                return "";
+            }
+
+            if (/^\d+$/.test(sMatnr) && sMatnr.length < 10) {
+                return sMatnr.padStart(10, "0");
+            }
+
+            return sMatnr;
+        },
+
+        /**
+         * 자재코드를 화면 표시용 외부 형식으로 변환한다.
+         */
+        _toExternalMatnr(sValue) {
+            const sMatnr = String(sValue || "").trim();
+
+            if (!sMatnr) {
+                return "";
+            }
+
+            return sMatnr.replace(/^0+/, "") || "0";
         },
 
         /**

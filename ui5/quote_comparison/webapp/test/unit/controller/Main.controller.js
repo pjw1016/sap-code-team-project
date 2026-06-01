@@ -35,7 +35,11 @@ sap.ui.define([
 
 		oAppController.getOwnerComponent = function () {
 			return {
-				getModel: function () {
+				getModel: function (sName) {
+					if (sName && oOptions.namedModels) {
+						return oOptions.namedModels[sName] || null;
+					}
+
 					return oOptions.odataModel || null;
 				}
 			};
@@ -1422,6 +1426,115 @@ sap.ui.define([
 		assert.strictEqual(oFixture.models.messages.getProperty("/count"), 2, "Both date fields receive validation messages.");
 		assert.strictEqual(oFixture.models.messages.getProperty("/items/0/controlId"), "idDocDateFromPicker", "From field is linked.");
 		assert.strictEqual(oFixture.models.messages.getProperty("/items/1/controlId"), "idDocDateToPicker", "To field is linked.");
+	});
+
+	QUnit.test("onSearch should stop and show MessagePopover when a typed vendor code does not exist", function (assert) {
+		var done = assert.async();
+		var bLoadCalled = false;
+		var bPopoverOpened = false;
+		var oVendorInput = {
+			setValueState: function (sState) {
+				this.valueState = sState;
+			},
+			setValueStateText: function (sText) {
+				this.valueStateText = sText;
+			}
+		};
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idDocDateFromPicker: { getValue: function () { return ""; }, setValueState: function () {}, setValueStateText: function () {} },
+				idDocDateToPicker: { getValue: function () { return ""; }, setValueState: function () {}, setValueStateText: function () {} },
+				idEindtFromPicker: { getValue: function () { return ""; }, setValueState: function () {}, setValueStateText: function () {} },
+				idEindtToPicker: { getValue: function () { return ""; }, setValueState: function () {}, setValueStateText: function () {} },
+				idLifnrInput: oVendorInput
+			},
+			namedModels: {
+				vendorHelp: {
+					read: function (sPath, mParameters) {
+						assert.strictEqual(sPath, "/ZCDS_D3_MM_0013", "Vendor Help EntitySet is used for existence validation.");
+						assert.strictEqual(mParameters.filters[0].sPath, "Lifnr", "Vendor code is checked by Lifnr.");
+						assert.strictEqual(mParameters.filters[0].oValue1, "V99999", "Typed vendor code is passed to the Help OData.");
+						mParameters.success({ results: [] });
+					}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.filter.setProperty("/Lifnr", "V99999");
+		oFixture.controller._loadRfqHeaders = function () {
+			bLoadCalled = true;
+			return Promise.resolve([]);
+		};
+		oFixture.controller._openValidationMessagePopoverDelayed = function () {
+			bPopoverOpened = true;
+		};
+		oFixture.controller._getText = function (sKey, aArgs) {
+			var mText = {
+				lifnr: "공급업체코드",
+				validationCodeNotFound: "{0}에 존재하지 않는 값입니다.",
+				validationMessageDescription: "메시지를 선택하면 해당 조회조건으로 이동합니다.",
+				validationErrorCount: "{0}"
+			};
+			var sText = mText[sKey] || sKey;
+
+			if (aArgs) {
+				aArgs.forEach(function (sArg, iIndex) {
+					sText = sText.replace("{" + iIndex + "}", sArg);
+				});
+			}
+
+			return sText;
+		};
+
+		oFixture.controller.onSearch().then(function (vResult) {
+			assert.strictEqual(vResult, false, "Search returns false when code existence validation fails.");
+			assert.strictEqual(bLoadCalled, false, "RFQHeaderSet is not read.");
+			assert.strictEqual(bPopoverOpened, true, "Validation MessagePopover is requested.");
+			assert.strictEqual(oFixture.models.messages.getProperty("/count"), 1, "One validation message is stored.");
+			assert.strictEqual(oFixture.models.messages.getProperty("/items/0/controlId"), "idLifnrInput", "Vendor input is linked.");
+			assert.strictEqual(oFixture.models.messages.getProperty("/items/0/title"), "공급업체코드에 존재하지 않는 값입니다.", "Message uses the field label.");
+			assert.strictEqual(oVendorInput.valueState, "Error", "Vendor input is marked as an error.");
+			done();
+		});
+	});
+
+	QUnit.test("onSearch should validate external material code with ALPHA input value", function (assert) {
+		var done = assert.async();
+		var bLoadCalled = false;
+		var oFixture = createControllerWithFakeView({
+			controls: {
+				idDocDateFromPicker: { getValue: function () { return ""; }, setValueState: function () {}, setValueStateText: function () {} },
+				idDocDateToPicker: { getValue: function () { return ""; }, setValueState: function () {}, setValueStateText: function () {} },
+				idEindtFromPicker: { getValue: function () { return ""; }, setValueState: function () {}, setValueStateText: function () {} },
+				idEindtToPicker: { getValue: function () { return ""; }, setValueState: function () {}, setValueStateText: function () {} },
+				idMatnrInput: { setValueState: function () {}, setValueStateText: function () {} }
+			},
+			namedModels: {
+				materialHelp: {
+					read: function (sPath, mParameters) {
+						assert.strictEqual(sPath, "/ZCDS_D3_MM_0014", "Material Help EntitySet is used.");
+						assert.strictEqual(mParameters.filters[0].sPath, "Matnr", "Material code is checked by Matnr.");
+						assert.strictEqual(mParameters.filters[0].oValue1, "0000100002", "External material code is converted to ALPHA input.");
+						mParameters.success({ results: [{ Matnr: "0000100002", Maktx: "Kids Frame" }] });
+					}
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.filter.setProperty("/Matnr", "100002");
+		oFixture.controller._loadRfqHeaders = function () {
+			bLoadCalled = true;
+			return Promise.resolve([]);
+		};
+		oFixture.controller._openValidationMessagePopoverDelayed = function () {};
+
+		oFixture.controller.onSearch().then(function () {
+			assert.strictEqual(bLoadCalled, true, "Search continues when the material exists.");
+			assert.strictEqual(oFixture.models.messages.getProperty("/count"), 0, "No validation message remains.");
+			done();
+		});
 	});
 
 	QUnit.test("onSearch should load RFQHeaderSet and update Begin column models", function (assert) {
