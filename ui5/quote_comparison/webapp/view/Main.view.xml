@@ -734,10 +734,10 @@
                                                 <Text text="{i18n>matnr}"/>
                                             </Column>
                                             <Column minScreenWidth="25rem" demandPopin="true">
-                                                <Text text="{i18n>reqQty}"/>
+                                                <Text text="{i18n>eindt}"/>
                                             </Column>
                                             <Column minScreenWidth="30rem" demandPopin="true">
-                                                <Text text="{i18n>eindt}"/>
+                                                <Text text="{i18n>reqQty}"/>
                                             </Column>
                                             <Column minScreenWidth="35rem" demandPopin="true">
                                                 <Text text="{i18n>awardStatus}"/>
@@ -762,10 +762,10 @@
                                                     <ObjectIdentifier
                                                         title="{work>Matnr}"
                                                         text="{work>Maktx}"/>
+                                                    <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
                                                     <ObjectNumber
                                                         number="{path: 'work>ReqQty', formatter: '.formatter.formatQuantity'}"
                                                         unit="{work>Meins}"/>
-                                                    <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
                                                     <ObjectStatus
                                                         text="{work>ItemStatusText}"
                                                         state="{path: 'work>ItemStatus', formatter: '.formatter.formatItemStatusState'}"/>
@@ -857,6 +857,7 @@
                                                 <Button
                                                     text="{i18n>autoRecommend}"
                                                     type="Transparent"
+                                                    enabled="{= ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"
                                                     press=".onApplyAutoRecommend"/>
                                                 <Button
                                                     text="{i18n>mqDetail}"
@@ -873,7 +874,7 @@
                                                 <table:template>
                                                     <RadioButton
                                                         selected="{work>UiSelected}"
-                                                        enabled="{= ${work>CanSelect} === 'X' }"
+                                                        enabled="{= ${work>CanSelect} === 'X' &amp;&amp; ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"
                                                         groupName="mqCompareSelection"
                                                         tooltip="{work>BlockReason}"
                                                         select=".onMqRadioSelect"/>
@@ -925,6 +926,24 @@
                                             </table:Column>
                                             <table:Column width="6rem">
                                                 <table:label>
+                                                    <Label text="{i18n>eindt}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="8rem">
+                                                <table:label>
+                                                    <Label text="{i18n>netwrKrw}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectNumber
+                                                        number="{path: 'work>NetwrKrw', formatter: '.formatter.formatAmount'}"
+                                                        unit="{work>Kwaers}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="6rem">
+                                                <table:label>
                                                     <Label text="{i18n>quoteQty}"/>
                                                 </table:label>
                                                 <table:template>
@@ -964,24 +983,6 @@
                                                         number="{path: 'work>Kursf', formatter: '.formatter.formatExchangeRate'}"/>
                                                 </table:template>
                                             </table:Column>
-                                            <table:Column width="8rem">
-                                                <table:label>
-                                                    <Label text="{i18n>netwrKrw}"/>
-                                                </table:label>
-                                                <table:template>
-                                                    <ObjectNumber
-                                                        number="{path: 'work>NetwrKrw', formatter: '.formatter.formatAmount'}"
-                                                        unit="{work>Kwaers}"/>
-                                                </table:template>
-                                            </table:Column>
-                                            <table:Column width="6rem">
-                                                <table:label>
-                                                    <Label text="{i18n>eindt}"/>
-                                                </table:label>
-                                                <table:template>
-                                                    <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
-                                                </table:template>
-                                            </table:Column>
                                             <table:Column width="6rem">
                                                 <table:label>
                                                     <Label text="{i18n>currentAward}"/>
@@ -1016,12 +1017,12 @@
                         <Button
                             text="{i18n>saveAward}"
                             type="Accept"
-                            enabled="{= !!${work>/SelectedMq/MqNo} }"
+                            enabled="{= !!${work>/SelectedMq/MqNo} &amp;&amp; ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"
                             press=".onSaveAward"/>
                         <Button
                             text="{i18n>cancelAward}"
                             type="Reject"
-                            enabled="{= ${work>/SelectedRfqItem/CanCancelAward} === 'X' }"
+                            enabled="{= ${work>/SelectedRfqItem/CanCancelAward} === 'X' &amp;&amp; ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"
                             press=".onCancelAward"/>
                     </OverflowToolbar>
                 </uxap:footer>

@@ -438,7 +438,7 @@ sap.ui.define([
         onMqRadioSelect(oEvent) {
             const oSelectedRow = this._getObjectFromEventSource(oEvent);
 
-            if (!oSelectedRow || oSelectedRow.CanSelect !== "X") {
+            if (this._isSelectedRfqItemPoCreated() || !oSelectedRow || oSelectedRow.CanSelect !== "X") {
                 return;
             }
 
@@ -455,6 +455,11 @@ sap.ui.define([
          * CanSelect가 X가 아니면 채택 대상으로 자동 지정하지 않는다.
          */
         onApplyAutoRecommend() {
+            if (this._isSelectedRfqItemPoCreated()) {
+                this._showToast(this._getText("msgPoCreatedNoChange") || "이미 PO가 생성되어 변경할 수 없습니다.");
+                return;
+            }
+
             const oRecommendedRow = this._findSelectableRecommendedMq();
 
             if (!oRecommendedRow) {
@@ -502,6 +507,11 @@ sap.ui.define([
             const oWorkModel = this.getView().getModel("work");
             const oSelectedMq = oWorkModel ? (oWorkModel.getProperty("/SelectedMq") || {}) : {};
 
+            if (this._isSelectedRfqItemPoCreated()) {
+                this._showToast(this._getText("msgPoCreatedNoChange") || "이미 PO가 생성되어 변경할 수 없습니다.");
+                return Promise.resolve(null);
+            }
+
             if (!oSelectedMq.MqNo || !oSelectedMq.MqItem) {
                 this._showToast(this._getText("msgSelectMq") || "채택할 MQ를 선택하세요.");
                 return Promise.resolve(null);
@@ -538,6 +548,11 @@ sap.ui.define([
             const sAwardMqNo = oSelectedRfqItem.AwardMqNo;
             const sAwardMqItem = oSelectedRfqItem.AwardMqItem;
 
+            if (this._isSelectedRfqItemPoCreated(oSelectedRfqItem)) {
+                this._showToast(this._getText("msgPoCreatedNoChange") || "이미 PO가 생성되어 변경할 수 없습니다.");
+                return Promise.resolve(null);
+            }
+
             if (oSelectedRfqItem.CanCancelAward !== "X" || !sAwardMqNo || !sAwardMqItem) {
                 this._showToast(this._getText("msgNoAwardToCancel") || "채택취소할 MQ가 없습니다.");
                 return Promise.resolve(null);
@@ -567,6 +582,11 @@ sap.ui.define([
             const oDetailModel = this.getView().getModel("detail");
             const oMqDetail = oDetailModel ? (oDetailModel.getProperty("/MqDetail") || {}) : {};
             const oCompareRow = this._findMqCompareRow(oMqDetail.MqNo, oMqDetail.MqItem);
+
+            if (this._isSelectedRfqItemPoCreated()) {
+                this._showToast(this._getText("msgPoCreatedNoChange") || "이미 PO가 생성되어 변경할 수 없습니다.");
+                return;
+            }
 
             /*
              * Dialog의 "이 MQ 선택"은 상세 조회가 아니라 채택 대상 지정 기능이다.
@@ -876,6 +896,22 @@ sap.ui.define([
             const iNetwrKrw = Number(oRow && oRow.NetwrKrw);
 
             return Number.isFinite(iNetwrKrw) ? iNetwrKrw : Number.POSITIVE_INFINITY;
+        },
+
+        /**
+         * 현재 선택된 RFQ Item이 이미 PO 생성 완료 상태인지 확인한다.
+         *
+         * PO 생성 후에는 채택/채택취소처럼 DB 상태를 바꾸는 작업을 허용하면 안 된다.
+         * Backend에서도 최종 차단하지만, 사용자가 변경 가능한 화면으로 오해하지 않도록
+         * UI 이벤트에서도 한 번 더 막는다.
+         */
+        _isSelectedRfqItemPoCreated(oRfqItem) {
+            const oWorkModel = this.getView().getModel("work");
+            const oSelectedRfqItem = oRfqItem || (oWorkModel ? (oWorkModel.getProperty("/SelectedRfqItem") || {}) : {});
+
+            return oSelectedRfqItem.ItemStatus === "PO"
+                || oSelectedRfqItem.PoCreatedYn === "X"
+                || !!oSelectedRfqItem.PoNo;
         },
 
         _setSelectedMq(oSelectedRow) {

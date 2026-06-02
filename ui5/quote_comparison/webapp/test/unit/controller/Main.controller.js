@@ -684,6 +684,45 @@ sap.ui.define([
 		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), oPreviousSelectedMq, "Selected MQ model is not overwritten by an unselectable row.");
 	});
 
+	QUnit.test("onMqRadioSelect should ignore all MQ rows when the selected RFQ item already has a PO", function (assert) {
+		var aRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000001",
+			MqItem: "00010",
+			CanSelect: "X",
+			UiSelected: false
+		}];
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedRfqItem", {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			ItemStatus: "PO",
+			PoCreatedYn: "X",
+			PoNo: "4500000001"
+		});
+		oFixture.models.work.setProperty("/MqCompareRows", aRows);
+
+		oFixture.controller.onMqRadioSelect({
+			getSource: function () {
+				return {
+					getBindingContext: function () {
+						return {
+							getObject: function () {
+								return aRows[0];
+							}
+						};
+					}
+				};
+			}
+		});
+
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/0/UiSelected"), false, "MQ row stays unselected even if CanSelect is X.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), {}, "Selected MQ is not set for a PO-created item.");
+	});
+
 	QUnit.test("onOpenMqDetailFromRow should read detail for the clicked MQ row regardless of selectability", function (assert) {
 		var done = assert.async();
 		var oClickedRow = {
@@ -939,6 +978,34 @@ sap.ui.define([
 		assert.strictEqual(sToastMessage, "?좏깮 媛?ν븳 異붿쿇 MQ媛 ?놁뒿?덈떎.", "User is informed when no selectable recommendation exists.");
 	});
 
+	QUnit.test("onApplyAutoRecommend should not select a recommendation when the selected RFQ item already has a PO", function (assert) {
+		var aRows = [{
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			RecommendYn: "X",
+			CanSelect: "X",
+			UiSelected: false
+		}];
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedRfqItem", {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			ItemStatus: "PO",
+			PoCreatedYn: "X"
+		});
+		oFixture.models.work.setProperty("/MqCompareRows", aRows);
+		oFixture.controller._showToast = function () {};
+
+		oFixture.controller.onApplyAutoRecommend();
+
+		assert.strictEqual(oFixture.models.work.getProperty("/MqCompareRows/0/UiSelected"), false, "Recommended MQ is not selected for a PO-created item.");
+		assert.deepEqual(oFixture.models.work.getProperty("/SelectedMq"), {}, "Selected MQ remains empty.");
+	});
+
 	QUnit.test("onSaveAward should MERGE AWARD for the selected MQ and refresh comparison data", function (assert) {
 		var done = assert.async();
 		var bRefreshed = false;
@@ -1008,6 +1075,35 @@ sap.ui.define([
 		return oFixture.controller.onSaveAward().then(function () {
 			assert.notOk(bUpdateCalled, "Backend update is not called without a selected MQ.");
 			assert.strictEqual(sToastMessage, "梨꾪깮??MQ瑜??좏깮?섏꽭??", "User is asked to select an MQ first.");
+		});
+	});
+
+	QUnit.test("onSaveAward should not call MERGE when the selected RFQ item already has a PO", function (assert) {
+		var bUpdateCalled = false;
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				update: function () {
+					bUpdateCalled = true;
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedRfqItem", {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			ItemStatus: "PO",
+			PoCreatedYn: "X"
+		});
+		oFixture.models.work.setProperty("/SelectedMq", {
+			MqNo: "MQ70000002",
+			MqItem: "00010",
+			CanSelect: "X"
+		});
+		oFixture.controller._showToast = function () {};
+
+		return oFixture.controller.onSaveAward().then(function () {
+			assert.notOk(bUpdateCalled, "Backend update is not called for a PO-created item.");
 		});
 	});
 
@@ -1095,6 +1191,33 @@ sap.ui.define([
 		return oFixture.controller.onCancelAward().then(function () {
 			assert.notOk(bUpdateCalled, "Backend update is not called without a cancellable awarded MQ.");
 			assert.strictEqual(sToastMessage, "梨꾪깮痍⑥냼??MQ媛 ?놁뒿?덈떎.", "User is informed that there is no award to cancel.");
+		});
+	});
+
+	QUnit.test("onCancelAward should not call MERGE when the selected RFQ item already has a PO", function (assert) {
+		var bUpdateCalled = false;
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				update: function () {
+					bUpdateCalled = true;
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedRfqItem", {
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			ItemStatus: "PO",
+			PoCreatedYn: "X",
+			AwardMqNo: "MQ70000002",
+			AwardMqItem: "00010",
+			CanCancelAward: "X"
+		});
+		oFixture.controller._showToast = function () {};
+
+		return oFixture.controller.onCancelAward().then(function () {
+			assert.notOk(bUpdateCalled, "Backend update is not called for a PO-created item.");
 		});
 	});
 
