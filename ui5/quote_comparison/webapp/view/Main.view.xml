@@ -726,6 +726,24 @@
                                         growingThreshold="20"
                                         noDataText="{i18n>msgNoData}"
                                         selectionChange=".onRfqItemSelectionChange">
+                                        <headerToolbar>
+                                            <OverflowToolbar>
+                                                <Title
+                                                    text="{= ${i18n>rfqItemTabTitle} + ' (' + ${work>/RfqItems}.length + ')' }"
+                                                    level="H3"/>
+                                                <ToolbarSpacer/>
+                                                <Button
+                                                    text="{i18n>bulkAward}"
+                                                    type="Accept"
+                                                    enabled="{= !!${work>/SelectedRfq/RfqNo} &amp;&amp; ${work>/RfqItems}.length > 0 &amp;&amp; ${work>/SelectedRfq/AwardStatus} !== 'PO' }"
+                                                    press=".onBulkAward"/>
+                                                <Button
+                                                    text="{i18n>bulkCancelAward}"
+                                                    type="Reject"
+                                                    enabled="{= !!${work>/SelectedRfq/RfqNo} &amp;&amp; ${work>/RfqItems}.length > 0 &amp;&amp; ${work>/SelectedRfq/AwardStatus} !== 'PO' }"
+                                                    press=".onBulkCancelAward"/>
+                                            </OverflowToolbar>
+                                        </headerToolbar>
                                         <columns>
                                             <Column width="6rem">
                                                 <Text text="{i18n>rfqItem}"/>
@@ -1013,6 +1031,15 @@
 
                 <uxap:footer>
                     <OverflowToolbar>
+                        <Button
+                            id="idProcessMessageButton"
+                            icon="{processMessages>/buttonIcon}"
+                            type="{processMessages>/buttonType}"
+                            text="{processMessages>/buttonText}"
+                            tooltip="{i18n>processMessageButtonTooltip}"
+                            visible="{= ${processMessages>/count} > 0 }"
+                            press=".onProcessMessagePopoverPress"
+                            ariaHasPopup="Dialog"/>
                         <ToolbarSpacer/>
                         <Button
                             text="{i18n>saveAward}"

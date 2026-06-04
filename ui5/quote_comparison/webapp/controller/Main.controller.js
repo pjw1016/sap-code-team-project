@@ -36,6 +36,11 @@ sap.ui.define([
                 this._oValidationMessagePopover = null;
             }
 
+            if (this._oProcessMessagePopover) {
+                this._oProcessMessagePopover.destroy();
+                this._oProcessMessagePopover = null;
+            }
+
             if (this._oValueHelpDialog) {
                 this._oValueHelpDialog.destroy();
                 this._oValueHelpDialog = null;
@@ -60,6 +65,7 @@ sap.ui.define([
             oView.setModel(new JSONModel(this._createInitialWorkData()), "work");
             oView.setModel(new JSONModel(this._createInitialDetailData()), "detail");
             oView.setModel(new JSONModel(this._createEmptyValidationMessages()), "messages");
+            oView.setModel(new JSONModel(this._createEmptyProcessMessages()), "processMessages");
         },
 
         /**
@@ -158,6 +164,23 @@ sap.ui.define([
         },
 
         /**
+         * 채택/채택취소 같은 업무 처리 결과 MessagePopover 모델의 초기값을 반환한다.
+         *
+         * 조회조건 검증 메시지는 사용자가 조회 전에 입력값을 고쳐야 하는 오류이고,
+         * 업무 처리 메시지는 채택/채택취소 실행 후 어떤 RFQ Item이 처리되었는지 알려주는 결과다.
+         * 두 메시지를 같은 모델에 섞으면 사용자가 원인과 결과를 구분하기 어렵기 때문에 별도 모델로 둔다.
+         */
+        _createEmptyProcessMessages() {
+            return {
+                items: [],
+                count: 0,
+                buttonText: "",
+                buttonIcon: "sap-icon://message-popup",
+                buttonType: "Transparent"
+            };
+        },
+
+        /**
          * 조회 버튼 이벤트.
          *
          * RFQ Header 조회 전에 조회조건 유효성 검증을 먼저 수행한다.
@@ -232,6 +255,91 @@ sap.ui.define([
             if (oSource) {
                 this._getValidationMessagePopover().openBy(oSource);
             }
+        },
+
+        /**
+         * 채택/채택취소 업무 처리 결과 MessagePopover 버튼 이벤트.
+         *
+         * 조회조건 오류 MessagePopover와 별개로 운영한다.
+         * 일괄 채택 기능은 여러 RFQ Item을 대상으로 하므로 성공/제외/오류 메시지가 동시에 발생할 수 있다.
+         * 따라서 결과 메시지 전용 Popover를 두어 사용자가 처리 결과를 한 곳에서 확인하도록 한다.
+         */
+        onProcessMessagePopoverPress(oEvent) {
+            const oSource = oEvent && oEvent.getSource && oEvent.getSource();
+
+            if (oSource) {
+                this._getProcessMessagePopover().openBy(oSource);
+            }
+        },
+
+        /**
+         * RFQ Item 목록 헤더의 "일괄 채택" 버튼 이벤트.
+         *
+         * QuotationItemSet 단건 MERGE를 RFQ Item별로 순차 호출하고,
+         * 각 Item의 성공/제외/오류 결과를 footer MessagePopover에 표시한다.
+         */
+        onBulkAward() {
+            const oWorkModel = this.getView().getModel("work");
+            const oSelectedRfq = oWorkModel ? (oWorkModel.getProperty("/SelectedRfq") || {}) : {};
+            const aRfqItems = oWorkModel ? (oWorkModel.getProperty("/RfqItems") || []) : [];
+
+            if (!oSelectedRfq.RfqNo) {
+                this._setProcessMessages([
+                    this._createProcessMessage(
+                        "Warning",
+                        this._getText("msgSelectRfq") || "RFQ를 먼저 선택하세요.",
+                        this._getText("bulkAward") || "일괄 채택"
+                    )
+                ]);
+                this._openProcessMessagePopoverDelayed();
+                return Promise.resolve(false);
+            }
+
+            return this._confirmAction(
+                this._getText("msgConfirmBulkAward") ||
+                "선택 RFQ의 미채택 RFQ Item에 대해 자동추천 MQ를 일괄 채택하시겠습니까?"
+            ).then((bConfirmed) => {
+                if (!bConfirmed) {
+                    return false;
+                }
+
+                return this._executeBulkAward(oSelectedRfq, aRfqItems);
+            });
+        },
+
+        /**
+         * RFQ Item 목록 헤더의 "일괄 채택취소" 버튼 이벤트.
+         *
+         * QuotationItemSet 단건 MERGE를 RFQ Item별로 순차 호출하고,
+         * PO 미생성 채택 Item만 채택취소 대상으로 처리한다.
+         */
+        onBulkCancelAward() {
+            const oWorkModel = this.getView().getModel("work");
+            const oSelectedRfq = oWorkModel ? (oWorkModel.getProperty("/SelectedRfq") || {}) : {};
+            const aRfqItems = oWorkModel ? (oWorkModel.getProperty("/RfqItems") || []) : [];
+
+            if (!oSelectedRfq.RfqNo) {
+                this._setProcessMessages([
+                    this._createProcessMessage(
+                        "Warning",
+                        this._getText("msgSelectRfq") || "RFQ를 먼저 선택하세요.",
+                        this._getText("bulkCancelAward") || "일괄 채택취소"
+                    )
+                ]);
+                this._openProcessMessagePopoverDelayed();
+                return Promise.resolve(false);
+            }
+
+            return this._confirmAction(
+                this._getText("msgConfirmBulkCancelAward") ||
+                "선택 RFQ의 채택 가능 RFQ Item에 대해 일괄 채택취소하시겠습니까?"
+            ).then((bConfirmed) => {
+                if (!bConfirmed) {
+                    return false;
+                }
+
+                return this._executeBulkCancelAward(oSelectedRfq, aRfqItems);
+            });
         },
 
         /**
@@ -1527,6 +1635,377 @@ sap.ui.define([
             });
         },
 
+        /**
+         * 선택 RFQ의 RFQ Item을 순차적으로 일괄 채택한다.
+         *
+         * 처리 기준:
+         * - PO 생성 Item은 변경하지 않는다.
+         * - 이미 채택된 Item은 중복 채택하지 않고 결과 메시지만 남긴다.
+         * - 미채택 Item은 MQCompareSet을 RFQ Item 단위로 조회한 뒤 Backend가 계산한
+         *   RecommendYn = X, CanSelect = X MQ만 채택한다.
+         * - 각 Item의 성공/제외/오류 결과는 footer MessagePopover에 누적 표시한다.
+         */
+        _executeBulkAward(oSelectedRfq, aRfqItems) {
+            const oViewModel = this.getView().getModel("view");
+            const aItems = aRfqItems || [];
+            const aResults = [];
+
+            if (oViewModel) {
+                oViewModel.setProperty("/Busy", true);
+            }
+
+            if (!aItems.length) {
+                this._setProcessMessages([
+                    this._createProcessMessage(
+                        "Warning",
+                        this._getText("msgBulkNoTarget") || "처리 대상 RFQ Item이 없습니다.",
+                        this._getText("bulkAward") || "일괄 채택"
+                    )
+                ]);
+                this._openProcessMessagePopoverDelayed();
+
+                if (oViewModel) {
+                    oViewModel.setProperty("/Busy", false);
+                }
+
+                return Promise.resolve(false);
+            }
+
+            return this._executeSequential(aItems, (oItem) => {
+                return this._processBulkAwardItem(oSelectedRfq, oItem).then((oResult) => {
+                    aResults.push(oResult);
+                });
+            }).then(() => {
+                const aMessages = aResults.map((oResult) => oResult.message);
+                const bChanged = aResults.some((oResult) => oResult.changed);
+
+                this._setProcessMessages(aMessages);
+
+                if (!bChanged) {
+                    this._openProcessMessagePopoverDelayed();
+                    return false;
+                }
+
+                return this._refreshAfterAward().catch((oError) => {
+                    aMessages.push(this._createProcessMessage(
+                        "Error",
+                        this._getText("msgBulkRefreshError") ||
+                        "일괄 처리 후 화면 데이터 갱신 중 오류가 발생했습니다.",
+                        this._getText("bulkAward") || "일괄 채택",
+                        this._getODataErrorText(oError)
+                    ));
+                    this._setProcessMessages(aMessages);
+                }).then(() => {
+                    this._openProcessMessagePopoverDelayed();
+                    return true;
+                });
+            }).finally(() => {
+                if (oViewModel) {
+                    oViewModel.setProperty("/Busy", false);
+                }
+            });
+        },
+
+        /**
+         * RFQ Item 1건에 대한 일괄 채택 처리를 수행한다.
+         *
+         * 단건 채택 버튼의 `_updateQuotationItem`은 toast와 refresh를 함께 수행하므로
+         * 일괄 처리에서는 refresh 없는 `_updateQuotationItemForBulk`를 사용한다.
+         */
+        _processBulkAwardItem(oSelectedRfq, oRfqItem) {
+            const sRfqItem = this._getBulkItemNo(oRfqItem);
+            const sSubtitle = this._getText("bulkAward") || "일괄 채택";
+
+            if (this._isSelectedRfqItemPoCreated(oRfqItem)) {
+                return Promise.resolve({
+                    changed: false,
+                    message: this._createProcessMessage(
+                        "Error",
+                        this._getText("msgBulkSkipPoCreated", [sRfqItem]) ||
+                        "RFQ Item " + sRfqItem + ": 이미 PO가 생성되어 제외되었습니다.",
+                        sSubtitle
+                    )
+                });
+            }
+
+            if (this._isRfqItemAwarded(oRfqItem)) {
+                return Promise.resolve({
+                    changed: false,
+                    message: this._createProcessMessage(
+                        "Error",
+                        this._getText("msgBulkSkipAlreadyAwarded", [sRfqItem]) ||
+                        "RFQ Item " + sRfqItem + ": 이미 채택되어 제외되었습니다.",
+                        sSubtitle
+                    )
+                });
+            }
+
+            return this._readMqCompareRowsForBulkItem(oSelectedRfq, oRfqItem).then((aRows) => {
+                const oRecommendedMq = this._findSelectableRecommendedMqInRows(aRows);
+
+                if (!oRecommendedMq) {
+                    return {
+                        changed: false,
+                        message: this._createProcessMessage(
+                            "Error",
+                            this._getText("msgBulkSkipNoRecommend", [sRfqItem]) ||
+                            "RFQ Item " + sRfqItem + ": 선택 가능한 자동추천 MQ가 없어 제외되었습니다.",
+                            sSubtitle
+                        )
+                    };
+                }
+
+                return this._updateQuotationItemForBulk(
+                    oRecommendedMq.MqNo,
+                    oRecommendedMq.MqItem,
+                    "AWARD"
+                ).then(() => {
+                    return {
+                        changed: true,
+                        message: this._createProcessMessage(
+                            "Success",
+                            this._getText("msgBulkAwardSuccess", [sRfqItem, oRecommendedMq.MqNo, oRecommendedMq.MqItem]) ||
+                            "RFQ Item " + sRfqItem + ": 자동추천 MQ " + oRecommendedMq.MqNo + "/" + oRecommendedMq.MqItem + "가 채택되었습니다.",
+                            sSubtitle
+                        )
+                    };
+                });
+            }).catch((oError) => {
+                return {
+                    changed: false,
+                    message: this._createProcessMessage(
+                        "Error",
+                        this._getText("msgBulkAwardError", [sRfqItem]) ||
+                        "RFQ Item " + sRfqItem + ": 일괄 채택 처리 중 오류가 발생했습니다.",
+                        sSubtitle,
+                        this._getODataErrorText(oError)
+                    )
+                };
+            });
+        },
+
+        /**
+         * 선택 RFQ의 채택 가능 RFQ Item을 순차적으로 일괄 채택취소한다.
+         */
+        _executeBulkCancelAward(oSelectedRfq, aRfqItems) {
+            const oViewModel = this.getView().getModel("view");
+            const aItems = aRfqItems || [];
+            const aResults = [];
+
+            if (oViewModel) {
+                oViewModel.setProperty("/Busy", true);
+            }
+
+            if (!aItems.length) {
+                this._setProcessMessages([
+                    this._createProcessMessage(
+                        "Warning",
+                        this._getText("msgBulkNoTarget") || "처리 대상 RFQ Item이 없습니다.",
+                        this._getText("bulkCancelAward") || "일괄 채택취소"
+                    )
+                ]);
+                this._openProcessMessagePopoverDelayed();
+
+                if (oViewModel) {
+                    oViewModel.setProperty("/Busy", false);
+                }
+
+                return Promise.resolve(false);
+            }
+
+            return this._executeSequential(aItems, (oItem) => {
+                return this._processBulkCancelAwardItem(oItem).then((oResult) => {
+                    aResults.push(oResult);
+                });
+            }).then(() => {
+                const aMessages = aResults.map((oResult) => oResult.message);
+                const bChanged = aResults.some((oResult) => oResult.changed);
+
+                this._setProcessMessages(aMessages);
+
+                if (!bChanged) {
+                    this._openProcessMessagePopoverDelayed();
+                    return false;
+                }
+
+                return this._refreshAfterAward().catch((oError) => {
+                    aMessages.push(this._createProcessMessage(
+                        "Error",
+                        this._getText("msgBulkRefreshError") ||
+                        "일괄 처리 후 화면 데이터 갱신 중 오류가 발생했습니다.",
+                        this._getText("bulkCancelAward") || "일괄 채택취소",
+                        this._getODataErrorText(oError)
+                    ));
+                    this._setProcessMessages(aMessages);
+                }).then(() => {
+                    this._openProcessMessagePopoverDelayed();
+                    return true;
+                });
+            }).finally(() => {
+                if (oViewModel) {
+                    oViewModel.setProperty("/Busy", false);
+                }
+            });
+        },
+
+        /**
+         * RFQ Item 1건에 대한 일괄 채택취소 처리를 수행한다.
+         */
+        _processBulkCancelAwardItem(oRfqItem) {
+            const sRfqItem = this._getBulkItemNo(oRfqItem);
+            const sAwardMqNo = oRfqItem && oRfqItem.AwardMqNo;
+            const sAwardMqItem = oRfqItem && oRfqItem.AwardMqItem;
+            const sSubtitle = this._getText("bulkCancelAward") || "일괄 채택취소";
+
+            if (this._isSelectedRfqItemPoCreated(oRfqItem)) {
+                return Promise.resolve({
+                    changed: false,
+                    message: this._createProcessMessage(
+                        "Error",
+                        this._getText("msgBulkSkipPoCreated", [sRfqItem]) ||
+                        "RFQ Item " + sRfqItem + ": 이미 PO가 생성되어 제외되었습니다.",
+                        sSubtitle
+                    )
+                });
+            }
+
+            if (!oRfqItem || oRfqItem.CanCancelAward !== "X" || !sAwardMqNo || !sAwardMqItem) {
+                return Promise.resolve({
+                    changed: false,
+                    message: this._createProcessMessage(
+                        "Error",
+                        this._getText("msgBulkSkipNoAward", [sRfqItem]) ||
+                        "RFQ Item " + sRfqItem + ": 채택취소할 MQ가 없어 제외되었습니다.",
+                        sSubtitle
+                    )
+                });
+            }
+
+            return this._updateQuotationItemForBulk(
+                sAwardMqNo,
+                sAwardMqItem,
+                "CANCEL"
+            ).then(() => {
+                return {
+                    changed: true,
+                    message: this._createProcessMessage(
+                        "Success",
+                        this._getText("msgBulkCancelSuccess", [sRfqItem, sAwardMqNo, sAwardMqItem]) ||
+                        "RFQ Item " + sRfqItem + ": 채택 MQ " + sAwardMqNo + "/" + sAwardMqItem + "가 취소되었습니다.",
+                        sSubtitle
+                    )
+                };
+            }).catch((oError) => {
+                return {
+                    changed: false,
+                    message: this._createProcessMessage(
+                        "Error",
+                        this._getText("msgBulkCancelError", [sRfqItem]) ||
+                        "RFQ Item " + sRfqItem + ": 일괄 채택취소 처리 중 오류가 발생했습니다.",
+                        sSubtitle,
+                        this._getODataErrorText(oError)
+                    )
+                };
+            });
+        },
+
+        /**
+         * 일괄 채택용 MQCompareSet 조회.
+         *
+         * 일반 `_loadMqCompareForRfqItem`은 화면의 MQ 비교표와 차트를 갱신한다.
+         * 일괄 처리 중에는 사용자가 보고 있는 선택 Item/차트를 계속 유지해야 하므로
+         * work 모델을 변경하지 않는 별도 조회 helper를 사용한다.
+         */
+        _readMqCompareRowsForBulkItem(oSelectedRfq, oRfqItem) {
+            const sRfqNo = (oRfqItem && oRfqItem.RfqNo) || (oSelectedRfq && oSelectedRfq.RfqNo);
+            const sRfqItem = oRfqItem && oRfqItem.RfqItem;
+
+            if (!sRfqNo || !sRfqItem) {
+                return Promise.resolve([]);
+            }
+
+            return this._readEntitySet("/MQCompareSet", this._buildMqCompareFilters(sRfqNo, sRfqItem))
+                .then((aRows) => {
+                    return this._sortMqCompareRowsByNetwrKrw((aRows || []).map((oRow) => {
+                        return Object.assign({}, oRow);
+                    }));
+                });
+        },
+
+        _findSelectableRecommendedMqInRows(aRows) {
+            return (aRows || []).find((oRow) => {
+                return oRow && oRow.RecommendYn === "X" && oRow.CanSelect === "X";
+            }) || null;
+        },
+
+        _updateQuotationItemForBulk(sMqNo, sMqItem, sActionType) {
+            const sPath = this._createQuotationItemPath(sMqNo, sMqItem);
+
+            if (!sPath) {
+                return Promise.reject(new Error("MQ key is missing."));
+            }
+
+            return this._updateEntity(sPath, {
+                MqNo: sMqNo,
+                MqItem: sMqItem,
+                ActionType: sActionType
+            }, {
+                merge: true
+            });
+        },
+
+        _executeSequential(aItems, fnHandler) {
+            return (aItems || []).reduce((pChain, oItem) => {
+                return pChain.then(() => fnHandler(oItem));
+            }, Promise.resolve());
+        },
+
+        _isRfqItemAwarded(oRfqItem) {
+            /*
+             * 채택 여부는 상태 코드와 취소 가능 플래그를 기준으로 판단한다.
+             *
+             * 주의:
+             * AwardMqNo / AwardMqItem은 화면 표시나 후속 처리를 위해 내려오는 보조 식별값일 수 있다.
+             * 이 값만 보고 채택으로 판단하면, 미채택 Item인데도 "이미 채택"으로 오판할 수 있다.
+             * 실제로 채택된 Item은 Backend RFQItemSet에서 ItemStatus = A 또는 CanCancelAward = X로
+             * 내려오므로 이 두 값만 채택 판단 기준으로 사용한다.
+             */
+            return !!(oRfqItem && (
+                oRfqItem.ItemStatus === "A" ||
+                oRfqItem.CanCancelAward === "X"
+            ));
+        },
+
+        _getBulkItemNo(oRfqItem) {
+            return (oRfqItem && oRfqItem.RfqItem) || "-";
+        },
+
+        /**
+         * Gateway Business Exception / Technical Error에서 사용자에게 보여줄 수 있는
+         * 메시지를 최대한 추출한다.
+         */
+        _getODataErrorText(oError) {
+            const sDefaultMessage = this._getText("msgDefaultError") ||
+                "처리 중 오류가 발생했습니다. 잠시 후 다시 시도하세요.";
+            let oParsed;
+
+            if (!oError) {
+                return sDefaultMessage;
+            }
+
+            if (oError.responseText) {
+                try {
+                    oParsed = JSON.parse(oError.responseText);
+                    return (oParsed && oParsed.error && oParsed.error.message && oParsed.error.message.value) ||
+                        sDefaultMessage;
+                } catch (oParseError) {
+                    return oError.responseText;
+                }
+            }
+
+            return oError.message || sDefaultMessage;
+        },
+
         _loadMqDetail(sMqNo, sMqItem) {
             const oView = this.getView();
             const oViewModel = oView.getModel("view");
@@ -2291,6 +2770,33 @@ sap.ui.define([
         },
 
         /**
+         * 채택/채택취소 처리 결과 MessagePopover를 반환한다.
+         *
+         * 검증 MessagePopover와 동일한 `sap.m.MessagePopover` 패턴을 사용하지만,
+         * 바인딩 모델은 `processMessages`로 분리한다.
+         * 이렇게 하면 조회조건 오류와 업무 처리 결과가 서로 덮어쓰지 않는다.
+         */
+        _getProcessMessagePopover() {
+            if (!this._oProcessMessagePopover) {
+                this._oProcessMessagePopover = new MessagePopover({
+                    items: {
+                        path: "processMessages>/items",
+                        template: new MessageItem({
+                            type: "{processMessages>type}",
+                            title: "{processMessages>title}",
+                            subtitle: "{processMessages>subtitle}",
+                            description: "{processMessages>description}"
+                        })
+                    }
+                });
+
+                this.getView().addDependent(this._oProcessMessagePopover);
+            }
+
+            return this._oProcessMessagePopover;
+        },
+
+        /**
          * 유효성 검증 직후 MessagePopover를 자동으로 열기 위한 헬퍼다.
          *
          * messages 모델이 갱신된 직후에는 Footer 버튼이 아직 렌더링되지 않았을 수 있다.
@@ -2302,6 +2808,22 @@ sap.ui.define([
 
                 if (oButton && oButton.getVisible()) {
                     this._getValidationMessagePopover().openBy(oButton);
+                }
+            }.bind(this), 0);
+        },
+
+        /**
+         * 업무 처리 결과 MessagePopover를 자동으로 연다.
+         *
+         * RFQ Item Table headerToolbar의 결과 버튼은 processMessages 모델 갱신 후 렌더링될 수 있으므로
+         * 검증 MessagePopover와 동일하게 짧게 지연한 뒤 openBy 기준 컨트롤로 사용한다.
+         */
+        _openProcessMessagePopoverDelayed() {
+            setTimeout(function () {
+                const oButton = this.byId("idProcessMessageButton");
+
+                if (oButton && oButton.getVisible()) {
+                    this._getProcessMessagePopover().openBy(oButton);
                 }
             }.bind(this), 0);
         },
@@ -2502,6 +3024,21 @@ sap.ui.define([
         },
 
         /**
+         * 채택/채택취소 처리 결과 MessagePopover에 표시할 메시지 객체를 만든다.
+         *
+         * Backend 일괄 처리 연결 후에는 ABAP 응답의 MessageType/MessageText를
+         * 이 구조로 변환하면 단건 처리와 일괄 처리 결과를 같은 화면 패턴으로 표시할 수 있다.
+         */
+        _createProcessMessage(sType, sTitle, sSubtitle, sDescription) {
+            return {
+                type: sType || "Information",
+                title: sTitle || "",
+                subtitle: sSubtitle || "",
+                description: sDescription || ""
+            };
+        },
+
+        /**
          * 검증 오류 목록을 messages 모델에 반영하고 관련 필드의 ValueState도 갱신한다.
          */
         _setValidationMessages(aErrors) {
@@ -2529,6 +3066,36 @@ sap.ui.define([
                     buttonType: iCount ? "Negative" : "Transparent"
                 });
             }
+        },
+
+        /**
+         * 채택/채택취소 처리 결과를 processMessages 모델에 반영한다.
+         *
+         * Error가 하나라도 있으면 Negative, Warning이 있으면 Attention,
+         * 그 외에는 정보성 버튼으로 표시한다.
+         */
+        _setProcessMessages(aMessages) {
+            const oProcessMessagesModel = this.getView().getModel("processMessages");
+            const aItems = aMessages || [];
+            const iCount = aItems.length;
+            const bHasError = aItems.some(function (oMessage) {
+                return oMessage && oMessage.type === "Error";
+            });
+            const bHasWarning = aItems.some(function (oMessage) {
+                return oMessage && oMessage.type === "Warning";
+            });
+
+            if (!oProcessMessagesModel) {
+                return;
+            }
+
+            oProcessMessagesModel.setData({
+                items: aItems,
+                count: iCount,
+                buttonText: iCount ? this._getText("processMessageCount", [iCount]) : "",
+                buttonIcon: bHasError ? "sap-icon://message-error" : (bHasWarning ? "sap-icon://message-warning" : "sap-icon://message-information"),
+                buttonType: bHasError ? "Negative" : (bHasWarning ? "Attention" : "Accept")
+            });
         },
 
         /**

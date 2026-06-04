@@ -1221,6 +1221,29 @@ sap.ui.define([
 		});
 	});
 
+	QUnit.test("_isRfqItemAwarded should not treat helper MQ keys as awarded state", function (assert) {
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+
+		assert.notOk(oFixture.controller._isRfqItemAwarded({
+			RfqNo: "5000000123",
+			RfqItem: "00020",
+			ItemStatus: "N",
+			ItemStatusText: "Not awarded",
+			AwardMqNo: "MQ70000002",
+			AwardMqItem: "00020",
+			CanCancelAward: ""
+		}), "A not-awarded item is not skipped only because AwardMqNo/AwardMqItem values exist.");
+
+		assert.ok(oFixture.controller._isRfqItemAwarded({
+			RfqNo: "5000000123",
+			RfqItem: "00010",
+			ItemStatus: "A",
+			CanCancelAward: "X"
+		}), "An awarded item is detected by ItemStatus or CanCancelAward.");
+	});
+
 	QUnit.test("_refreshAfterAward should preserve the current Mid column layout while reloading data", function (assert) {
 		var done = assert.async();
 		var aReadPaths = [];
