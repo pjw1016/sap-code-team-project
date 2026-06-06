@@ -20,6 +20,6 @@ builder:
           name: ZD3MM0005
           description: '[MM] 견적 비교 및 거래선 채택'
           package: ZPD3MM
-          transport: EFXK902337
+          transport: EFXK902398
         exclude:
           - /test/
