@@ -1251,6 +1251,7 @@ sap.ui.define([
 			RfqNo: "RQ10000002",
 			AwardStatus: "A"
 		});
+		oFixture.models.work.setProperty("/CanCreatePo", true);
 		oFixture.controller._confirmAction = function () {
 			return Promise.resolve(true);
 		};
@@ -1314,6 +1315,79 @@ sap.ui.define([
 			ItemStatus: "A",
 			CanCancelAward: "X"
 		}), "An awarded item is detected by ItemStatus or CanCancelAward.");
+	});
+
+	QUnit.test("_updateRfqItemActionFlags should enable buttons from RFQ Item state, not header state", function (assert) {
+		var oFixture = createControllerWithFakeView();
+
+		oFixture.controller.onInit();
+
+		oFixture.controller._updateRfqItemActionFlags([
+			{
+				RfqItem: "00010",
+				ItemStatus: "N",
+				PoCreatedYn: ""
+			}
+		]);
+
+		assert.strictEqual(oFixture.models.work.getProperty("/CanCreatePo"), false, "PO creation is disabled when every item is not awarded.");
+		assert.strictEqual(oFixture.models.work.getProperty("/CanBulkAward"), true, "Bulk award is still enabled when a not-awarded item can be processed.");
+		assert.strictEqual(oFixture.models.work.getProperty("/CanBulkCancelAward"), false, "Bulk cancel is disabled without cancellable awarded items.");
+
+		oFixture.controller._updateRfqItemActionFlags([
+			{
+				RfqItem: "00010",
+				ItemStatus: "PO",
+				PoCreatedYn: "X",
+				CanCancelAward: ""
+			},
+			{
+				RfqItem: "00020",
+				ItemStatus: "A",
+				PoCreatedYn: "",
+				CanCancelAward: "X"
+			}
+		]);
+
+		assert.strictEqual(oFixture.models.work.getProperty("/CanCreatePo"), true, "PO creation is enabled when at least one awarded item has no PO yet.");
+		assert.strictEqual(oFixture.models.work.getProperty("/CanBulkCancelAward"), true, "Bulk cancel is enabled when at least one awarded item can be cancelled.");
+		assert.strictEqual(oFixture.models.work.getProperty("/CanBulkAward"), false, "Bulk award is disabled when there is no not-awarded target item.");
+
+		oFixture.controller._updateRfqItemActionFlags([
+			{
+				RfqItem: "00010",
+				ItemStatus: "PO",
+				PoCreatedYn: "X"
+			},
+			{
+				RfqItem: "00020",
+				ItemStatus: "N",
+				PoCreatedYn: ""
+			}
+		]);
+
+		assert.strictEqual(oFixture.models.work.getProperty("/CanCreatePo"), false, "PO creation is disabled when the list has only PO-created and not-awarded items.");
+		assert.strictEqual(oFixture.models.work.getProperty("/CanBulkAward"), true, "Bulk award stays enabled for the remaining not-awarded item.");
+		assert.strictEqual(oFixture.models.work.getProperty("/CanBulkCancelAward"), false, "Bulk cancel stays disabled without awarded targets.");
+	});
+
+	QUnit.test("_setProcessMessages should display message counts by message type", function (assert) {
+		var oFixture = createControllerWithFakeView();
+		var oProcessMessages;
+
+		oFixture.controller.onInit();
+
+		oFixture.controller._setProcessMessages([
+			oFixture.controller._createProcessMessage("Error", "RFQ Item 00010 오류", "일괄 채택취소"),
+			oFixture.controller._createProcessMessage("Success", "RFQ Item 00020 성공", "일괄 채택취소")
+		]);
+
+		oProcessMessages = oFixture.models.processMessages.getData();
+
+		assert.strictEqual(oProcessMessages.count, 2, "The total message count is still retained for compatibility.");
+		assert.strictEqual(oProcessMessages.buttonText, "오류 1 / 성공 1", "Footer text separates error and success counts.");
+		assert.strictEqual(oProcessMessages.buttonIcon, "sap-icon://message-error", "The footer button still uses the highest severity icon.");
+		assert.strictEqual(oProcessMessages.buttonType, "Negative", "The footer button keeps negative type when any error exists.");
 	});
 
 	QUnit.test("_refreshAfterAward should preserve the current Mid column layout while reloading data", function (assert) {

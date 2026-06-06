@@ -132,6 +132,9 @@ sap.ui.define([
                 RfqHeaderCount: 0,
                 RfqHeaders: [],
                 RfqItems: [],
+                CanBulkAward: false,
+                CanBulkCancelAward: false,
+                CanCreatePo: false,
                 MqCompareRows: [],
                 ChartRows: [],
                 SelectedRfq: {},
@@ -704,8 +707,8 @@ sap.ui.define([
                 return Promise.resolve(null);
             }
 
-            if (oSelectedRfq.AwardStatus === "PO") {
-                this._showToast(this._getText("msgCreatePoAlreadyCreated") || "이미 PO 생성 상태인 RFQ입니다.");
+            if (!oWorkModel || !oWorkModel.getProperty("/CanCreatePo")) {
+                this._showToast(this._getText("msgCreatePoNoTarget") || "PO를 생성할 수 있는 채택 RFQ Item이 없습니다.");
                 return Promise.resolve(null);
             }
 
@@ -935,12 +938,14 @@ sap.ui.define([
                 if (oWorkModel) {
                     oWorkModel.setProperty("/RfqItems", aRows);
                 }
+                this._updateRfqItemActionFlags(aRows);
 
                 return aRows;
             }).catch((oError) => {
                 if (oWorkModel) {
                     oWorkModel.setProperty("/RfqItems", []);
                 }
+                this._updateRfqItemActionFlags([]);
 
                 this._showToast(this._getText("msgLoadRfqItemError") || "RFQ Item 목록 조회 중 오류가 발생했습니다.");
                 throw oError;
@@ -1472,6 +1477,9 @@ sap.ui.define([
 
             if (oWorkModel) {
                 oWorkModel.setProperty("/RfqItems", []);
+                oWorkModel.setProperty("/CanBulkAward", false);
+                oWorkModel.setProperty("/CanBulkCancelAward", false);
+                oWorkModel.setProperty("/CanCreatePo", false);
                 oWorkModel.setProperty("/SelectedRfqItem", {});
                 oWorkModel.setProperty("/SelectedMq", {});
                 oWorkModel.setProperty("/MqCompareRows", []);
@@ -2073,6 +2081,62 @@ sap.ui.define([
             ));
         },
 
+        /**
+         * RFQ Item 목록을 기준으로 Mid Column 주요 업무 버튼의 활성화 여부를 계산한다.
+         *
+         * Header의 AwardStatus는 RFQ 전체 집계 상태라서 일부 Item만 PO 생성된 경우 `PO`가 될 수 있다.
+         * 이 값을 그대로 버튼 조건에 쓰면 아직 "채택" 상태인 Item이 남아 있어도 PO 생성 버튼이 막힌다.
+         * 따라서 실제 버튼 조건은 RFQ Header가 아니라 현재 조회된 RFQ Item 목록을 기준으로 계산한다.
+         */
+        _updateRfqItemActionFlags(aRfqItems) {
+            const oWorkModel = this.getView().getModel("work");
+            const aItems = aRfqItems || [];
+
+            if (!oWorkModel) {
+                return;
+            }
+
+            oWorkModel.setProperty("/CanCreatePo", this._hasPoCreatableRfqItem(aItems));
+            oWorkModel.setProperty("/CanBulkCancelAward", this._hasAwardCancelableRfqItem(aItems));
+            oWorkModel.setProperty("/CanBulkAward", this._hasBulkAwardTargetRfqItem(aItems));
+        },
+
+        /**
+         * PO 생성 대상 여부.
+         *
+         * 2차 개발 V1.1.1 기준 PO 생성은 "채택 완료 + PO 미생성" Item만 대상으로 한다.
+         * 미채택 Item은 제외 대상이고, 이미 PO 생성된 Item도 제외 대상이므로 버튼 활성화 기준에서 뺀다.
+         */
+        _hasPoCreatableRfqItem(aRfqItems) {
+            return (aRfqItems || []).some(function (oItem) {
+                return this._isRfqItemAwarded(oItem) && !this._isSelectedRfqItemPoCreated(oItem);
+            }.bind(this));
+        },
+
+        /**
+         * 일괄 채택취소 대상 여부.
+         *
+         * 채택취소는 Backend가 내려준 CanCancelAward = X인 Item만 허용한다.
+         * PO 생성 Item은 후속 문서 정합성 때문에 채택취소 대상에서 제외한다.
+         */
+        _hasAwardCancelableRfqItem(aRfqItems) {
+            return (aRfqItems || []).some(function (oItem) {
+                return oItem && oItem.CanCancelAward === "X" && !this._isSelectedRfqItemPoCreated(oItem);
+            }.bind(this));
+        },
+
+        /**
+         * 일괄 채택 대상 여부.
+         *
+         * 일괄 채택은 아직 채택되지 않았고 PO도 생성되지 않은 Item을 자동추천 MQ 기준으로 채택하는 기능이다.
+         * 따라서 이 버튼은 "채택 Item 존재 여부"가 아니라 "미채택 처리 대상 존재 여부"를 기준으로 활성화한다.
+         */
+        _hasBulkAwardTargetRfqItem(aRfqItems) {
+            return (aRfqItems || []).some(function (oItem) {
+                return oItem && oItem.ItemStatus === "N" && !this._isSelectedRfqItemPoCreated(oItem);
+            }.bind(this));
+        },
+
         _getBulkItemNo(oRfqItem) {
             return (oRfqItem && oRfqItem.RfqItem) || "-";
         },
@@ -2240,6 +2304,9 @@ sap.ui.define([
                 oWorkModel.setProperty("/SelectedRfqItem", {});
                 oWorkModel.setProperty("/SelectedMq", {});
                 oWorkModel.setProperty("/RfqItems", []);
+                oWorkModel.setProperty("/CanBulkAward", false);
+                oWorkModel.setProperty("/CanBulkCancelAward", false);
+                oWorkModel.setProperty("/CanCreatePo", false);
                 oWorkModel.setProperty("/MqCompareRows", []);
                 oWorkModel.setProperty("/ChartRows", []);
             }
@@ -3219,6 +3286,7 @@ sap.ui.define([
             const oProcessMessagesModel = this.getView().getModel("processMessages");
             const aItems = aMessages || [];
             const iCount = aItems.length;
+            const oTypeCounts = this._countProcessMessagesByType(aItems);
             const bHasError = aItems.some(function (oMessage) {
                 return oMessage && oMessage.type === "Error";
             });
@@ -3233,10 +3301,66 @@ sap.ui.define([
             oProcessMessagesModel.setData({
                 items: aItems,
                 count: iCount,
-                buttonText: iCount ? this._getText("processMessageCount", [iCount]) : "",
+                buttonText: iCount ? this._formatProcessMessageSummary(oTypeCounts) : "",
                 buttonIcon: bHasError ? "sap-icon://message-error" : (bHasWarning ? "sap-icon://message-warning" : "sap-icon://message-information"),
                 buttonType: bHasError ? "Negative" : (bHasWarning ? "Attention" : "Accept")
             });
+        },
+
+        /**
+         * 처리 결과 메시지를 MessageType별로 집계한다.
+         *
+         * 기존에는 메시지 전체 건수만 Footer 버튼에 표시했다. 그러면 성공 1건 + 오류 1건이어도
+         * Error가 포함되어 있다는 이유로 전체가 오류 2건처럼 보일 수 있다.
+         * Footer에서는 전체 건수보다 유형별 건수가 더 중요하므로 Error/Warning/Success/Information을 분리한다.
+         */
+        _countProcessMessagesByType(aMessages) {
+            return (aMessages || []).reduce(function (oCounts, oMessage) {
+                const sType = oMessage && oMessage.type;
+
+                if (sType === "Error") {
+                    oCounts.Error += 1;
+                } else if (sType === "Warning") {
+                    oCounts.Warning += 1;
+                } else if (sType === "Success") {
+                    oCounts.Success += 1;
+                } else {
+                    oCounts.Information += 1;
+                }
+
+                return oCounts;
+            }, {
+                Error: 0,
+                Warning: 0,
+                Success: 0,
+                Information: 0
+            });
+        },
+
+        /**
+         * Footer 처리결과 버튼에 표시할 유형별 요약 문자열을 만든다.
+         *
+         * sap.m.Button은 아이콘을 하나만 표시할 수 있으므로, 같은 버튼 안의 텍스트에서
+         * "오류 1 / 성공 1"처럼 유형별 건수를 명확히 보여준다.
+         */
+        _formatProcessMessageSummary(oTypeCounts) {
+            const aParts = [];
+            const oCounts = oTypeCounts || {};
+
+            if (oCounts.Error) {
+                aParts.push("오류 " + oCounts.Error);
+            }
+            if (oCounts.Warning) {
+                aParts.push("경고 " + oCounts.Warning);
+            }
+            if (oCounts.Success) {
+                aParts.push("성공 " + oCounts.Success);
+            }
+            if (oCounts.Information) {
+                aParts.push("정보 " + oCounts.Information);
+            }
+
+            return aParts.join(" / ");
         },
 
         /**

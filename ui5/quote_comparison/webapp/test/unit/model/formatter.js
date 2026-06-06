@@ -20,6 +20,15 @@ sap.ui.define([
 		assert.strictEqual(formatter.formatBooleanState(""), "None");
 	});
 
+	QUnit.test("current award helpers emphasize only the awarded MQ row", function (assert) {
+		assert.strictEqual(formatter.formatCurrentAwardText("X"), "현재 채택");
+		assert.strictEqual(formatter.formatCurrentAwardText(""), "-");
+		assert.strictEqual(formatter.formatCurrentAwardState("X"), "Success");
+		assert.strictEqual(formatter.formatCurrentAwardState(""), "None");
+		assert.strictEqual(formatter.formatCurrentAwardIcon("X"), "sap-icon://accept");
+		assert.strictEqual(formatter.formatCurrentAwardIcon(""), "");
+	});
+
 	QUnit.test("selection and response helpers expose UI5 ValueState strings", function (assert) {
 		assert.strictEqual(formatter.formatCanSelectText("X"), "선택 가능");
 		assert.strictEqual(formatter.formatCanSelectText(""), "선택 불가");
@@ -40,5 +49,28 @@ sap.ui.define([
 	QUnit.test("formatExchangeRate keeps at least two decimal places", function (assert) {
 		assert.strictEqual(formatter.formatExchangeRate("1507.9"), "1,507.90");
 		assert.strictEqual(formatter.formatExchangeRate("1507.98765"), "1,507.98765");
+	});
+
+	QUnit.test("formatMqDeliveryDateState compares MQ date with selected RFQ Item date", function (assert) {
+		assert.strictEqual(
+			formatter.formatMqDeliveryDateState("2026-06-21", "2026-06-22"),
+			"Warning",
+			"Earlier MQ delivery date is shown with warning color."
+		);
+		assert.strictEqual(
+			formatter.formatMqDeliveryDateState("2026-06-22", "2026-06-22"),
+			"Success",
+			"Same MQ delivery date is shown with success color."
+		);
+		assert.strictEqual(
+			formatter.formatMqDeliveryDateState("2026-06-23", "2026-06-22"),
+			"Error",
+			"Later MQ delivery date is shown with error color."
+		);
+		assert.strictEqual(
+			formatter.formatMqDeliveryDateState(null, "2026-06-22"),
+			"None",
+			"Missing MQ date keeps the default text state."
+		);
 	});
 });

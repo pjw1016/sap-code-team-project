@@ -35,6 +35,41 @@ sap.ui.define([
         return Number(vValue);
     }
 
+    function toDateOnlyTime(vDate) {
+        var aGatewayMatch;
+        var aIsoDateMatch;
+        var oDate;
+
+        if (!vDate) {
+            return null;
+        }
+
+        if (vDate instanceof Date && !isNaN(vDate.getTime())) {
+            return new Date(vDate.getFullYear(), vDate.getMonth(), vDate.getDate()).getTime();
+        }
+
+        if (typeof vDate !== "string") {
+            return null;
+        }
+
+        aGatewayMatch = /\/Date\((\d+)\)\//.exec(vDate);
+        if (aGatewayMatch) {
+            oDate = new Date(Number(aGatewayMatch[1]));
+            return new Date(oDate.getFullYear(), oDate.getMonth(), oDate.getDate()).getTime();
+        }
+
+        aIsoDateMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(vDate);
+        if (aIsoDateMatch) {
+            return new Date(
+                Number(aIsoDateMatch[1]),
+                Number(aIsoDateMatch[2]) - 1,
+                Number(aIsoDateMatch[3])
+            ).getTime();
+        }
+
+        return null;
+    }
+
     return {
         /**
          * UI5 Date 객체, Gateway /Date(...)/ 값, ISO 형식 문자열을 yyyy-MM-dd로 변환한다.
@@ -115,6 +150,39 @@ sap.ui.define([
          * @param {string} sCurrency 통화코드
          * @returns {string} 금액과 통화코드가 합쳐진 문자열
          */
+        /**
+         * MQ 납기일과 선택된 RFQ Item 납기일을 비교하여 ObjectStatus 색상 상태를 반환한다.
+         * CSS를 직접 쓰지 않고 SAPUI5 표준 ValueState를 사용하므로 테마 변경에도 자연스럽게 따라간다.
+         *
+         * 표시 기준:
+         * - MQ 납기일 < RFQ Item 납기일: Warning, 표준 노란색/주황색 계열
+         * - MQ 납기일 = RFQ Item 납기일: Success, 표준 초록색
+         * - MQ 납기일 > RFQ Item 납기일: Error, 표준 빨간색
+         * - 비교 기준일이 없거나 파싱할 수 없음: None, 기본 텍스트
+         *
+         * @param {Date|string} vMqEindt MQ Item 납기일
+         * @param {Date|string} vRfqEindt 선택된 RFQ Item 납기일
+         * @returns {sap.ui.core.ValueState} sap.m.ObjectStatus state 값
+         */
+        formatMqDeliveryDateState: function (vMqEindt, vRfqEindt) {
+            var iMqTime = toDateOnlyTime(vMqEindt);
+            var iRfqTime = toDateOnlyTime(vRfqEindt);
+
+            if (iMqTime === null || iRfqTime === null) {
+                return ValueState.None;
+            }
+
+            if (iMqTime < iRfqTime) {
+                return ValueState.Warning;
+            }
+
+            if (iMqTime > iRfqTime) {
+                return ValueState.Error;
+            }
+
+            return ValueState.Success;
+        },
+
         formatCurrencyAmount: function (vValue, sCurrency) {
             var sAmount = this.formatAmount(vValue);
 
@@ -157,6 +225,40 @@ sap.ui.define([
          * @param {string} sValue Backend CanSelect 플래그 값
          * @returns {sap.ui.core.ValueState} UI5 상태값
          */
+        /**
+         * MQ 비교 목록의 현재 채택 컬럼에 표시할 텍스트를 반환한다.
+         * 일반 Boolean 텍스트처럼 모든 행에 "예/아니오"를 반복하면 비교표가 복잡해지므로,
+         * 실제 채택 MQ만 "현재 채택"으로 강조하고 나머지는 "-"로 낮은 강도로 표시한다.
+         *
+         * @param {string} sValue Backend CurrentAwardYn 플래그. X이면 현재 채택 MQ를 의미한다.
+         * @returns {string} MQ 비교 목록의 현재 채택 표시 텍스트
+         */
+        formatCurrentAwardText: function (sValue) {
+            return sValue === "X" ? "채택" : "-";
+        },
+
+        /**
+         * MQ 비교 목록의 현재 채택 컬럼 색상 상태를 반환한다.
+         * 채택 행만 Success로 표시하고 미채택 행은 None으로 두어 사용자가 채택 MQ를 빠르게 찾게 한다.
+         *
+         * @param {string} sValue Backend CurrentAwardYn 플래그
+         * @returns {sap.ui.core.ValueState} ObjectStatus 상태값
+         */
+        formatCurrentAwardState: function (sValue) {
+            return sValue === "X" ? ValueState.Success : ValueState.None;
+        },
+
+        /**
+         * MQ 비교 목록의 현재 채택 컬럼 아이콘을 반환한다.
+         * 채택 MQ에는 표준 accept 아이콘을 붙이고, 미채택 MQ에는 아이콘을 표시하지 않는다.
+         *
+         * @param {string} sValue Backend CurrentAwardYn 플래그
+         * @returns {string} sap-icon URI 또는 빈 문자열
+         */
+        formatCurrentAwardIcon: function (sValue) {
+            return sValue === "X" ? "sap-icon://accept" : "";
+        },
+
         formatCanSelectState: function (sValue) {
             return sValue === "X" ? ValueState.Success : ValueState.Warning;
         },

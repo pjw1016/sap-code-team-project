@@ -735,12 +735,12 @@
                                                 <Button
                                                     text="{i18n>bulkAward}"
                                                     type="Accept"
-                                                    enabled="{= !!${work>/SelectedRfq/RfqNo} &amp;&amp; ${work>/RfqItems}.length > 0 &amp;&amp; ${work>/SelectedRfq/AwardStatus} !== 'PO' }"
+                                                    enabled="{= !!${work>/SelectedRfq/RfqNo} &amp;&amp; ${work>/CanBulkAward} }"
                                                     press=".onBulkAward"/>
                                                 <Button
                                                     text="{i18n>bulkCancelAward}"
                                                     type="Reject"
-                                                    enabled="{= !!${work>/SelectedRfq/RfqNo} &amp;&amp; ${work>/RfqItems}.length > 0 &amp;&amp; ${work>/SelectedRfq/AwardStatus} !== 'PO' }"
+                                                    enabled="{= !!${work>/SelectedRfq/RfqNo} &amp;&amp; ${work>/CanBulkCancelAward} }"
                                                     press=".onBulkCancelAward"/>
                                             </OverflowToolbar>
                                         </headerToolbar>
@@ -820,7 +820,7 @@
                                                 title: { visible: false },
                                                 legend: { visible: false },
                                                 plotArea: { dataLabel: { visible: true } },
-                                                valueAxis: { title: { visible: true, text: 'KRW 환산총액' } },
+                                                valueAxis: { title: { visible: true, text: '환산총액(단위: KRW)' } },
                                                 categoryAxis: { title: { visible: true, text: '공급업체' } }
                                             }">
                                             <viz:dataset>
@@ -869,19 +869,30 @@
                                             <OverflowToolbar>
                                                 <Title
                                                     id="idMqCompareTableTitle"
-                                                    text="{i18n>mqCompareTabTitle}"
+                                                    text="{= ${i18n>mqCompareTabTitle} + ' (' + ${work>/MqCompareRows}.length + ')' }"
                                                     level="H3"/>
                                                 <ToolbarSpacer/>
+                                                <Text
+                                                    text="{= ${i18n>matnr} + ': ' + ${work>/SelectedRfqItem/Matnr} + '(' + ${work>/SelectedRfqItem/Maktx} + ')' }"
+                                                    wrapping="false"
+                                                    width="18rem"
+                                                    visible="{= !!${work>/SelectedRfqItem/Matnr} }"/>
+                                                <ToolbarSeparator visible="{= !!${work>/SelectedRfqItem/Matnr} }"/>
                                                 <Button
                                                     text="{i18n>autoRecommend}"
                                                     type="Transparent"
                                                     enabled="{= ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"
                                                     press=".onApplyAutoRecommend"/>
                                                 <Button
-                                                    text="{i18n>mqDetail}"
-                                                    type="Transparent"
-                                                    enabled="{= !!${work>/SelectedMq/MqNo} }"
-                                                    press=".onOpenMqDetail"/>
+                                                    text="{i18n>saveAward}"
+                                                    type="Accept"
+                                                    enabled="{= !!${work>/SelectedMq/MqNo} &amp;&amp; ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"
+                                                    press=".onSaveAward"/>
+                                                <Button
+                                                    text="{i18n>cancelAward}"
+                                                    type="Reject"
+                                                    enabled="{= ${work>/SelectedRfqItem/CanCancelAward} === 'X' &amp;&amp; ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"
+                                                    press=".onCancelAward"/>
                                             </OverflowToolbar>
                                         </table:extension>
                                         <table:columns>
@@ -896,6 +907,27 @@
                                                         groupName="mqCompareSelection"
                                                         tooltip="{work>BlockReason}"
                                                         select=".onMqRadioSelect"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="7rem">
+                                                <table:label>
+                                                    <Label text="{i18n>currentAward}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectStatus
+                                                        text="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatCurrentAwardText'}"
+                                                        icon="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatCurrentAwardIcon'}"
+                                                        state="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatCurrentAwardState'}"/>
+                                                </table:template>
+                                            </table:Column>
+                                            <table:Column width="8rem">
+                                                <table:label>
+                                                    <Label text="{i18n>mqNo}"/>
+                                                </table:label>
+                                                <table:template>
+                                                    <ObjectIdentifier
+                                                        title="{work>MqNo}"
+                                                        text="{work>MqItem}"/>
                                                 </table:template>
                                             </table:Column>
                                             <table:Column
@@ -914,16 +946,6 @@
                                             </table:Column>
                                             <table:Column width="8rem">
                                                 <table:label>
-                                                    <Label text="{i18n>mqNo}"/>
-                                                </table:label>
-                                                <table:template>
-                                                    <ObjectIdentifier
-                                                        title="{work>MqNo}"
-                                                        text="{work>MqItem}"/>
-                                                </table:template>
-                                            </table:Column>
-                                            <table:Column width="8rem">
-                                                <table:label>
                                                     <Label text="{i18n>lifnr}"/>
                                                 </table:label>
                                                 <table:template>
@@ -932,6 +954,10 @@
                                                         text="{work>Name1}"/>
                                                 </table:template>
                                             </table:Column>
+                                            <!--
+                                            자재코드와 자재명은 선택한 RFQ Item 기준으로 MQ 후보 전체가 동일하므로
+                                            테이블 컬럼에서는 숨기고, 상단 툴바의 공통 자재 정보로 표시한다.
+                                            필요 시 아래 Column 주석을 해제하면 행 단위 자재 정보를 다시 볼 수 있다.
                                             <table:Column width="8rem">
                                                 <table:label>
                                                     <Label text="{i18n>matnr}"/>
@@ -942,12 +968,21 @@
                                                         text="{work>Maktx}"/>
                                                 </table:template>
                                             </table:Column>
+                                            -->
                                             <table:Column width="6rem">
                                                 <table:label>
                                                     <Label text="{i18n>eindt}"/>
                                                 </table:label>
                                                 <table:template>
-                                                    <Text text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"/>
+                                                    <ObjectStatus
+                                                        text="{path: 'work>Eindt', formatter: '.formatter.formatDate'}"
+                                                        state="{
+                                                            parts: [
+                                                                {path: 'work>Eindt'},
+                                                                {path: 'work>/SelectedRfqItem/Eindt'}
+                                                            ],
+                                                            formatter: '.formatter.formatMqDeliveryDateState'
+                                                        }"/>
                                                 </table:template>
                                             </table:Column>
                                             <table:Column width="8rem">
@@ -960,6 +995,9 @@
                                                         unit="{work>Kwaers}"/>
                                                 </table:template>
                                             </table:Column>
+                                            <!--
+                                            견적수량은 현재 비교 핵심 컬럼에서 제외한다.
+                                            필요 시 아래 Column 주석을 해제한다.
                                             <table:Column width="6rem">
                                                 <table:label>
                                                     <Label text="{i18n>quoteQty}"/>
@@ -970,8 +1008,11 @@
                                                         unit="{work>Meins}"/>
                                                 </table:template>
                                             </table:Column>
+                                            -->
                                             <!-- 가격단위(PEINH)는 단가가 몇 단위 기준인지 나타낸다.
                                                  예: 견적수량 12, 단가 100,000, 가격단위 2이면 총액은 12 / 2 * 100,000 = 600,000 이다. -->
+                                            <!--
+                                            가격단위는 단가 해석용 보조 정보이므로 기본 화면에서는 숨긴다.
                                             <table:Column width="6rem">
                                                 <table:label>
                                                     <Label text="{i18n>peinh}"/>
@@ -981,6 +1022,10 @@
                                                         number="{path: 'work>Peinh', formatter: '.formatter.formatQuantity'}"/>
                                                 </table:template>
                                             </table:Column>
+                                            -->
+                                            <!--
+                                            원통화 단가는 KRW 환산총액 중심 비교 화면에서는 숨긴다.
+                                            필요 시 아래 Column 주석을 해제한다.
                                             <table:Column width="8rem">
                                                 <table:label>
                                                     <Label text="{i18n>netpr}"/>
@@ -991,26 +1036,24 @@
                                                         unit="{work>Waers}"/>
                                                 </table:template>
                                             </table:Column>
+                                            -->
+                                            <!--
+                                            적용환율은 환산 결과 검증용 보조 정보이므로 기본 화면에서는 숨긴다.
+                                            환율은 금액과 달리 소수점 자릿수 0을 유지해야 하므로 전용 formatter를 사용한다.
                                             <table:Column width="8rem">
                                                 <table:label>
                                                     <Label text="{i18n>kursf}"/>
                                                 </table:label>
                                                 <table:template>
-                                                    <!-- 환율은 금액과 달리 소수점 끝자리 0도 의미가 있으므로 환율 전용 formatter를 사용한다. -->
                                                     <ObjectNumber
                                                         number="{path: 'work>Kursf', formatter: '.formatter.formatExchangeRate'}"/>
                                                 </table:template>
                                             </table:Column>
-                                            <table:Column width="6rem">
-                                                <table:label>
-                                                    <Label text="{i18n>currentAward}"/>
-                                                </table:label>
-                                                <table:template>
-                                                    <ObjectStatus
-                                                        text="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatBooleanText'}"
-                                                        state="{path: 'work>CurrentAwardYn', formatter: '.formatter.formatBooleanState'}"/>
-                                                </table:template>
-                                            </table:Column>
+                                            -->
+                                            <!-- 채택 여부 컬럼은 사용자가 바로 확인할 수 있도록 테이블 앞쪽으로 이동했다. -->
+                                            <!--
+                                            추천 여부는 자동추천 버튼 동작으로 확인 가능하므로 기본 화면에서는 숨긴다.
+                                            필요 시 아래 Column 주석을 해제한다.
                                             <table:Column width="4rem">
                                                 <table:label>
                                                     <Label text="{i18n>recommend}"/>
@@ -1021,6 +1064,7 @@
                                                         state="{path: 'work>RecommendYn', formatter: '.formatter.formatBooleanState'}"/>
                                                 </table:template>
                                             </table:Column>
+                                            -->
                                         </table:columns>
                                     </table:Table>
                                 </uxap:blocks>
@@ -1044,18 +1088,8 @@
                         <Button
                             text="{i18n>createPo}"
                             type="Emphasized"
-                            enabled="{= !!${work>/SelectedRfq/RfqNo} &amp;&amp; ${work>/SelectedRfq/AwardStatus} !== 'PO' }"
+                            enabled="{= !!${work>/SelectedRfq/RfqNo} &amp;&amp; ${work>/CanCreatePo} }"
                             press=".onCreatePoFromRfq"/>
-                        <Button
-                            text="{i18n>saveAward}"
-                            type="Accept"
-                            enabled="{= !!${work>/SelectedMq/MqNo} &amp;&amp; ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"
-                            press=".onSaveAward"/>
-                        <Button
-                            text="{i18n>cancelAward}"
-                            type="Reject"
-                            enabled="{= ${work>/SelectedRfqItem/CanCancelAward} === 'X' &amp;&amp; ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"
-                            press=".onCancelAward"/>
                     </OverflowToolbar>
                 </uxap:footer>
             </uxap:ObjectPageLayout>
