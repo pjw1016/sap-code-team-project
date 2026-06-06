@@ -1221,6 +1221,78 @@ sap.ui.define([
 		});
 	});
 
+	QUnit.test("onCreatePoFromRfq should POST selected RFQ to PoCreateRequestSet and refresh on success", function (assert) {
+		var done = assert.async();
+		var bRefreshed = false;
+		var bPopoverOpened = false;
+		var oFixture = createControllerWithFakeView({
+			odataModel: {
+				create: function (sPath, oPayload, mParameters) {
+					assert.strictEqual(sPath, "/PoCreateRequestSet", "PO creation request is sent to the request EntitySet.");
+					assert.deepEqual(oPayload, {
+						RfqNo: "RQ10000002"
+					}, "Selected RFQ number is passed as the CREATE payload.");
+
+					mParameters.success({
+						RfqNo: "RQ10000002",
+						MessageType: "S",
+						MessageText: "PO 생성 요청이 정상 처리되었습니다.",
+						PoCount: 1,
+						PoItemCount: 17,
+						CreatedPoNos: "4500000001",
+						ErrorCount: 0
+					});
+				}
+			}
+		});
+
+		oFixture.controller.onInit();
+		oFixture.models.work.setProperty("/SelectedRfq", {
+			RfqNo: "RQ10000002",
+			AwardStatus: "A"
+		});
+		oFixture.controller._confirmAction = function () {
+			return Promise.resolve(true);
+		};
+		oFixture.controller._refreshAfterAward = function () {
+			bRefreshed = true;
+			return Promise.resolve();
+		};
+		oFixture.controller._openProcessMessagePopoverDelayed = function () {
+			bPopoverOpened = true;
+		};
+		oFixture.controller._getText = function (sKey, aArgs) {
+			if (sKey === "createPo") {
+				return "PO 생성";
+			}
+
+			if (sKey === "msgConfirmCreatePo") {
+				return "RFQ " + aArgs[0] + " 기준으로 채택된 MQ를 PO로 생성하시겠습니까?";
+			}
+
+			if (sKey === "msgCreatePoResultDescription") {
+				return "RFQ: " + aArgs[3] + ", 생성 PO 수: " + aArgs[0] + ", 생성 PO Item 수: " + aArgs[1] + ", 생성 PO 번호: " + aArgs[2];
+			}
+
+			if (sKey === "processMessageCount") {
+				return String(aArgs[0]);
+			}
+
+			return "";
+		};
+
+		oFixture.controller.onCreatePoFromRfq().then(function () {
+			var oProcessMessages = oFixture.models.processMessages.getData();
+
+			assert.ok(bRefreshed, "RFQ data is refreshed after successful PO creation.");
+			assert.ok(bPopoverOpened, "Process MessagePopover is requested after receiving backend result.");
+			assert.strictEqual(oProcessMessages.count, 1, "One process message is displayed.");
+			assert.strictEqual(oProcessMessages.items[0].type, "Success", "Backend S message is mapped to Success.");
+			assert.strictEqual(oFixture.models.view.getProperty("/Busy"), false, "Busy state is cleared.");
+			done();
+		});
+	});
+
 	QUnit.test("_isRfqItemAwarded should not treat helper MQ keys as awarded state", function (assert) {
 		var oFixture = createControllerWithFakeView();
 

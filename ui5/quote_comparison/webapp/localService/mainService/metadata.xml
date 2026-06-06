@@ -161,12 +161,27 @@
                 <Property Name="MessageType" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="메시지 유형" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
                 <Property Name="MessageText" Type="Edm.String" MaxLength="100" sap:unicode="false" sap:label="메시지 내용" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
             </EntityType>
+            <EntityType Name="PoCreateRequest" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="RfqNo"/>
+                </Key>
+                <Property Name="RfqNo" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="RFQ 번호" sap:creatable="true" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MessageType" Type="Edm.String" MaxLength="1" sap:unicode="false" sap:label="메시지 유형" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="MessageText" Type="Edm.String" MaxLength="220" sap:unicode="false" sap:label="메시지 문구" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoCount" Type="Edm.Int32" sap:label="생성 PO 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="PoItemCount" Type="Edm.Int32" sap:label="생성 PO Item 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="FirstPoNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="첫 번째 PO 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="CreatedPoNos" Type="Edm.String" MaxLength="255" sap:unicode="false" sap:label="생성 PO 번호 목록" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="SkippedItemCount" Type="Edm.Int32" sap:label="제외 Item 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ErrorCount" Type="Edm.Int32" sap:label="오류 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+            </EntityType>
             <EntityContainer Name="ZGWD3MM0005_SRV_Entities" m:IsDefaultEntityContainer="true" sap:supported-formats="atom json xlsx">
                 <EntitySet Name="RFQHeaderSet" EntityType="ZGWD3MM0005_SRV.RFQHeader" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
                 <EntitySet Name="RFQItemSet" EntityType="ZGWD3MM0005_SRV.RFQItem" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
                 <EntitySet Name="MQCompareSet" EntityType="ZGWD3MM0005_SRV.MQCompare" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
                 <EntitySet Name="MQDetailSet" EntityType="ZGWD3MM0005_SRV.MQDetail" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
                 <EntitySet Name="QuotationItemSet" EntityType="ZGWD3MM0005_SRV.QuotationItem" sap:creatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
+                <EntitySet Name="PoCreateRequestSet" EntityType="ZGWD3MM0005_SRV.PoCreateRequest" sap:creatable="true" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:content-version="1"/>
             </EntityContainer>
             <Annotation Term="Core.SchemaVersion" String="1.0.0" xmlns="http://docs.oasis-open.org/odata/ns/edm"/>
             <atom:link rel="self" href="http://61.97.134.36:8000/sap/opu/odata/sap/ZGWD3MM0005_SRV/$metadata" xmlns:atom="http://www.w3.org/2005/Atom"/>

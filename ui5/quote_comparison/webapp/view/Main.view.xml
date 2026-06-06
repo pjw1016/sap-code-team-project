@@ -1042,6 +1042,11 @@
                             ariaHasPopup="Dialog"/>
                         <ToolbarSpacer/>
                         <Button
+                            text="{i18n>createPo}"
+                            type="Emphasized"
+                            enabled="{= !!${work>/SelectedRfq/RfqNo} &amp;&amp; ${work>/SelectedRfq/AwardStatus} !== 'PO' }"
+                            press=".onCreatePoFromRfq"/>
+                        <Button
                             text="{i18n>saveAward}"
                             type="Accept"
                             enabled="{= !!${work>/SelectedMq/MqNo} &amp;&amp; ${work>/SelectedRfqItem/ItemStatus} !== 'PO' &amp;&amp; ${work>/SelectedRfqItem/PoCreatedYn} !== 'X' &amp;&amp; !${work>/SelectedRfqItem/PoNo} }"

@@ -682,6 +682,82 @@ sap.ui.define([
         },
 
         /**
+         * 선택 RFQ 기준 PO 생성 버튼 이벤트.
+         *
+         * PO Header/Item 생성은 UI5가 직접 계산하지 않고 Backend에 위임한다.
+         * 현재 Gateway에서 확정한 API는 Function Import가 아니라
+         * `PoCreateRequestSet` EntitySet에 생성 요청을 보내는 CREATE_ENTITY 방식이다.
+         *
+         * SAPUI5 OData V2 Model의 create 메소드는 지정한 EntitySet에 POST를 보내므로,
+         * Gateway Client에서 성공 확인한 `/PoCreateRequestSet` + `{ RfqNo: ... }` 요청과
+         * 같은 형태로 동작한다.
+         */
+        onCreatePoFromRfq() {
+            const oView = this.getView();
+            const oViewModel = oView.getModel("view");
+            const oWorkModel = oView.getModel("work");
+            const oSelectedRfq = oWorkModel ? (oWorkModel.getProperty("/SelectedRfq") || {}) : {};
+            const sRfqNo = oSelectedRfq.RfqNo;
+
+            if (!sRfqNo) {
+                this._showToast(this._getText("msgCreatePoSelectRfq") || "PO를 생성할 RFQ를 먼저 선택하세요.");
+                return Promise.resolve(null);
+            }
+
+            if (oSelectedRfq.AwardStatus === "PO") {
+                this._showToast(this._getText("msgCreatePoAlreadyCreated") || "이미 PO 생성 상태인 RFQ입니다.");
+                return Promise.resolve(null);
+            }
+
+            return this._confirmAction(
+                this._getText("msgConfirmCreatePo", [sRfqNo]) ||
+                "선택 RFQ 기준으로 채택된 MQ를 PO로 생성하시겠습니까?"
+            ).then((bConfirmed) => {
+                if (!bConfirmed) {
+                    return null;
+                }
+
+                if (oViewModel) {
+                    oViewModel.setProperty("/Busy", true);
+                }
+
+                return this._createEntity("/PoCreateRequestSet", {
+                    RfqNo: sRfqNo
+                }).then((oResponse) => {
+                    const oMessage = this._createPoCreateProcessMessage(oResponse, sRfqNo);
+                    const bSuccess = oResponse && oResponse.MessageType === "S" && Number(oResponse.ErrorCount || 0) <= 0;
+
+                    this._setProcessMessages([oMessage]);
+                    this._openProcessMessagePopoverDelayed();
+
+                    /*
+                     * PO 생성 성공 후에는 Header 상태, RFQ Item 상태, MQ 선택 가능 여부가 바뀐다.
+                     * 채택/채택취소 후 사용하던 재조회 흐름을 재사용해 Begin/Mid Column을 함께 갱신한다.
+                     */
+                    if (bSuccess) {
+                        return this._refreshAfterAward().then(() => oResponse);
+                    }
+
+                    return oResponse;
+                }).catch((oError) => {
+                    this._setProcessMessages([
+                        this._createProcessMessage(
+                            "Error",
+                            this._getODataErrorText(oError),
+                            this._getText("createPo") || "PO 생성"
+                        )
+                    ]);
+                    this._openProcessMessagePopoverDelayed();
+                    throw oError;
+                }).finally(() => {
+                    if (oViewModel) {
+                        oViewModel.setProperty("/Busy", false);
+                    }
+                });
+            });
+        },
+
+        /**
          * 상세 Dialog 안의 "이 MQ 선택" 버튼 이벤트.
          *
          * Dialog에서 MQ를 선택한 뒤 비교표의 선택 상태와 맞추는 로직은 상세 팝업 연결 단계에서 작성한다.
@@ -1490,6 +1566,27 @@ sap.ui.define([
                 }
 
                 oModel.update(sPath, oPayload, Object.assign({}, mParameters, {
+                    success: resolve,
+                    error: reject
+                }));
+            });
+        },
+
+        _createEntity(sPath, oPayload, mParameters) {
+            const oModel = this.getOwnerComponent().getModel();
+
+            return new Promise((resolve, reject) => {
+                if (!oModel || !oModel.create) {
+                    reject(new Error("Default ODataModel create is not available."));
+                    return;
+                }
+
+                /*
+                 * OData V2 create는 EntitySet 경로와 payload를 받아 POST를 수행한다.
+                 * PO 생성은 DB에 단순히 요청 Row를 저장하는 기능이 아니라 Command성 업무 처리이지만,
+                 * Gateway에서는 `PoCreateRequestSet_CREATE_ENTITY`로 받기 때문에 create 메소드를 사용한다.
+                 */
+                oModel.create(sPath, oPayload, Object.assign({}, mParameters, {
                     success: resolve,
                     error: reject
                 }));
@@ -3036,6 +3133,50 @@ sap.ui.define([
                 subtitle: sSubtitle || "",
                 description: sDescription || ""
             };
+        },
+
+        /**
+         * PO 생성 CREATE_ENTITY 응답을 footer MessagePopover 항목으로 변환한다.
+         *
+         * Backend는 SAPGUI Gateway Client에서 확인한 것처럼 PoCreateRequest Entity 1건을 반환한다.
+         * 화면에서는 이 응답을 기존 채택/채택취소 처리 결과와 같은 MessagePopover 모델 구조로 바꿔 표시한다.
+         */
+        _createPoCreateProcessMessage(oResponse, sFallbackRfqNo) {
+            const sMessageType = this._mapBackendMessageType(oResponse && oResponse.MessageType);
+            const sTitle = (oResponse && oResponse.MessageText) ||
+                this._getText("msgCreatePoSuccessFallback") ||
+                "PO 생성 요청이 처리되었습니다.";
+            const sSubtitle = this._getText("createPo") || "PO 생성";
+            const sCreatedPoNos = (oResponse && oResponse.CreatedPoNos) || "-";
+            const sDescription = this._getText("msgCreatePoResultDescription", [
+                (oResponse && oResponse.PoCount) || 0,
+                (oResponse && oResponse.PoItemCount) || 0,
+                sCreatedPoNos,
+                (oResponse && oResponse.RfqNo) || sFallbackRfqNo || "-"
+            ]) || "";
+
+            return this._createProcessMessage(
+                sMessageType,
+                sTitle,
+                sSubtitle,
+                sDescription
+            );
+        },
+
+        /**
+         * ABAP/Gateway의 단문 메시지 타입(S/E/W/I)을 SAPUI5 MessagePopover 타입으로 변환한다.
+         */
+        _mapBackendMessageType(sMessageType) {
+            switch (sMessageType) {
+                case "S":
+                    return "Success";
+                case "E":
+                    return "Error";
+                case "W":
+                    return "Warning";
+                default:
+                    return "Information";
+            }
         },
 
         /**

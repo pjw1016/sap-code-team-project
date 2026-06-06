@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://sap.github.io/ui5-tooling/schema/ui5.yaml.json
+
+specVersion: "3.1"
+metadata:
+  name: code.d3.quotecomparison
+type: application
+builder:
+  resources:
+    excludes:
+      - /test/**
+      - /localService/**
+  customTasks:
+    - name: deploy-to-abap
+      afterTask: generateCachebusterInfo
+      configuration:
+        target:
+          url: http://61.97.134.36:8000
+          client: '100'
+        app:
+          name: ZD3MM0005
+          description: '[MM] 견적 비교 및 거래선 채택'
+          package: ZPD3MM
+          transport: EFXK902337
+        exclude:
+          - /test/
