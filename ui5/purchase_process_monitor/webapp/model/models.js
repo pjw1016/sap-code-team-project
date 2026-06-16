@@ -39,6 +39,7 @@ function (JSONModel, Device) {
 
                 // 기본 조회조건: V1.2 설계서 기준으로 PR번호와 PO번호는 항상 화면에 표시한다.
                 PrNo: "",
+                RfqNo: "",
                 PoNo: "",
 
                 /*
@@ -102,6 +103,14 @@ function (JSONModel, Device) {
                 // PO이면 Mid Column을 열고, RFQ이면 RFQ/MQ 현황 영역만 강조한다.
                 selectedDocType: "",
                 selectedDocNo: "",
+
+                // 조달 문서 목록 Header에 표시할 현재 상태/정렬/그룹 요약 문구.
+                DelayTableStatusSummary: "상태: 전체",
+                DelayTableSortGroupSummary: "정렬/그룹: 기본",
+                DelayTableSortKey: "",
+                DelayTableSortDescending: false,
+                DelayTableGroupKey: "",
+                DelayTableGroupDescending: false,
 
                 // 문서 상세 Dialog에서 선택한 관련 문서를 기억한다.
                 selectedDocumentStage: "",

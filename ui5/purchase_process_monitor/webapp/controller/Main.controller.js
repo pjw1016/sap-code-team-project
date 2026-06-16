@@ -6,9 +6,11 @@ sap.ui.define([
     "sap/m/MessageBox",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
+    "sap/ui/model/Sorter",
+    "sap/ui/core/Fragment",
     "code/d3/purchaseprocessmonitor/model/formatter",
     "code/d3/purchaseprocessmonitor/model/models"
-], (Controller, MessageToast, MessageBox, Filter, FilterOperator, formatter, models) => {
+], (Controller, MessageToast, MessageBox, Filter, FilterOperator, Sorter, Fragment, formatter, models) => {
     "use strict";
 
     return Controller.extend("code.d3.purchaseprocessmonitor.controller.Main", {
@@ -47,6 +49,7 @@ sap.ui.define([
          * RFQ/MQ 진행 상태는 조달 문서 목록의 RFQ Header 행으로 통합 표시한다.
          */
         onSearch() {
+            this._updateDelayTableStateSummary();
             return this._loadBeginSummary();
         },
 
@@ -92,23 +95,52 @@ sap.ui.define([
             if (oViewModel) {
                 oViewModel.setProperty("/selectedDelayStatus", "");
             }
+
+            this._updateDelayTableStateSummary();
         },
 
         /**
          * KPI 필터 해제 버튼 이벤트.
          *
-         * 이후 KPI 카드를 클릭하면 view>/selectedDelayStatus에 DelayStatus가 저장되고,
-         * DelayListSet 조회 시 그 값만 필터로 전달한다.
-         * 현재 단계에서는 OData 재조회 전이므로 선택 상태만 초기화하고 사용자에게 동작을 알려준다.
+         * KPI 카드 클릭 또는 지연 상태 ComboBox 변경으로 좁혀진 상태 필터를
+         * 화면의 기본 지연/미처리 상태 5개로 되돌린 뒤 같은 조회조건으로 Begin 영역을 다시 조회한다.
+         *
+         * 기본값은 "정상"을 제외한 PR/RFQ/MQ/PO/IV 지연 상태 전체이며,
+         * filter>/DelayStatuses를 직접 갱신하면 MultiComboBox 선택값도 함께 복원된다.
+         *
+         * @returns {Promise} Begin Column 재조회 Promise
          */
         onClearKpiFilter() {
-            var oViewModel = this.getView().getModel("view");
+            var oView = this.getView();
+            var oFilterModel = oView.getModel("filter");
+            var oViewModel = oView.getModel("view");
+
+            if (oFilterModel) {
+                oFilterModel.setProperty("/DelayStatuses", this._getDefaultDelayStatuses());
+            }
 
             if (oViewModel) {
                 oViewModel.setProperty("/selectedDelayStatus", "");
             }
 
-            MessageToast.show("KPI 필터를 해제했습니다.");
+            this._updateDelayTableStateSummary();
+            MessageToast.show("KPI 필터를 기본 지연 상태로 되돌렸습니다.");
+            return this._loadBeginSummary();
+        },
+
+        /**
+         * 화면 진입 시 사용하는 기본 지연 상태 배열을 반환한다.
+         *
+         * models.createFilterModel()의 기본값을 복사해서 사용하면
+         * 초기 조회, 전체 초기화, KPI 필터 해제의 기준이 한 곳으로 유지된다.
+         * 배열은 참조 공유를 피하기 위해 slice()로 복사한다.
+         *
+         * @returns {string[]} 정상(NORMAL)을 제외한 기본 지연/미처리 상태 코드 배열
+         */
+        _getDefaultDelayStatuses() {
+            var oDefaultFilterData = models.createFilterModel().getData();
+
+            return Array.isArray(oDefaultFilterData.DelayStatuses) ? oDefaultFilterData.DelayStatuses.slice() : [];
         },
 
         /**
@@ -131,7 +163,18 @@ sap.ui.define([
             }
 
             this._selectSingleDelayStatus(sDelayStatus);
+            this._updateDelayTableStateSummary();
             return this._loadBeginSummary();
+        },
+
+        /**
+         * 지연 상태 MultiComboBox 선택 완료 이벤트.
+         *
+         * 사용자가 직접 ComboBox에서 상태를 바꾸는 경우에는 아직 조회 버튼을 누르기 전이라도
+         * 목록 Header의 "상태: ..." 문구를 즉시 갱신한다.
+         */
+        onDelayStatusSelectionFinish() {
+            this._updateDelayTableStateSummary();
         },
 
         /**
@@ -159,7 +202,26 @@ sap.ui.define([
          * 실제 sap.m.ViewSettingsDialog 연결은 이후 단계에서 DelayListSet 컬럼 기준이 확정되면 구현한다.
          */
         onOpenDelayTableSettings() {
-            MessageToast.show("정렬/그룹 설정은 다음 단계에서 연결합니다.");
+            var oView = this.getView();
+
+            if (!this._pDelayTableSettingsDialog) {
+                this._pDelayTableSettingsDialog = Fragment.load({
+                    id: oView.getId(),
+                    name: "code.d3.purchaseprocessmonitor.fragment.DelayTableSettings",
+                    controller: this
+                }).then(function (oDialog) {
+                    if (oView.addDependent) {
+                        oView.addDependent(oDialog);
+                    }
+
+                    return oDialog;
+                });
+            }
+
+            return this._pDelayTableSettingsDialog.then(function (oDialog) {
+                oDialog.open();
+                return oDialog;
+            });
         },
 
         /**
@@ -168,7 +230,51 @@ sap.ui.define([
          * 아직 정렬/그룹 Sorter를 적용하지 않으므로 사용자에게 현재 상태를 알려준다.
          */
         onResetDelayTableSettings() {
-            MessageToast.show("정렬/그룹 조건이 아직 적용되지 않았습니다.");
+            this._resetDelayTableSettings();
+            MessageToast.show("정렬/그룹 조건을 초기화했습니다.");
+        },
+
+        /**
+         * ViewSettingsDialog의 선택값을 sap.m.Table Binding Sorter로 변환한다.
+         *
+         * @param {sap.ui.base.Event} oEvent ViewSettingsDialog confirm 이벤트
+         */
+        onDelayTableSettingsConfirm(oEvent) {
+            var oSortItem = oEvent.getParameter("sortItem");
+            var oGroupItem = oEvent.getParameter("groupItem");
+            var sSortKey = oSortItem && oSortItem.getKey();
+            var sGroupKey = oGroupItem && oGroupItem.getKey();
+            var bSortDescending = oEvent.getParameter("sortDescending");
+            var bGroupDescending = oEvent.getParameter("groupDescending");
+
+            this._applyDelayTableSorters(sSortKey, bSortDescending, sGroupKey, bGroupDescending);
+        },
+
+        /**
+         * 조달 문서 목록 행 선택 이벤트.
+         *
+         * 20단계에서는 PR/RFQ/PO 후속 동작을 바로 실행하지 않고,
+         * 사용자가 선택한 기준 문서 정보를 view 모델에 저장하는 것까지만 처리한다.
+         * 이렇게 해두면 다음 단계에서 DocType 기준으로 PR 안내, RFQ 강조, PO Mid Column 열기를
+         * 같은 선택 상태 위에 안정적으로 붙일 수 있다.
+         *
+         * @param {sap.ui.base.Event} oEvent ColumnListItem press 이벤트
+         */
+        onDelayListItemPress(oEvent) {
+            var oItem = oEvent && oEvent.getSource && oEvent.getSource();
+            var oContext = oItem && oItem.getBindingContext && oItem.getBindingContext("delay");
+            var oRow = oContext && oContext.getObject && oContext.getObject();
+            var oViewModel = this.getView().getModel("view");
+
+            if (!oRow || !oViewModel) {
+                MessageToast.show("선택한 조달 문서 정보를 읽을 수 없습니다.");
+                return;
+            }
+
+            oViewModel.setProperty("/selectedDocType", oRow.DocType || "");
+            oViewModel.setProperty("/selectedDocNo", oRow.DocNo || "");
+
+            MessageToast.show("조달 문서를 선택했습니다: " + (oRow.DocType || "-") + " " + (oRow.DocNo || ""));
         },
 
         /**
@@ -269,6 +375,7 @@ sap.ui.define([
          */
         _readDelayList() {
             var aDelayStatuses = this._getSelectedDelayStatuses();
+            var aBackendDelayStatuses = this._toBackendDelayStatuses(aDelayStatuses);
             var oReadPromise;
 
             /*
@@ -278,12 +385,12 @@ sap.ui.define([
              * 사용자는 MultiComboBox에서 여러 상태를 선택하지만, Backend에는 상태별 단건 조건으로
              * 나누어 조회하면 기존 단건 필터 로직을 그대로 활용할 수 있고 결과 누락도 막을 수 있다.
              */
-            if (aDelayStatuses.length > 1) {
-                oReadPromise = Promise.all(aDelayStatuses.map(function (sDelayStatus) {
+            if (aBackendDelayStatuses.length > 1) {
+                oReadPromise = Promise.all(aBackendDelayStatuses.map(function (sDelayStatus) {
                     return this._readEntitySet("/DelayListSet", this._buildDelayListFilters([sDelayStatus]));
                 }.bind(this))).then(this._mergeDelayListRows.bind(this));
             } else {
-                oReadPromise = this._readEntitySet("/DelayListSet", this._buildDelayListFilters());
+                oReadPromise = this._readEntitySet("/DelayListSet", this._buildDelayListFilters(aBackendDelayStatuses));
             }
 
             return oReadPromise.then(function (aRows) {
@@ -295,8 +402,369 @@ sap.ui.define([
                     count: aDelayRows.length
                 });
 
+                this._reapplyDelayTableSorters();
                 return aDelayRows;
             }.bind(this));
+        },
+
+        /**
+         * 조달 문서 목록 Table에 정렬/그룹 Sorter를 적용한다.
+         *
+         * 견적 비교 앱과 동일하게 그룹 Sorter를 먼저 적용하고,
+         * 그룹과 다른 정렬 필드가 선택된 경우 정렬 Sorter를 두 번째로 추가한다.
+         *
+         * @param {string} sSortKey 정렬 기준 Property
+         * @param {boolean} bSortDescending 정렬 내림차순 여부
+         * @param {string} sGroupKey 그룹 기준 Property
+         * @param {boolean} bGroupDescending 그룹 내림차순 여부
+         */
+        _applyDelayTableSorters(sSortKey, bSortDescending, sGroupKey, bGroupDescending) {
+            var oView = this.getView && this.getView();
+            var oTable = oView && typeof oView.byId === "function"
+                ? oView.byId("delayListTable")
+                : (typeof this.byId === "function" ? this.byId("delayListTable") : null);
+            var oBinding = oTable && oTable.getBinding && oTable.getBinding("items");
+            var aSorters = [];
+
+            this._setDelayTableSortGroupState(sSortKey, bSortDescending, sGroupKey, bGroupDescending);
+
+            if (sGroupKey) {
+                aSorters.push(this._createDelayTableSorter(
+                    sGroupKey,
+                    bGroupDescending,
+                    this._getDelayTableGroup.bind(this, sGroupKey)
+                ));
+            }
+
+            if (sSortKey && sSortKey !== sGroupKey) {
+                aSorters.push(this._createDelayTableSorter(sSortKey, bSortDescending));
+            }
+
+            if (oBinding && typeof oBinding.sort === "function") {
+                oBinding.sort(aSorters);
+            }
+        },
+
+        /**
+         * 조회 후에도 사용자가 지정한 정렬/그룹 상태가 유지되도록 현재 view 모델 상태를 다시 적용한다.
+         */
+        _reapplyDelayTableSorters() {
+            var oViewModel = this.getView().getModel("view");
+
+            if (!oViewModel) {
+                return;
+            }
+
+            this._applyDelayTableSorters(
+                oViewModel.getProperty("/DelayTableSortKey"),
+                oViewModel.getProperty("/DelayTableSortDescending"),
+                oViewModel.getProperty("/DelayTableGroupKey"),
+                oViewModel.getProperty("/DelayTableGroupDescending")
+            );
+        },
+
+        /**
+         * 조달 문서 목록의 정렬/그룹 상태와 Dialog 선택값을 기본값으로 되돌린다.
+         */
+        _resetDelayTableSettings() {
+            this._applyDelayTableSorters("", false, "", false);
+            this._resetDelayTableSettingsDialog();
+        },
+
+        /**
+         * 이미 생성된 ViewSettingsDialog의 선택 표시를 초기화한다.
+         */
+        _resetDelayTableSettingsDialog() {
+            var oDialog = this.byId("delayTableSettingsDialog");
+
+            if (!oDialog) {
+                return;
+            }
+
+            if (typeof oDialog.setSortDescending === "function") {
+                oDialog.setSortDescending(false);
+            }
+
+            if (typeof oDialog.setGroupDescending === "function") {
+                oDialog.setGroupDescending(false);
+            }
+
+            this._clearViewSettingsItems(oDialog.getSortItems && oDialog.getSortItems());
+            this._clearViewSettingsItems(oDialog.getGroupItems && oDialog.getGroupItems());
+        },
+
+        /**
+         * ViewSettingsDialog Item 선택 표시를 해제한다.
+         *
+         * @param {sap.m.ViewSettingsItem[]} aItems Dialog Item 배열
+         */
+        _clearViewSettingsItems(aItems) {
+            (aItems || []).forEach(function (oItem) {
+                if (oItem && typeof oItem.setSelected === "function") {
+                    oItem.setSelected(false);
+                }
+            });
+        },
+
+        /**
+         * DelayList 필드 특성에 맞는 Sorter를 만든다.
+         *
+         * 지연일/품목 수처럼 숫자로 비교해야 하는 필드는 별도 comparator를 사용해
+         * 문자 정렬에서 "10"이 "2"보다 앞서는 문제를 막는다.
+         *
+         * @param {string} sKey Sorter Property
+         * @param {boolean} bDescending 내림차순 여부
+         * @param {function|boolean} vGroup 그룹 함수 또는 그룹 여부
+         * @returns {sap.ui.model.Sorter} Table binding에 적용할 Sorter
+         */
+        _createDelayTableSorter(sKey, bDescending, vGroup) {
+            var fnComparator = this._isDelayNumericSortKey(sKey) ? this._compareNumericValues.bind(this) : undefined;
+
+            return new Sorter(sKey, bDescending, vGroup, fnComparator);
+        },
+
+        /**
+         * 숫자 정렬이 필요한 DelayList Property인지 판별한다.
+         *
+         * @param {string} sKey Property 이름
+         * @returns {boolean} 숫자 comparator 필요 여부
+         */
+        _isDelayNumericSortKey(sKey) {
+            return [
+                "DelayDays",
+                "DelayedItemCount",
+                "TotalItemCount"
+            ].indexOf(sKey) > -1;
+        },
+
+        /**
+         * 숫자형 필드 정렬용 comparator.
+         *
+         * @param {*} vA 왼쪽 값
+         * @param {*} vB 오른쪽 값
+         * @returns {int} 비교 결과
+         */
+        _compareNumericValues(vA, vB) {
+            var fA = Number(vA);
+            var fB = Number(vB);
+
+            if (Number.isNaN(fA)) {
+                fA = 0;
+            }
+
+            if (Number.isNaN(fB)) {
+                fB = 0;
+            }
+
+            if (fA < fB) {
+                return -1;
+            }
+
+            if (fA > fB) {
+                return 1;
+            }
+
+            return 0;
+        },
+
+        /**
+         * Table 그룹 헤더에 표시할 key/text를 만든다.
+         *
+         * @param {string} sProperty 그룹 기준 Property
+         * @param {sap.ui.model.Context} oContext Row binding context
+         * @returns {{key: string, text: string}} UI5 그룹 헤더 정보
+         */
+        _getDelayTableGroup(sProperty, oContext) {
+            var oRow = oContext && oContext.getObject ? oContext.getObject() : {};
+            var sKey = oRow[sProperty] || "";
+            var sText = sKey || "N/A";
+
+            if (sProperty === "DocType") {
+                sText = this._getDocTypeText(sKey);
+            }
+
+            return {
+                key: sKey,
+                text: this._getDelayTableSettingLabel(sProperty) + ": " + sText
+            };
+        },
+
+        /**
+         * 정렬/그룹 상태를 view 모델에 저장하고 Header 요약 문구를 갱신한다.
+         */
+        _setDelayTableSortGroupState(sSortKey, bSortDescending, sGroupKey, bGroupDescending) {
+            var oViewModel = this.getView().getModel("view");
+
+            if (!oViewModel) {
+                return;
+            }
+
+            oViewModel.setProperty("/DelayTableSortKey", sSortKey || "");
+            oViewModel.setProperty("/DelayTableSortDescending", !!bSortDescending);
+            oViewModel.setProperty("/DelayTableGroupKey", sGroupKey || "");
+            oViewModel.setProperty("/DelayTableGroupDescending", !!bGroupDescending);
+
+            this._updateDelayTableStateSummary();
+        },
+
+        /**
+         * 목록 Header에 표시되는 상태 요약과 정렬/그룹 요약을 갱신한다.
+         */
+        _updateDelayTableStateSummary() {
+            var oViewModel = this.getView().getModel("view");
+
+            if (!oViewModel) {
+                return;
+            }
+
+            oViewModel.setProperty("/DelayTableStatusSummary", this._getDelayTableStatusSummary());
+            oViewModel.setProperty("/DelayTableSortGroupSummary", this._getDelayTableSortGroupSummary());
+        },
+
+        /**
+         * 현재 지연 상태 선택값을 Header 요약 문구로 변환한다.
+         *
+         * @returns {string} 예: "상태: 전체", "상태: RFQ 미접수 외 1"
+         */
+        _getDelayTableStatusSummary() {
+            var aStatuses = this._getSelectedDelayStatuses();
+            var aDefaultStatuses = this._getDefaultDelayStatuses();
+            var aLabels;
+
+            if (!aStatuses.length) {
+                return "상태: 미선택";
+            }
+
+            if (this._hasSameMembers(aStatuses, aDefaultStatuses)
+                    || this._hasSameMembers(aStatuses, aDefaultStatuses.concat(["NORMAL"]))) {
+                return "상태: 전체";
+            }
+
+            aLabels = aStatuses.map(this._getDelayStatusTextByCode.bind(this)).filter(Boolean);
+
+            if (aLabels.length <= 2) {
+                return "상태: " + aLabels.join(", ");
+            }
+
+            return "상태: " + aLabels[0] + " 외 " + (aLabels.length - 1);
+        },
+
+        /**
+         * 현재 정렬/그룹 선택값을 Header 요약 문구로 변환한다.
+         *
+         * @returns {string} 예: "정렬/그룹: 기본", "정렬: 지연일 내림차순 / 그룹: 지연상태 오름차순"
+         */
+        _getDelayTableSortGroupSummary() {
+            var oViewModel = this.getView().getModel("view");
+            var aParts = [];
+            var sSortKey = oViewModel && oViewModel.getProperty("/DelayTableSortKey");
+            var sGroupKey = oViewModel && oViewModel.getProperty("/DelayTableGroupKey");
+
+            if (sSortKey) {
+                aParts.push(
+                    "정렬: "
+                    + this._getDelayTableSettingLabel(sSortKey)
+                    + " "
+                    + this._getOrderText(oViewModel.getProperty("/DelayTableSortDescending"))
+                );
+            }
+
+            if (sGroupKey) {
+                aParts.push(
+                    "그룹: "
+                    + this._getDelayTableSettingLabel(sGroupKey)
+                    + " "
+                    + this._getOrderText(oViewModel.getProperty("/DelayTableGroupDescending"))
+                );
+            }
+
+            return aParts.length ? aParts.join(" / ") : "정렬/그룹: 기본";
+        },
+
+        /**
+         * DelayList 정렬/그룹 Property를 사용자가 읽을 수 있는 라벨로 변환한다.
+         *
+         * @param {string} sKey Property 이름
+         * @returns {string} 화면 표시 라벨
+         */
+        _getDelayTableSettingLabel(sKey) {
+            var mLabelByProperty = {
+                DelayStatusText: "지연상태",
+                DocType: "문서유형",
+                DocNo: "문서번호",
+                MaterialSummary: "자재요약",
+                VendorSummary: "공급업체",
+                PlantSummary: "플랜트",
+                DelayDays: "지연일",
+                DelayedItemCount: "지연품목",
+                TotalItemCount: "전체품목"
+            };
+
+            return mLabelByProperty[sKey] || sKey;
+        },
+
+        /**
+         * 정렬 방향 Boolean 값을 한국어 문구로 변환한다.
+         *
+         * @param {boolean} bDescending 내림차순 여부
+         * @returns {string} 오름차순/내림차순
+         */
+        _getOrderText(bDescending) {
+            return bDescending ? "내림차순" : "오름차순";
+        },
+
+        /**
+         * DelayStatus 코드를 KPI 카드 명칭과 같은 한국어 문구로 변환한다.
+         *
+         * @param {string} sStatus DelayStatus 코드
+         * @returns {string} 상태명
+         */
+        _getDelayStatusTextByCode(sStatus) {
+            var mTextByStatus = {
+                PR_DELAY: "PR 처리 지연",
+                RFQ_NO_QUOTATION: "RFQ 미접수",
+                MQ_SELECTION_DELAY: "MQ 채택 지연",
+                PO_DELIVERY_DELAY: "PO 납기 지연",
+                IV_INCOMPLETE: "입고 후 미송장",
+                NORMAL: "정상",
+                DELAY: "지연/미처리 전체",
+                ALL: "전체"
+            };
+
+            return mTextByStatus[sStatus] || sStatus;
+        },
+
+        /**
+         * 문서유형 코드를 그룹 헤더용 문구로 변환한다.
+         *
+         * @param {string} sDocType 문서유형 코드
+         * @returns {string} 문서유형 문구
+         */
+        _getDocTypeText(sDocType) {
+            var mTextByDocType = {
+                PR: "PR",
+                RFQ: "RFQ",
+                PO: "PO"
+            };
+
+            return mTextByDocType[sDocType] || sDocType || "N/A";
+        },
+
+        /**
+         * 두 배열이 순서와 무관하게 같은 값을 가지고 있는지 확인한다.
+         *
+         * @param {string[]} aLeft 첫 번째 배열
+         * @param {string[]} aRight 두 번째 배열
+         * @returns {boolean} 동일 멤버 여부
+         */
+        _hasSameMembers(aLeft, aRight) {
+            var aNormalizedLeft = (Array.isArray(aLeft) ? aLeft : []).slice().sort();
+            var aNormalizedRight = (Array.isArray(aRight) ? aRight : []).slice().sort();
+
+            return aNormalizedLeft.length === aNormalizedRight.length
+                && aNormalizedLeft.every(function (sValue, iIndex) {
+                    return sValue === aNormalizedRight[iIndex];
+                });
         },
 
         /**
@@ -312,6 +780,63 @@ sap.ui.define([
             var oFilterData = oFilterModel && typeof oFilterModel.getData === "function" ? oFilterModel.getData() : {};
 
             return Array.isArray(oFilterData.DelayStatuses) ? oFilterData.DelayStatuses.filter(Boolean) : [];
+        },
+
+        /**
+         * 화면 MultiComboBox의 세부 선택값을 Backend가 지원하는 DelayStatus 정책으로 변환한다.
+         *
+         * 화면에는 사용자가 이해하기 쉬운 PR/RFQ/MQ/PO/IV/NORMAL 개별 상태를 보여주고,
+         * OData 요청 직전에만 Backend 대표 코드로 압축한다.
+         * 이렇게 하면 UI 선택 상태는 그대로 유지하면서도 전체 지연 조회는 한 번만 호출할 수 있다.
+         *
+         * 변환 규칙:
+         * - 지연/미처리 5개 전체 선택: DELAY
+         * - 지연/미처리 5개 + 정상 선택: ALL
+         * - 정상만 선택: NORMAL
+         * - 일부 상태 다중 선택: 기존처럼 상태별 개별 조회 후 병합
+         *
+         * @param {string[]} aDelayStatuses 화면에서 선택된 DelayStatus 코드 배열
+         * @returns {string[]} Backend에 실제로 전달할 DelayStatus 코드 배열
+         */
+        _toBackendDelayStatuses(aDelayStatuses) {
+            var aDelayOnlyStatuses = [
+                "PR_DELAY",
+                "RFQ_NO_QUOTATION",
+                "MQ_SELECTION_DELAY",
+                "PO_DELIVERY_DELAY",
+                "IV_INCOMPLETE"
+            ];
+            var mSeen = {};
+            var aStatusKeys = (Array.isArray(aDelayStatuses) ? aDelayStatuses : []).filter(function (sStatus) {
+                if (!sStatus || mSeen[sStatus]) {
+                    return false;
+                }
+
+                mSeen[sStatus] = true;
+                return true;
+            });
+            var bHasNormal = aStatusKeys.indexOf("NORMAL") > -1;
+            var bHasAllDelayStatuses = aDelayOnlyStatuses.every(function (sDelayStatus) {
+                return aStatusKeys.indexOf(sDelayStatus) > -1;
+            });
+
+            if (!aStatusKeys.length) {
+                return [];
+            }
+
+            if (bHasAllDelayStatuses && bHasNormal && aStatusKeys.length === aDelayOnlyStatuses.length + 1) {
+                return ["ALL"];
+            }
+
+            if (bHasAllDelayStatuses && !bHasNormal && aStatusKeys.length === aDelayOnlyStatuses.length) {
+                return ["DELAY"];
+            }
+
+            if (bHasNormal && aStatusKeys.length === 1) {
+                return ["NORMAL"];
+            }
+
+            return aStatusKeys;
         },
 
         /**
@@ -454,6 +979,11 @@ sap.ui.define([
                 aFilters.push(new Filter("KeyDate", FilterOperator.EQ, this._normalizeDate(oFilterData.KeyDate)));
             }
 
+            /*
+             * 현재 실제 Gateway metadata에는 Summary EntityType에 LookbackMonths Property가 없다.
+             * metadata에 없는 Property를 필터로 보내면 UI5 ODataModel과 Gateway가 모두 오류를 발생시키므로,
+             * Backend MPC/metadata가 갱신되기 전까지 Summary 조회는 KeyDate만 전달한다.
+             */
             return aFilters;
         },
 
@@ -469,7 +999,12 @@ sap.ui.define([
         _buildDelayListFilters(aDelayStatuses) {
             var oView = this.getView();
             var oFilterData = oView.getModel("filter").getData();
+            var sPrNo = this._normalizeSearchText(oFilterData.PrNo);
+            var sRfqNo = this._normalizeSearchText(oFilterData.RfqNo);
             var sPoNo = this._normalizeSearchText(oFilterData.PoNo);
+            var sMatnr = this._normalizeSearchText(oFilterData.Matnr);
+            var sLifnr = this._normalizeSearchText(oFilterData.Lifnr);
+            var sWerks = this._normalizeSearchText(oFilterData.Werks);
             var aFilters = [];
 
             if (oFilterData.KeyDate) {
@@ -477,14 +1012,42 @@ sap.ui.define([
             }
 
             /*
-             * DelayListSet의 Key는 DocType + DocNo이다.
-             * 화면 조회조건 이름은 사용자가 이해하기 쉬운 PoNo이지만,
-             * Backend에는 PoNo Property가 없으므로 PO번호 입력 시
-             * DocType='PO'와 DocNo='<입력 PO번호>' 조합으로 변환해서 전달한다.
+             * 현재 실제 Gateway metadata에는 DelayList EntityType에 LookbackMonths Property가 없다.
+             * 조회기간 UI 값은 filter 모델에 보관하되, Backend MPC/metadata가 갱신되기 전까지 OData 필터로 보내지 않는다.
+             *
+             * DelayListSet의 기준 문서는 DocType + DocNo 조합이다.
+             * 따라서 화면의 PR번호/PO번호 입력값은 Backend에 직접 PrNo/PoNo로 보내지 않고,
+             * 실제 목록 Key인 문서유형과 문서번호로 변환해서 전달한다.
+             *
+             * PR번호와 PO번호가 동시에 입력된 경우에는 하나의 Header 기준문서를 고르는 화면 특성상
+             * PR번호를 우선한다. 동시 입력 경고는 이후 Busy/오류 처리 고도화 단계에서 사용자 안내로 분리한다.
              */
-            if (sPoNo) {
+            if (sPrNo) {
+                aFilters.push(new Filter("DocType", FilterOperator.EQ, "PR"));
+                aFilters.push(new Filter("DocNo", FilterOperator.EQ, sPrNo));
+            } else if (sRfqNo) {
+                aFilters.push(new Filter("DocType", FilterOperator.EQ, "RFQ"));
+                aFilters.push(new Filter("DocNo", FilterOperator.EQ, sRfqNo));
+            } else if (sPoNo) {
                 aFilters.push(new Filter("DocType", FilterOperator.EQ, "PO"));
                 aFilters.push(new Filter("DocNo", FilterOperator.EQ, sPoNo));
+            }
+
+            /*
+             * 상세 조회조건 중 Backend 필터 Property가 확정된 코드 필드만 전달한다.
+             * 자재명(Maktx), 공급업체명(Name1)은 현재 DelayListSet metadata 필터 계약에 없으므로 보내지 않는다.
+             * metadata에 없는 Property를 보내면 Gateway에서 400 오류가 발생할 수 있기 때문이다.
+             */
+            if (sMatnr) {
+                aFilters.push(new Filter("Matnr", FilterOperator.EQ, sMatnr));
+            }
+
+            if (sLifnr) {
+                aFilters.push(new Filter("Lifnr", FilterOperator.EQ, sLifnr));
+            }
+
+            if (sWerks) {
+                aFilters.push(new Filter("Werks", FilterOperator.EQ, sWerks));
             }
 
             this._addDelayStatusFilters(aFilters, Array.isArray(aDelayStatuses) ? aDelayStatuses : oFilterData.DelayStatuses);

@@ -68,7 +68,8 @@
                                         class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                                         <Label
                                             text="기준일"
-                                            labelFor="keyDatePicker" />
+                                            labelFor="keyDatePicker"
+                                            required="true" />
                                         <DatePicker
                                             id="keyDatePicker"
                                             dateValue="{filter>/KeyDate}"
@@ -99,34 +100,6 @@
                                     </VBox>
 
                                     <VBox
-                                        width="10.5rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
-                                        <Label
-                                            text="PR번호"
-                                            labelFor="prNoInput" />
-                                        <Input
-                                            id="prNoInput"
-                                            value="{filter>/PrNo}"
-                                            maxLength="10"
-                                            placeholder="PR번호 입력"
-                                            width="100%" />
-                                    </VBox>
-
-                                    <VBox
-                                        width="10.5rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
-                                        <Label
-                                            text="PO번호"
-                                            labelFor="poNoInput" />
-                                        <Input
-                                            id="poNoInput"
-                                            value="{filter>/PoNo}"
-                                            maxLength="10"
-                                            placeholder="PO번호 입력"
-                                            width="100%" />
-                                    </VBox>
-
-                                    <VBox
                                         width="18rem"
                                         class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                                         <Label
@@ -144,7 +117,8 @@
                                             id="delayStatusCombo"
                                             selectedKeys="{filter>/DelayStatuses}"
                                             width="100%"
-                                            placeholder="지연 상태 선택">
+                                            placeholder="지연 상태 선택"
+                                            selectionFinish=".onDelayStatusSelectionFinish">
                                             <core:Item key="PR_DELAY" text="PR 처리 지연" />
                                             <core:Item key="RFQ_NO_QUOTATION" text="RFQ 미접수" />
                                             <core:Item key="MQ_SELECTION_DELAY" text="MQ 채택 지연" />
@@ -242,6 +216,48 @@
                                             maxLength="6"
                                             placeholder="플랜트 입력"
                                             showValueHelp="true"
+                                            width="100%" />
+                                    </VBox>
+
+                                    <VBox
+                                        width="10.5rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="PR번호"
+                                            labelFor="prNoInput" />
+                                        <Input
+                                            id="prNoInput"
+                                            value="{filter>/PrNo}"
+                                            maxLength="10"
+                                            placeholder="PR번호 입력"
+                                            width="100%" />
+                                    </VBox>
+
+                                    <VBox
+                                        width="10.5rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="RFQ번호"
+                                            labelFor="rfqNoInput" />
+                                        <Input
+                                            id="rfqNoInput"
+                                            value="{filter>/RfqNo}"
+                                            maxLength="10"
+                                            placeholder="RFQ번호 입력"
+                                            width="100%" />
+                                    </VBox>
+
+                                    <VBox
+                                        width="10.5rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="PO번호"
+                                            labelFor="poNoInput" />
+                                        <Input
+                                            id="poNoInput"
+                                            value="{filter>/PoNo}"
+                                            maxLength="10"
+                                            placeholder="PO번호 입력"
                                             width="100%" />
                                     </VBox>
                                 </HBox>
@@ -533,6 +549,8 @@
                                                 text="{= '조달 문서 목록 (' + ${delay>/count} + ')' }"
                                                 level="H2" />
                                             <ToolbarSpacer />
+                                            <Text text="{view>/DelayTableStatusSummary}" />
+                                            <Text text="{view>/DelayTableSortGroupSummary}" />
                                             <Button
                                                 icon="sap-icon://sort"
                                                 type="Transparent"
@@ -615,7 +633,9 @@
                                             </Column>
                                         </columns>
                                         <items>
-                                            <ColumnListItem type="Navigation">
+                                            <ColumnListItem
+                                                type="Navigation"
+                                                press=".onDelayListItemPress">
                                                 <cells>
                                                     <ObjectStatus
                                                         text="{delay>DelayStatusText}"

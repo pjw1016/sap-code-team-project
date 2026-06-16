@@ -1,0 +1,34 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <!--
+        조달 문서 목록 sap.m.Table 정렬/그룹 설정 Dialog.
+        견적 비교 및 거래선 채택 앱의 ViewSettingsDialog 패턴을 재사용한다.
+        사용자가 선택한 정렬/그룹 항목은 Controller에서 sap.ui.model.Sorter 배열로 변환해
+        현재 조회된 delay JSONModel Table binding에 적용한다.
+    -->
+    <ViewSettingsDialog
+        id="delayTableSettingsDialog"
+        title="정렬/그룹 설정"
+        sortDescending="false"
+        confirm=".onDelayTableSettingsConfirm">
+        <sortItems>
+            <ViewSettingsItem key="DelayStatusText" text="지연상태" />
+            <ViewSettingsItem key="DocType" text="문서유형" />
+            <ViewSettingsItem key="DocNo" text="문서번호" />
+            <ViewSettingsItem key="MaterialSummary" text="자재요약" />
+            <ViewSettingsItem key="VendorSummary" text="공급업체" />
+            <ViewSettingsItem key="PlantSummary" text="플랜트" />
+            <ViewSettingsItem key="DelayDays" text="지연일" />
+            <ViewSettingsItem key="DelayedItemCount" text="지연품목" />
+            <ViewSettingsItem key="TotalItemCount" text="전체품목" />
+        </sortItems>
+        <groupItems>
+            <ViewSettingsItem key="DelayStatusText" text="지연상태" />
+            <ViewSettingsItem key="DocType" text="문서유형" />
+            <ViewSettingsItem key="MaterialSummary" text="자재요약" />
+            <ViewSettingsItem key="VendorSummary" text="공급업체" />
+            <ViewSettingsItem key="PlantSummary" text="플랜트" />
+        </groupItems>
+    </ViewSettingsDialog>
+</core:FragmentDefinition>
