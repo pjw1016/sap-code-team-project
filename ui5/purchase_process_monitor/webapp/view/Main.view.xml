@@ -1,0 +1,526 @@
+<mvc:View
+    controllerName="code.d3.purchaseprocessmonitor.controller.Main"
+    displayBlock="true"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+    xmlns:mvc="sap.ui.core.mvc">
+    <!--
+        FlexibleColumnLayout은 이번 앱의 핵심 화면 뼈대다.
+        Begin Column은 전체 조달 병목을 보는 모니터링 영역이고,
+        Mid Column은 사용자가 PO 행을 선택했을 때 상세 Flow와 품목 상태를 보는 영역이다.
+
+        layout은 view JSONModel에서 관리한다.
+        - 최초 진입: OneColumn
+        - PO 선택: TwoColumnsMidExpanded
+        - Mid 전체화면: MidColumnFullScreen
+    -->
+    <f:FlexibleColumnLayout
+        id="fcl"
+        layout="{view>/layout}"
+        backgroundDesign="Translucent">
+        <f:beginColumnPages>
+            <f:DynamicPage
+                id="beginPage"
+                fitContent="false"
+                headerExpanded="true"
+                preserveHeaderStateOnScroll="false"
+                showFooter="false">
+                <f:title>
+                    <f:DynamicPageTitle>
+                        <f:heading>
+                            <Title
+                                level="H1"
+                                text="조회 조건" />
+                        </f:heading>
+                        <f:expandedContent>
+                            <Text text="구매 프로세스의 지연, 미완료, RFQ/MQ 진행 상태를 한 화면에서 확인합니다." />
+                        </f:expandedContent>
+                    </f:DynamicPageTitle>
+                </f:title>
+
+                <f:header>
+                    <f:DynamicPageHeader pinnable="true">
+                        <!--
+                            조회조건은 V1.2.1 기준으로 기본조건과 상세조건을 분리한다.
+                            기본조건: 기준일, 조회기간, PR번호, PO번호
+                            상세조건: 자재코드, 자재명, 공급업체, 공급업체명, 플랜트
+
+                            각 Control은 filter JSONModel에 바인딩한다.
+                            이렇게 하면 Controller에서 Control ID를 찾아 값을 읽지 않고,
+                            filter 모델 값만 기준으로 OData Filter를 만들 수 있다.
+                        -->
+                        <VBox class="sapUiSmallMargin" renderType="Bare">
+                            <VBox renderType="Bare">
+                                <Title
+                                    level="H4"
+                                    text="기본 조회조건"
+                                    class="sapUiTinyMarginBottom" />
+
+                                <!--
+                                    기본 조회조건은 자주 쓰는 조건이므로 한 줄 검색바처럼 배치한다.
+                                    각 필드 폭을 고정해 Input이 과도하게 늘어나지 않게 하고,
+                                    화면 폭이 좁아지면 wrap="Wrap"에 의해 다음 줄로 자연스럽게 내려가게 한다.
+                                -->
+                                <HBox
+                                    id="basicFilterBar"
+                                    wrap="Wrap"
+                                    renderType="Bare">
+                                    <VBox
+                                        width="11rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="기준일"
+                                            labelFor="keyDatePicker" />
+                                        <DatePicker
+                                            id="keyDatePicker"
+                                            dateValue="{filter>/KeyDate}"
+                                            displayFormat="yyyy.MM.dd"
+                                            valueFormat="yyyy-MM-dd"
+                                            width="100%" />
+                                    </VBox>
+
+                                    <VBox
+                                        width="18rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="조회기간"
+                                            labelFor="lookbackSegmentedButton" />
+                                        <SegmentedButton
+                                            id="lookbackSegmentedButton"
+                                            selectedKey="{filter>/LookbackMonths}"
+                                            width="100%">
+                                            <items>
+                                                <SegmentedButtonItem
+                                                    key="3"
+                                                    text="최근 3개월" />
+                                                <SegmentedButtonItem
+                                                    key="6"
+                                                    text="최근 6개월" />
+                                            </items>
+                                        </SegmentedButton>
+                                    </VBox>
+
+                                    <VBox
+                                        width="14rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="PR번호"
+                                            labelFor="prNoInput" />
+                                        <Input
+                                            id="prNoInput"
+                                            value="{filter>/PrNo}"
+                                            maxLength="10"
+                                            placeholder="PR번호 입력"
+                                            width="100%" />
+                                    </VBox>
+
+                                    <VBox
+                                        width="14rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="PO번호"
+                                            labelFor="poNoInput" />
+                                        <Input
+                                            id="poNoInput"
+                                            value="{filter>/PoNo}"
+                                            maxLength="10"
+                                            placeholder="PO번호 입력"
+                                            width="100%" />
+                                    </VBox>
+                                </HBox>
+                            </VBox>
+
+                            <VBox
+                                id="advancedFilterBox"
+                                visible="{view>/showAdvancedFilters}"
+                                renderType="Bare">
+                                <Title
+                                    level="H4"
+                                    text="상세 조회조건"
+                                    class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
+
+                                <!--
+                                    상세 조회조건도 가능한 한 한 줄에 표시한다.
+                                    단, 작은 노트북/브라우저 축소 상태에서는 가로 스크롤 대신 자동 줄바꿈으로 접근성을 유지한다.
+                                -->
+                                <HBox
+                                    id="advancedFilterBar"
+                                    wrap="Wrap"
+                                    renderType="Bare">
+                                    <VBox
+                                        width="12rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="자재코드"
+                                            labelFor="matnrInput" />
+                                        <Input
+                                            id="matnrInput"
+                                            value="{filter>/Matnr}"
+                                            maxLength="10"
+                                            placeholder="자재코드 입력"
+                                            showValueHelp="true"
+                                            width="100%" />
+                                    </VBox>
+
+                                    <VBox
+                                        width="14rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="자재명"
+                                            labelFor="matnrNameInput" />
+                                        <Input
+                                            id="matnrNameInput"
+                                            value="{filter>/Maktx}"
+                                            maxLength="40"
+                                            placeholder="자재명 입력"
+                                            width="100%" />
+                                    </VBox>
+
+                                    <VBox
+                                        width="12rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="공급업체"
+                                            labelFor="lifnrInput" />
+                                        <Input
+                                            id="lifnrInput"
+                                            value="{filter>/Lifnr}"
+                                            maxLength="6"
+                                            placeholder="공급업체코드 입력"
+                                            showValueHelp="true"
+                                            width="100%" />
+                                    </VBox>
+
+                                    <VBox
+                                        width="14rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="공급업체명"
+                                            labelFor="lifnrNameInput" />
+                                        <Input
+                                            id="lifnrNameInput"
+                                            value="{filter>/Name1}"
+                                            maxLength="40"
+                                            placeholder="공급업체명 입력"
+                                            width="100%" />
+                                    </VBox>
+
+                                    <VBox
+                                        width="10rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="플랜트"
+                                            labelFor="werksInput" />
+                                        <Input
+                                            id="werksInput"
+                                            value="{filter>/Werks}"
+                                            maxLength="6"
+                                            placeholder="플랜트 입력"
+                                            showValueHelp="true"
+                                            width="100%" />
+                                    </VBox>
+                                </HBox>
+                            </VBox>
+
+                            <OverflowToolbar class="sapUiTinyMarginTop">
+                                <ToolbarSpacer />
+                                <Button
+                                    id="toggleAdvancedFilterButton"
+                                    text="{= ${view>/showAdvancedFilters} ? '상세조건 접기' : '상세조건 펼치기' }"
+                                    type="Transparent"
+                                    press=".onToggleAdvancedFilters" />
+                                <Button
+                                    id="resetFilterButton"
+                                    text="초기화"
+                                    type="Transparent"
+                                    press=".onResetFilters" />
+                                <Button
+                                    id="searchButton"
+                                    text="조회"
+                                    type="Emphasized"
+                                    press=".onSearch" />
+                            </OverflowToolbar>
+                        </VBox>
+                    </f:DynamicPageHeader>
+                </f:header>
+
+                <f:content>
+                    <VBox class="sapUiSmallMargin" renderType="Bare">
+                        <!--
+                            Begin Column의 실제 데이터 바인딩은 이후 단계에서 순차 구현한다.
+                            지금은 화면 구조가 흔들리지 않도록 섹션의 위치와 ID를 먼저 확정한다.
+                        -->
+                        <Panel
+                            id="kpiSection"
+                            class="sapUiNoContentPadding sapUiSmallMarginBottom">
+                            <headerToolbar>
+                                <OverflowToolbar>
+                                    <Title
+                                        text="KPI 요약"
+                                        level="H2" />
+                                    <ToolbarSpacer />
+                                    <Button
+                                        id="clearKpiFilterButton"
+                                        icon="sap-icon://clear-filter"
+                                        type="Transparent"
+                                        tooltip="KPI 필터 해제"
+                                        press=".onClearKpiFilter" />
+                                </OverflowToolbar>
+                            </headerToolbar>
+                            <!--
+                                DashboardSummarySet KPI 카드.
+                                - 큰 숫자: Header 기준 문서 수
+                                - 보조 문구: Item 기준 품목 수
+                                실제 OData 조회 전에는 dashboard JSONModel의 기본값 0이 표시된다.
+                            -->
+                            <FlexBox
+                                wrap="Wrap"
+                                renderType="Bare"
+                                class="sapUiSmallMargin">
+                                <GenericTile
+                                    header="PR 처리 지연"
+                                    subheader="{= '품목 ' + ${dashboard>/PrDlyItmCnt} + '건 / 후속 확장' }"
+                                    frameType="OneByOne"
+                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                    <tileContent>
+                                        <TileContent>
+                                            <content>
+                                                <NumericContent
+                                                    icon="sap-icon://activity-items"
+                                                    value="{path: 'dashboard>/PrDlyHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                    scale="건"
+                                                    valueColor="Neutral"
+                                                    truncateValueTo="5" />
+                                            </content>
+                                        </TileContent>
+                                    </tileContent>
+                                </GenericTile>
+
+                                <GenericTile
+                                    header="RFQ 미접수"
+                                    subheader="{= '품목 ' + ${dashboard>/RfqNoqItmCnt} + '건' }"
+                                    frameType="OneByOne"
+                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                    <tileContent>
+                                        <TileContent>
+                                            <content>
+                                                <NumericContent
+                                                    icon="sap-icon://request"
+                                                    value="{path: 'dashboard>/RfqNoqHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                    scale="건"
+                                                    valueColor="Error"
+                                                    truncateValueTo="5" />
+                                            </content>
+                                        </TileContent>
+                                    </tileContent>
+                                </GenericTile>
+
+                                <GenericTile
+                                    header="MQ 채택 지연"
+                                    subheader="{= '품목 ' + ${dashboard>/MqSelDlyItmCnt} + '건' }"
+                                    frameType="OneByOne"
+                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                    <tileContent>
+                                        <TileContent>
+                                            <content>
+                                                <NumericContent
+                                                    icon="sap-icon://target-group"
+                                                    value="{path: 'dashboard>/MqSelDlyHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                    scale="건"
+                                                    valueColor="Critical"
+                                                    truncateValueTo="5" />
+                                            </content>
+                                        </TileContent>
+                                    </tileContent>
+                                </GenericTile>
+
+                                <GenericTile
+                                    header="PO 납기 지연"
+                                    subheader="{= '품목 ' + ${dashboard>/PoDlvDlyItmCnt} + '건' }"
+                                    frameType="OneByOne"
+                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                    <tileContent>
+                                        <TileContent>
+                                            <content>
+                                                <NumericContent
+                                                    icon="sap-icon://shipping-status"
+                                                    value="{path: 'dashboard>/PoDlvDlyHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                    scale="건"
+                                                    valueColor="Critical"
+                                                    truncateValueTo="5" />
+                                            </content>
+                                        </TileContent>
+                                    </tileContent>
+                                </GenericTile>
+
+                                <GenericTile
+                                    header="입고 후 미송장"
+                                    subheader="{= '품목 ' + ${dashboard>/IvIncItmCnt} + '건' }"
+                                    frameType="OneByOne"
+                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                    <tileContent>
+                                        <TileContent>
+                                            <content>
+                                                <NumericContent
+                                                    icon="sap-icon://document"
+                                                    value="{path: 'dashboard>/IvIncHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                    scale="건"
+                                                    valueColor="Error"
+                                                    truncateValueTo="5" />
+                                            </content>
+                                        </TileContent>
+                                    </tileContent>
+                                </GenericTile>
+
+                            </FlexBox>
+                        </Panel>
+
+                        <Panel
+                            id="weeklySummarySection"
+                            class="sapUiNoContentPadding sapUiSmallMarginBottom"
+                            headerText="주간 구매/입고/송장 요약">
+                            <!--
+                                WeeklySummarySet 주간 요약.
+                                금액 3개는 ObjectNumber로 통화와 함께 표시하고,
+                                건수 2개는 ObjectStatus로 빠르게 상태를 읽을 수 있게 한다.
+                            -->
+                            <FlexBox
+                                wrap="Wrap"
+                                renderType="Bare"
+                                class="sapUiSmallMargin">
+                                <VBox
+                                    width="13rem"
+                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
+                                    <Label text="구매금액 합계" />
+                                    <ObjectNumber
+                                        emphasized="true"
+                                        number="{path: 'weekly>/PurchaseAmt', formatter: '.formatter.formatAmount'}"
+                                        unit="{weekly>/Waers}" />
+                                </VBox>
+
+                                <VBox
+                                    width="13rem"
+                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
+                                    <Label text="입고금액 합계" />
+                                    <ObjectNumber
+                                        emphasized="true"
+                                        number="{path: 'weekly>/ReceiptAmt', formatter: '.formatter.formatAmount'}"
+                                        unit="{weekly>/Waers}" />
+                                </VBox>
+
+                                <VBox
+                                    width="13rem"
+                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
+                                    <Label text="송장금액 합계" />
+                                    <ObjectNumber
+                                        emphasized="true"
+                                        number="{path: 'weekly>/InvoiceAmt', formatter: '.formatter.formatAmount'}"
+                                        unit="{weekly>/Waers}" />
+                                </VBox>
+
+                                <VBox
+                                    width="11rem"
+                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
+                                    <Label text="금주 입고 완료" />
+                                    <ObjectStatus
+                                        text="{= ${weekly>/CompGrHdrCnt} + '건' }"
+                                        state="Success"
+                                        icon="sap-icon://sys-enter-2" />
+                                </VBox>
+
+                                <VBox
+                                    width="11rem"
+                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
+                                    <Label text="입고 후 미송장" />
+                                    <ObjectStatus
+                                        text="{= ${weekly>/IvIncHdrCnt} + '건' }"
+                                        state="Error"
+                                        icon="sap-icon://alert" />
+                                </VBox>
+                            </FlexBox>
+                        </Panel>
+
+                        <Panel
+                            id="rfqStatusSection"
+                            class="sapUiNoContentPadding sapUiSmallMarginBottom"
+                            headerText="RFQ/MQ 현황">
+                            <VBox class="sapUiSmallMargin">
+                                <Text text="RfqQuotationStatusSet 기반 RFQ 접수/채택 현황 영역" />
+                            </VBox>
+                        </Panel>
+
+                        <Panel
+                            id="delayListSection"
+                            class="sapUiNoContentPadding"
+                            headerText="지연 대상 목록">
+                            <VBox class="sapUiSmallMargin">
+                                <Text text="DelayListSet 기반 Header 목록 영역" />
+                            </VBox>
+                        </Panel>
+                    </VBox>
+                </f:content>
+            </f:DynamicPage>
+        </f:beginColumnPages>
+
+        <f:midColumnPages>
+            <f:DynamicPage
+                id="midPage"
+                fitContent="false"
+                preserveHeaderStateOnScroll="true"
+                showFooter="true">
+                <f:title>
+                    <f:DynamicPageTitle>
+                        <f:heading>
+                            <Title
+                                level="H2"
+                                text="PO 조달 흐름 상세" />
+                        </f:heading>
+                        <f:expandedContent>
+                            <Text text="RFQ 행 선택 시에는 PO Flow를 호출하지 않고 RFQ/MQ 현황에서 확인합니다." />
+                        </f:expandedContent>
+                    </f:DynamicPageTitle>
+                </f:title>
+
+                <f:content>
+                    <VBox class="sapUiSmallMargin" renderType="Bare">
+                        <Panel
+                            id="processFlowSection"
+                            class="sapUiNoContentPadding sapUiSmallMarginBottom"
+                            headerText="조달 문서 흐름">
+                            <VBox class="sapUiSmallMargin">
+                                <Text text="ProcessFlowSet 기반 PR → RFQ → MQ → PO → GR → IV 카드 영역" />
+                            </VBox>
+                        </Panel>
+
+                        <Panel
+                            id="processItemSection"
+                            class="sapUiNoContentPadding"
+                            headerText="품목별 진행 상태">
+                            <VBox class="sapUiSmallMargin">
+                                <Text text="ProcessItemSet 기반 품목별 진행 상태 Table 영역" />
+                            </VBox>
+                        </Panel>
+                    </VBox>
+                </f:content>
+
+                <f:footer>
+                    <OverflowToolbar>
+                        <ToolbarSpacer />
+                        <Button
+                            text="지연 산식 보기"
+                            type="Transparent"
+                            enabled="false" />
+                        <Button
+                            text="문서 상세 보기"
+                            type="Emphasized"
+                            enabled="false" />
+                        <Button
+                            text="납기/미입고 앱 이동"
+                            type="Transparent"
+                            enabled="false" />
+                    </OverflowToolbar>
+                </f:footer>
+            </f:DynamicPage>
+        </f:midColumnPages>
+    </f:FlexibleColumnLayout>
+</mvc:View>
