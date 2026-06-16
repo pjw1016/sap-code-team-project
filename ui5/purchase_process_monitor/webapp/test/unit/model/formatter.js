@@ -20,4 +20,11 @@ sap.ui.define([
         assert.strictEqual(formatter.formatDelayDays(0), "-");
         assert.strictEqual(formatter.formatDelayDays(null), "-");
     });
+
+    QUnit.test("summaryCode and summaryText split backend summary values", function (assert) {
+        assert.strictEqual(formatter.summaryCode("100005 / DDK Saddle 외 4건"), "100005");
+        assert.strictEqual(formatter.summaryText("100005 / DDK Saddle 외 4건"), "DDK Saddle 외 4건");
+        assert.strictEqual(formatter.summaryCode("견적 접수 후 미채택"), "견적 접수 후 미채택");
+        assert.strictEqual(formatter.summaryText("견적 접수 후 미채택"), "");
+    });
 });

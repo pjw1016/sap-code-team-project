@@ -2,6 +2,7 @@
     controllerName="code.d3.purchaseprocessmonitor.controller.Main"
     displayBlock="true"
     xmlns="sap.m"
+    xmlns:core="sap.ui.core"
     xmlns:f="sap.f"
     xmlns:mvc="sap.ui.core.mvc">
     <!--
@@ -32,9 +33,6 @@
                                 level="H1"
                                 text="조회 조건" />
                         </f:heading>
-                        <f:expandedContent>
-                            <Text text="구매 프로세스의 지연, 미완료, RFQ/MQ 진행 상태를 한 화면에서 확인합니다." />
-                        </f:expandedContent>
                     </f:DynamicPageTitle>
                 </f:title>
 
@@ -51,10 +49,10 @@
                         -->
                         <VBox class="sapUiSmallMargin" renderType="Bare">
                             <VBox renderType="Bare">
-                                <Title
+                                <!-- <Title
                                     level="H4"
                                     text="기본 조회조건"
-                                    class="sapUiTinyMarginBottom" />
+                                    class="sapUiTinyMarginBottom" /> -->
 
                                 <!--
                                     기본 조회조건은 자주 쓰는 조건이므로 한 줄 검색바처럼 배치한다.
@@ -80,7 +78,7 @@
                                     </VBox>
 
                                     <VBox
-                                        width="18rem"
+                                        width="16rem"
                                         class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                                         <Label
                                             text="조회기간"
@@ -101,7 +99,7 @@
                                     </VBox>
 
                                     <VBox
-                                        width="14rem"
+                                        width="10.5rem"
                                         class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                                         <Label
                                             text="PR번호"
@@ -115,7 +113,7 @@
                                     </VBox>
 
                                     <VBox
-                                        width="14rem"
+                                        width="10.5rem"
                                         class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                                         <Label
                                             text="PO번호"
@@ -127,6 +125,34 @@
                                             placeholder="PO번호 입력"
                                             width="100%" />
                                     </VBox>
+
+                                    <VBox
+                                        width="18rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="지연 상태"
+                                            labelFor="delayStatusCombo" />
+                                        <!--
+                                            지연 상태는 여러 상태를 동시에 조회할 수 있어야 하므로
+                                            SAPUI5 표준 sap.m.MultiComboBox를 사용한다.
+
+                                            selectedKeys는 filter>/DelayStatuses 배열과 양방향 바인딩된다.
+                                            기본값은 KPI 요약 카드 명칭과 같은 지연/미완료 상태이며,
+                                            정상(NORMAL)은 PR/PO 정상 건이 대량 조회될 수 있어 사용자가 직접 선택할 때만 포함한다.
+                                        -->
+                                        <MultiComboBox
+                                            id="delayStatusCombo"
+                                            selectedKeys="{filter>/DelayStatuses}"
+                                            width="100%"
+                                            placeholder="지연 상태 선택">
+                                            <core:Item key="PR_DELAY" text="PR 처리 지연" />
+                                            <core:Item key="RFQ_NO_QUOTATION" text="RFQ 미접수" />
+                                            <core:Item key="MQ_SELECTION_DELAY" text="MQ 채택 지연" />
+                                            <core:Item key="PO_DELIVERY_DELAY" text="PO 납기 지연" />
+                                            <core:Item key="IV_INCOMPLETE" text="입고 후 미송장" />
+                                            <core:Item key="NORMAL" text="정상" />
+                                        </MultiComboBox>
+                                    </VBox>
                                 </HBox>
                             </VBox>
 
@@ -135,8 +161,7 @@
                                 visible="{view>/showAdvancedFilters}"
                                 renderType="Bare">
                                 <Title
-                                    level="H4"
-                                    text="상세 조회조건"
+                                    text="상세조건"
                                     class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
 
                                 <!--
@@ -226,7 +251,7 @@
                                 <ToolbarSpacer />
                                 <Button
                                     id="toggleAdvancedFilterButton"
-                                    text="{= ${view>/showAdvancedFilters} ? '상세조건 접기' : '상세조건 펼치기' }"
+                                    text="{= ${view>/showAdvancedFilters} ? '상세조건 접기' : '상세조건' }"
                                     type="Transparent"
                                     press=".onToggleAdvancedFilters" />
                                 <Button
@@ -250,213 +275,386 @@
                             Begin Column의 실제 데이터 바인딩은 이후 단계에서 순차 구현한다.
                             지금은 화면 구조가 흔들리지 않도록 섹션의 위치와 ID를 먼저 확정한다.
                         -->
-                        <Panel
-                            id="kpiSection"
-                            class="sapUiNoContentPadding sapUiSmallMarginBottom">
-                            <headerToolbar>
-                                <OverflowToolbar>
-                                    <Title
-                                        text="KPI 요약"
-                                        level="H2" />
-                                    <ToolbarSpacer />
-                                    <Button
-                                        id="clearKpiFilterButton"
-                                        icon="sap-icon://clear-filter"
-                                        type="Transparent"
-                                        tooltip="KPI 필터 해제"
-                                        press=".onClearKpiFilter" />
-                                </OverflowToolbar>
-                            </headerToolbar>
-                            <!--
-                                DashboardSummarySet KPI 카드.
-                                - 큰 숫자: Header 기준 문서 수
-                                - 보조 문구: Item 기준 품목 수
-                                실제 OData 조회 전에는 dashboard JSONModel의 기본값 0이 표시된다.
-                            -->
-                            <FlexBox
-                                wrap="Wrap"
-                                renderType="Bare"
-                                class="sapUiSmallMargin">
-                                <GenericTile
-                                    header="PR 처리 지연"
-                                    subheader="{= '품목 ' + ${dashboard>/PrDlyItmCnt} + '건 / 후속 확장' }"
-                                    frameType="OneByOne"
-                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
-                                    <tileContent>
-                                        <TileContent>
-                                            <content>
-                                                <NumericContent
-                                                    icon="sap-icon://activity-items"
-                                                    value="{path: 'dashboard>/PrDlyHdrCnt', formatter: '.formatter.formatQuantity'}"
-                                                    scale="건"
-                                                    valueColor="Neutral"
-                                                    truncateValueTo="5" />
-                                            </content>
-                                        </TileContent>
-                                    </tileContent>
-                                </GenericTile>
+                        <FlexBox
+                            wrap="Wrap"
+                            renderType="Bare"
+                            class="sapUiSmallMarginBottom ppmSummaryRow">
+                            <VBox
+                                width="64%"
+                                class="sapUiSmallMarginEnd ppmKpiSummaryColumn">
+                                <Panel
+                                    id="kpiSection"
+                                    class="sapUiNoContentPadding">
+                                    <headerToolbar>
+                                        <OverflowToolbar>
+                                            <Title
+                                                text="KPI 요약"
+                                                level="H2" />
+                                            <ToolbarSpacer />
+                                            <Button
+                                                id="clearKpiFilterButton"
+                                                icon="sap-icon://clear-filter"
+                                                type="Transparent"
+                                                tooltip="KPI 필터 해제"
+                                                press=".onClearKpiFilter" />
+                                        </OverflowToolbar>
+                                    </headerToolbar>
+                                    <!--
+                                        DashboardSummarySet KPI 카드.
+                                        - 큰 숫자: Header 기준 문서 수
+                                        - 보조 문구: Item 기준 품목 수
+                                        실제 OData 조회 전에는 dashboard JSONModel의 기본값 0이 표시된다.
+                                    -->
+                                    <FlexBox
+                                        wrap="Wrap"
+                                        renderType="Bare"
+                                        class="sapUiSmallMargin">
+                                        <GenericTile
+                                            header="PR 처리 지연"
+                                            subheader="{= '품목 ' + ${dashboard>/PrDlyItmCnt} + '건 / 후속 확장' }"
+                                            press=".onKpiDelayStatusPress"
+                                            frameType="OneByOne"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                            <customData>
+                                                <core:CustomData key="delayStatus" value="PR_DELAY" />
+                                            </customData>
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            icon="sap-icon://activity-items"
+                                                            value="{path: 'dashboard>/PrDlyHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                            scale="건"
+                                                            valueColor="Neutral"
+                                                            truncateValueTo="5" />
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
 
-                                <GenericTile
-                                    header="RFQ 미접수"
-                                    subheader="{= '품목 ' + ${dashboard>/RfqNoqItmCnt} + '건' }"
-                                    frameType="OneByOne"
-                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
-                                    <tileContent>
-                                        <TileContent>
-                                            <content>
-                                                <NumericContent
-                                                    icon="sap-icon://request"
-                                                    value="{path: 'dashboard>/RfqNoqHdrCnt', formatter: '.formatter.formatQuantity'}"
-                                                    scale="건"
-                                                    valueColor="Error"
-                                                    truncateValueTo="5" />
-                                            </content>
-                                        </TileContent>
-                                    </tileContent>
-                                </GenericTile>
+                                        <GenericTile
+                                            header="RFQ 미접수"
+                                            subheader="{= '품목 ' + ${dashboard>/RfqNoqItmCnt} + '건' }"
+                                            press=".onKpiDelayStatusPress"
+                                            frameType="OneByOne"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                            <customData>
+                                                <core:CustomData key="delayStatus" value="RFQ_NO_QUOTATION" />
+                                            </customData>
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            icon="sap-icon://request"
+                                                            value="{path: 'dashboard>/RfqNoqHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                            scale="건"
+                                                            valueColor="Error"
+                                                            truncateValueTo="5" />
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
 
-                                <GenericTile
-                                    header="MQ 채택 지연"
-                                    subheader="{= '품목 ' + ${dashboard>/MqSelDlyItmCnt} + '건' }"
-                                    frameType="OneByOne"
-                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
-                                    <tileContent>
-                                        <TileContent>
-                                            <content>
-                                                <NumericContent
-                                                    icon="sap-icon://target-group"
-                                                    value="{path: 'dashboard>/MqSelDlyHdrCnt', formatter: '.formatter.formatQuantity'}"
-                                                    scale="건"
-                                                    valueColor="Critical"
-                                                    truncateValueTo="5" />
-                                            </content>
-                                        </TileContent>
-                                    </tileContent>
-                                </GenericTile>
+                                        <GenericTile
+                                            header="MQ 채택 지연"
+                                            subheader="{= '품목 ' + ${dashboard>/MqSelDlyItmCnt} + '건' }"
+                                            press=".onKpiDelayStatusPress"
+                                            frameType="OneByOne"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                            <customData>
+                                                <core:CustomData key="delayStatus" value="MQ_SELECTION_DELAY" />
+                                            </customData>
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            icon="sap-icon://target-group"
+                                                            value="{path: 'dashboard>/MqSelDlyHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                            scale="건"
+                                                            valueColor="Critical"
+                                                            truncateValueTo="5" />
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
 
-                                <GenericTile
-                                    header="PO 납기 지연"
-                                    subheader="{= '품목 ' + ${dashboard>/PoDlvDlyItmCnt} + '건' }"
-                                    frameType="OneByOne"
-                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
-                                    <tileContent>
-                                        <TileContent>
-                                            <content>
-                                                <NumericContent
-                                                    icon="sap-icon://shipping-status"
-                                                    value="{path: 'dashboard>/PoDlvDlyHdrCnt', formatter: '.formatter.formatQuantity'}"
-                                                    scale="건"
-                                                    valueColor="Critical"
-                                                    truncateValueTo="5" />
-                                            </content>
-                                        </TileContent>
-                                    </tileContent>
-                                </GenericTile>
+                                        <GenericTile
+                                            header="PO 납기 지연"
+                                            subheader="{= '품목 ' + ${dashboard>/PoDlvDlyItmCnt} + '건' }"
+                                            press=".onKpiDelayStatusPress"
+                                            frameType="OneByOne"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                            <customData>
+                                                <core:CustomData key="delayStatus" value="PO_DELIVERY_DELAY" />
+                                            </customData>
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            icon="sap-icon://shipping-status"
+                                                            value="{path: 'dashboard>/PoDlvDlyHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                            scale="건"
+                                                            valueColor="Critical"
+                                                            truncateValueTo="5" />
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
 
-                                <GenericTile
-                                    header="입고 후 미송장"
-                                    subheader="{= '품목 ' + ${dashboard>/IvIncItmCnt} + '건' }"
-                                    frameType="OneByOne"
-                                    class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
-                                    <tileContent>
-                                        <TileContent>
-                                            <content>
-                                                <NumericContent
-                                                    icon="sap-icon://document"
-                                                    value="{path: 'dashboard>/IvIncHdrCnt', formatter: '.formatter.formatQuantity'}"
-                                                    scale="건"
-                                                    valueColor="Error"
-                                                    truncateValueTo="5" />
-                                            </content>
-                                        </TileContent>
-                                    </tileContent>
-                                </GenericTile>
+                                        <GenericTile
+                                            header="입고 후 미송장"
+                                            subheader="{= '품목 ' + ${dashboard>/IvIncItmCnt} + '건' }"
+                                            press=".onKpiDelayStatusPress"
+                                            frameType="OneByOne"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                            <customData>
+                                                <core:CustomData key="delayStatus" value="IV_INCOMPLETE" />
+                                            </customData>
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            icon="sap-icon://document"
+                                                            value="{path: 'dashboard>/IvIncHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                            scale="건"
+                                                            valueColor="Error"
+                                                            truncateValueTo="5" />
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
 
-                            </FlexBox>
-                        </Panel>
-
-                        <Panel
-                            id="weeklySummarySection"
-                            class="sapUiNoContentPadding sapUiSmallMarginBottom"
-                            headerText="주간 구매/입고/송장 요약">
-                            <!--
-                                WeeklySummarySet 주간 요약.
-                                금액 3개는 ObjectNumber로 통화와 함께 표시하고,
-                                건수 2개는 ObjectStatus로 빠르게 상태를 읽을 수 있게 한다.
-                            -->
-                            <FlexBox
-                                wrap="Wrap"
-                                renderType="Bare"
-                                class="sapUiSmallMargin">
-                                <VBox
-                                    width="13rem"
-                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
-                                    <Label text="구매금액 합계" />
-                                    <ObjectNumber
-                                        emphasized="true"
-                                        number="{path: 'weekly>/PurchaseAmt', formatter: '.formatter.formatAmount'}"
-                                        unit="{weekly>/Waers}" />
-                                </VBox>
-
-                                <VBox
-                                    width="13rem"
-                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
-                                    <Label text="입고금액 합계" />
-                                    <ObjectNumber
-                                        emphasized="true"
-                                        number="{path: 'weekly>/ReceiptAmt', formatter: '.formatter.formatAmount'}"
-                                        unit="{weekly>/Waers}" />
-                                </VBox>
-
-                                <VBox
-                                    width="13rem"
-                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
-                                    <Label text="송장금액 합계" />
-                                    <ObjectNumber
-                                        emphasized="true"
-                                        number="{path: 'weekly>/InvoiceAmt', formatter: '.formatter.formatAmount'}"
-                                        unit="{weekly>/Waers}" />
-                                </VBox>
-
-                                <VBox
-                                    width="11rem"
-                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
-                                    <Label text="금주 입고 완료" />
-                                    <ObjectStatus
-                                        text="{= ${weekly>/CompGrHdrCnt} + '건' }"
-                                        state="Success"
-                                        icon="sap-icon://sys-enter-2" />
-                                </VBox>
-
-                                <VBox
-                                    width="11rem"
-                                    class="sapUiLargeMarginEnd sapUiTinyMarginBottom">
-                                    <Label text="입고 후 미송장" />
-                                    <ObjectStatus
-                                        text="{= ${weekly>/IvIncHdrCnt} + '건' }"
-                                        state="Error"
-                                        icon="sap-icon://alert" />
-                                </VBox>
-                            </FlexBox>
-                        </Panel>
-
-                        <Panel
-                            id="rfqStatusSection"
-                            class="sapUiNoContentPadding sapUiSmallMarginBottom"
-                            headerText="RFQ/MQ 현황">
-                            <VBox class="sapUiSmallMargin">
-                                <Text text="RfqQuotationStatusSet 기반 RFQ 접수/채택 현황 영역" />
+                                        <GenericTile
+                                            header="정상"
+                                            subheader="{= '품목 ' + ${dashboard>/NormalItmCnt} + '건' }"
+                                            press=".onKpiDelayStatusPress"
+                                            frameType="OneByOne"
+                                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom">
+                                            <customData>
+                                                <core:CustomData key="delayStatus" value="NORMAL" />
+                                            </customData>
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            icon="sap-icon://sys-enter-2"
+                                                            value="{path: 'dashboard>/NormalHdrCnt', formatter: '.formatter.formatQuantity'}"
+                                                            scale="건"
+                                                            valueColor="Good"
+                                                            truncateValueTo="5" />
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
+                                    </FlexBox>
+                                </Panel>
                             </VBox>
-                        </Panel>
 
-                        <Panel
-                            id="delayListSection"
-                            class="sapUiNoContentPadding"
-                            headerText="지연 대상 목록">
-                            <VBox class="sapUiSmallMargin">
-                                <Text text="DelayListSet 기반 Header 목록 영역" />
+                            <VBox
+                                width="34%"
+                                class="ppmWeeklySummaryColumn">
+                                <Panel
+                                    id="weeklySummarySection"
+                                    class="sapUiNoContentPadding ppmWeeklySummaryPanel"
+                                    headerText="주간 구매/입고/송장 요약">
+                                    <!--
+                                        WeeklySummarySet 주간 요약.
+                                        금액 3개는 ObjectNumber로 통화와 함께 표시하고,
+                                        건수 2개는 ObjectStatus로 빠르게 상태를 읽을 수 있게 한다.
+                                    -->
+                                    <FlexBox
+                                        wrap="Wrap"
+                                        renderType="Bare"
+                                        class="sapUiSmallMargin">
+                                        <VBox
+                                            width="12rem"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom ppmWeeklySummaryItem">
+                                            <Label text="구매금액 합계" />
+                                            <ObjectNumber
+                                                emphasized="true"
+                                                number="{path: 'weekly>/PurchaseAmt', formatter: '.formatter.formatAmount'}"
+                                                unit="{weekly>/Waers}" />
+                                        </VBox>
+
+                                        <VBox
+                                            width="12rem"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom ppmWeeklySummaryItem">
+                                            <Label text="입고금액 합계" />
+                                            <ObjectNumber
+                                                emphasized="true"
+                                                number="{path: 'weekly>/ReceiptAmt', formatter: '.formatter.formatAmount'}"
+                                                unit="{weekly>/Waers}" />
+                                        </VBox>
+
+                                        <VBox
+                                            width="12rem"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom ppmWeeklySummaryItem">
+                                            <Label text="송장금액 합계" />
+                                            <ObjectNumber
+                                                emphasized="true"
+                                                number="{path: 'weekly>/InvoiceAmt', formatter: '.formatter.formatAmount'}"
+                                                unit="{weekly>/Waers}" />
+                                        </VBox>
+
+                                        <VBox
+                                            width="12rem"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom ppmWeeklySummaryItem">
+                                            <Label text="금주 입고 완료" />
+                                            <ObjectStatus
+                                                text="{= ${weekly>/CompGrHdrCnt} + '건' }"
+                                                state="Success"
+                                                icon="sap-icon://sys-enter-2" />
+                                        </VBox>
+
+                                        <VBox
+                                            width="12rem"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom ppmWeeklySummaryItem">
+                                            <Label text="금주 입고 후 미송장" />
+                                            <ObjectStatus
+                                                text="{= ${weekly>/IvIncHdrCnt} + '건' }"
+                                                state="Error"
+                                                icon="sap-icon://alert" />
+                                        </VBox>
+                                    </FlexBox>
+                                </Panel>
                             </VBox>
-                        </Panel>
+                        </FlexBox>
+
+                        <FlexBox
+                            wrap="Wrap"
+                            renderType="Bare">
+                            <VBox width="100%">
+                                <Panel
+                                    id="delayListSection"
+                                    class="sapUiNoContentPadding">
+                                    <headerToolbar>
+                                        <OverflowToolbar>
+                                            <Title
+                                                text="{= '조달 문서 목록 (' + ${delay>/count} + ')' }"
+                                                level="H2" />
+                                            <ToolbarSpacer />
+                                            <Button
+                                                icon="sap-icon://sort"
+                                                type="Transparent"
+                                                tooltip="정렬/그룹 설정"
+                                                press=".onOpenDelayTableSettings" />
+                                            <Button
+                                                icon="sap-icon://reset"
+                                                type="Transparent"
+                                                tooltip="정렬/그룹 초기화"
+                                                press=".onResetDelayTableSettings" />
+                                            <Button
+                                                icon="sap-icon://refresh"
+                                                type="Transparent"
+                                                tooltip="새로고침"
+                                                press=".onSearch" />
+                                        </OverflowToolbar>
+                                    </headerToolbar>
+                                    <!--
+                                        DelayListSet Header 목록.
+                                        사용자가 행을 선택하면 다음 단계에서 Mid Column의 ProcessFlowSet/ProcessItemSet 조회로 연결한다.
+                                        지금 단계에서는 목록 조회와 표시를 먼저 안정화한다.
+                                    -->
+                                    <Table
+                                        id="delayListTable"
+                                        items="{delay>/rows}"
+                                        growing="true"
+                                        growingThreshold="10"
+                                        noDataText="조회된 조달 문서가 없습니다.">
+                                        <columns>
+                                            <Column
+                                                width="7rem"
+                                                minScreenWidth="30rem"
+                                                demandPopin="true"
+                                                popinDisplay="Inline">
+                                                <Text text="지연상태" />
+                                            </Column>
+                                            <Column
+                                                width="12rem"
+                                                minScreenWidth="40rem"
+                                                demandPopin="true"
+                                                popinDisplay="Inline">
+                                                <Text text="기준문서" />
+                                            </Column>
+                                            <Column
+                                                width="10rem"
+                                                minScreenWidth="50rem"
+                                                demandPopin="true"
+                                                popinDisplay="Inline">
+                                                <Text text="자재요약" />
+                                            </Column>
+                                            <Column
+                                                width="10rem"
+                                                minScreenWidth="60rem"
+                                                demandPopin="true"
+                                                popinDisplay="Inline">
+                                                <Text text="공급업체" />
+                                            </Column>
+                                            <Column
+                                                width="7rem"
+                                                minScreenWidth="70rem"
+                                                demandPopin="true"
+                                                popinDisplay="Inline">
+                                                <Text text="플랜트" />
+                                            </Column>
+                                            <Column
+                                                width="5rem"
+                                                hAlign="End"
+                                                minScreenWidth="80rem"
+                                                demandPopin="true"
+                                                popinDisplay="Inline">
+                                                <Text text="지연일" />
+                                            </Column>
+                                            <Column
+                                                width="5rem"
+                                                hAlign="End"
+                                                minScreenWidth="80rem"
+                                                demandPopin="true"
+                                                popinDisplay="Inline">
+                                                <Text text="지연품목" />
+                                            </Column>
+                                        </columns>
+                                        <items>
+                                            <ColumnListItem type="Navigation">
+                                                <cells>
+                                                    <ObjectStatus
+                                                        text="{delay>DelayStatusText}"
+                                                        state="{path: 'delay>Criticality', formatter: '.formatter.criticalityToValueState'}" />
+                                                    <VBox renderType="Bare">
+                                                        <ObjectIdentifier
+                                                            title="{delay>DocNo}"
+                                                            text="{delay>DocType}" />
+                                                        <!--
+                                                            비고는 문서 자체에 대한 설명이므로 별도 컬럼보다 기준문서 아래 보조 텍스트로 둔다.
+                                                            예: "입고 완료 후 송장검증 미완료", "MQ 접수 후 허용일 내 채택 미완료"
+                                                        -->
+                                                        <Text
+                                                            text="{delay>Remark}"
+                                                            wrapping="false"
+                                                            class="ppmDocMetaText sapUiTinyMarginTop" />
+                                                    </VBox>
+                                                    <ObjectIdentifier
+                                                        title="{path: 'delay>MaterialSummary', formatter: '.formatter.summaryCode'}"
+                                                        text="{path: 'delay>MaterialSummary', formatter: '.formatter.summaryText'}" />
+                                                    <ObjectIdentifier
+                                                        title="{path: 'delay>VendorSummary', formatter: '.formatter.summaryCode'}"
+                                                        text="{path: 'delay>VendorSummary', formatter: '.formatter.summaryText'}" />
+                                                    <ObjectIdentifier
+                                                        title="{path: 'delay>PlantSummary', formatter: '.formatter.summaryCode'}"
+                                                        text="{path: 'delay>PlantSummary', formatter: '.formatter.summaryText'}" />
+                                                    <ObjectNumber
+                                                        number="{path: 'delay>DelayDays', formatter: '.formatter.formatDelayDays'}"
+                                                        emphasized="true" />
+                                                    <ObjectNumber
+                                                        number="{= ${delay>DelayedItemCount} + ' / ' + ${delay>TotalItemCount} }"
+                                                        unit="건" />
+                                                </cells>
+                                            </ColumnListItem>
+                                        </items>
+                                    </Table>
+                                </Panel>
+                            </VBox>
+                        </FlexBox>
                     </VBox>
                 </f:content>
             </f:DynamicPage>
@@ -475,9 +673,6 @@
                                 level="H2"
                                 text="PO 조달 흐름 상세" />
                         </f:heading>
-                        <f:expandedContent>
-                            <Text text="RFQ 행 선택 시에는 PO Flow를 호출하지 않고 RFQ/MQ 현황에서 확인합니다." />
-                        </f:expandedContent>
                     </f:DynamicPageTitle>
                 </f:title>
 

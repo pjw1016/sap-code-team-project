@@ -20,6 +20,13 @@ sap.ui.define([
         assert.strictEqual(oFilterData.Lifnr, "", "공급업체는 상세 조회조건이며 초기값은 공백이다.");
         assert.strictEqual(oFilterData.Name1, "", "공급업체명(NAME1)은 상세 조회조건이며 초기값은 공백이다.");
         assert.strictEqual(oFilterData.Werks, "", "플랜트는 상세 조회조건이며 초기값은 공백이다.");
+        assert.deepEqual(oFilterData.DelayStatuses, [
+            "PR_DELAY",
+            "RFQ_NO_QUOTATION",
+            "MQ_SELECTION_DELAY",
+            "PO_DELIVERY_DELAY",
+            "IV_INCOMPLETE"
+        ], "지연상태 기본 조회조건은 KPI 카드 명칭과 같은 지연/미완료 상태만 선택하고 정상은 제외한다.");
         assert.strictEqual(oFilterData.DelayStatus, "", "DelayStatus는 KPI 클릭 전에는 비어 있다.");
     });
 
@@ -44,6 +51,8 @@ sap.ui.define([
         assert.strictEqual(oDashboardData.PoDlvDlyHdrCnt, 0, "PO 납기 지연 Header 수 기본값은 0이다.");
         assert.strictEqual(oDashboardData.IvIncHdrCnt, 0, "입고 후 미송장 Header 수 기본값은 0이다.");
         assert.strictEqual(oDashboardData.PrDlyHdrCnt, 0, "PR 처리 지연 Header 수 기본값은 0이다.");
+        assert.strictEqual(oDashboardData.NormalHdrCnt, 0, "정상 Header 수 기본값은 0이다.");
+        assert.strictEqual(oDashboardData.NormalItmCnt, 0, "정상 품목 수 기본값은 0이다.");
     });
 
     QUnit.test("createWeeklyModel provides amount and count defaults", function (assert) {
@@ -56,5 +65,21 @@ sap.ui.define([
         assert.strictEqual(oWeeklyData.InvoiceAmt, 0, "송장금액 기본값은 0이다.");
         assert.strictEqual(oWeeklyData.Waers, "KRW", "통화 기본값은 KRW이다.");
         assert.strictEqual(oWeeklyData.CompGrHdrCnt, 0, "금주 입고 완료 건수 기본값은 0이다.");
+    });
+
+    QUnit.test("createDelayListModel provides empty list defaults", function (assert) {
+        var oDelayListModel = models.createDelayListModel();
+        var oDelayListData = oDelayListModel.getData();
+
+        assert.deepEqual(oDelayListData.rows, [], "지연 대상 목록의 초기 rows는 빈 배열이다.");
+        assert.strictEqual(oDelayListData.count, 0, "지연 대상 목록의 초기 건수는 0이다.");
+    });
+
+    QUnit.test("createRfqStatusModel provides empty RFQ/MQ status defaults", function (assert) {
+        var oRfqStatusModel = models.createRfqStatusModel();
+        var oRfqStatusData = oRfqStatusModel.getData();
+
+        assert.deepEqual(oRfqStatusData.rows, [], "RFQ/MQ 현황의 초기 rows는 빈 배열이다.");
+        assert.strictEqual(oRfqStatusData.count, 0, "RFQ/MQ 현황의 초기 건수는 0이다.");
     });
 });

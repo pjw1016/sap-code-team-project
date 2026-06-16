@@ -51,6 +51,42 @@ sap.ui.define([], function () {
         }).format(fValue);
     }
 
+    /**
+     * Backend 요약 문자열을 코드와 명칭으로 나눈다.
+     *
+     * DelayListSet은 자재/공급업체/플랜트를 화면 표시용 요약 문자열로 내려준다.
+     * 예: "100005 / DDK Saddle 외 4건", "V00002 / Seoul Saddle Manufacturing"
+     *
+     * UI에서는 코드와 명칭을 한 줄에 붙여 보여주면 폭이 부족해 쉽게 잘린다.
+     * 그래서 "/" 앞은 코드 라인, "/" 뒤는 명칭 라인으로 나누어 표시한다.
+     *
+     * @param {string|null|undefined} sSummary Backend 요약 문자열
+     * @returns {{code: string, text: string}} 코드/명칭 분리 결과
+     */
+    function splitSummary(sSummary) {
+        var sValue = String(sSummary || "").trim();
+        var iSeparatorIndex = sValue.indexOf("/");
+
+        if (!sValue) {
+            return {
+                code: "",
+                text: ""
+            };
+        }
+
+        if (iSeparatorIndex < 0) {
+            return {
+                code: sValue,
+                text: ""
+            };
+        }
+
+        return {
+            code: sValue.slice(0, iSeparatorIndex).trim(),
+            text: sValue.slice(iSeparatorIndex + 1).trim()
+        };
+    }
+
     return {
         /**
          * Backend Criticality를 sap.m.ObjectStatus의 state 값으로 변환한다.
@@ -176,6 +212,26 @@ sap.ui.define([], function () {
          */
         formatAmount: function (vValue) {
             return formatNumber(vValue, 0);
+        },
+
+        /**
+         * "코드 / 명칭" 형태의 요약 문자열에서 코드 부분만 반환한다.
+         *
+         * @param {string|null|undefined} sSummary Backend 요약 문자열
+         * @returns {string} 코드 부분
+         */
+        summaryCode: function (sSummary) {
+            return splitSummary(sSummary).code;
+        },
+
+        /**
+         * "코드 / 명칭" 형태의 요약 문자열에서 명칭 부분만 반환한다.
+         *
+         * @param {string|null|undefined} sSummary Backend 요약 문자열
+         * @returns {string} 명칭 부분
+         */
+        summaryText: function (sSummary) {
+            return splitSummary(sSummary).text;
         }
     };
 });

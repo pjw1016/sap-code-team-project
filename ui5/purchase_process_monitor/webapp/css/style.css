@@ -1,1 +1,53 @@
-/* Enter your custom styles here */
+/* Purchase Process Monitor custom layout helpers. */
+
+/*
+ * KPI 패널은 카드가 2줄로 배치될 수 있어 주간 요약 패널보다 높아진다.
+ * 우측 주간 요약 패널에 최소 높이를 부여해 첫 번째 행의 좌우 패널 높이 차이를 완화한다.
+ */
+.ppmWeeklySummaryPanel {
+    min-height: 15rem;
+}
+
+.ppmWeeklySummaryPanel .sapMPanelContent {
+    min-height: 11.5rem;
+}
+
+/*
+ * 주간 요약 값을 작은 카드처럼 보이게 만들어 빈 공간을 단순 여백이 아니라 정보 영역으로 사용한다.
+ */
+.ppmWeeklySummaryItem {
+    min-height: 3rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: var(--sapList_Background);
+    box-shadow: var(--sapContent_Shadow0);
+}
+
+/*
+ * KPI 요약과 주간 요약은 넓은 화면에서는 좌우 배치하지만,
+ * 좁은 화면에서는 같은 폭의 세로 카드처럼 쌓아 패널이 서로 붙어 보이지 않게 한다.
+ */
+@media (max-width: 900px) {
+    .ppmSummaryRow {
+        gap: 1rem;
+    }
+
+    .ppmKpiSummaryColumn,
+    .ppmWeeklySummaryColumn {
+        width: 100% !important;
+    }
+
+    .ppmKpiSummaryColumn {
+        margin-right: 0 !important;
+    }
+}
+
+/* 조달 문서 목록의 긴 자재/공급업체/비고 텍스트는 한 줄 말줄임 처리한다. */
+.ppmDocMetaText {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

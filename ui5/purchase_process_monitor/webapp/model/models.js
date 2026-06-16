@@ -41,6 +41,23 @@ function (JSONModel, Device) {
                 PrNo: "",
                 PoNo: "",
 
+                /*
+                 * 지연상태 기본 조회조건.
+                 *
+                 * sap.m.MultiComboBox의 selectedKeys는 문자열 배열을 사용하므로,
+                 * 화면에서 선택된 상태 코드를 그대로 보관할 수 있게 배열로 둔다.
+                 *
+                 * NORMAL은 정상 PR/PO가 대량으로 조회될 수 있어 최초 기본값에서 제외한다.
+                 * 사용자가 정상 문서까지 보고 싶을 때만 지연상태 콤보박스에서 직접 선택하게 한다.
+                 */
+                DelayStatuses: [
+                    "PR_DELAY",
+                    "RFQ_NO_QUOTATION",
+                    "MQ_SELECTION_DELAY",
+                    "PO_DELIVERY_DELAY",
+                    "IV_INCOMPLETE"
+                ],
+
                 // 상세 조회조건: 접기/펼치기 영역에 배치할 조건이다.
                 // 코드 필드(Matnr, Lifnr, Werks)는 이후 Search Help와 연결하고,
                 // 명칭 필드(Maktx, Name1)는 사용자가 일부 텍스트로 좁혀 볼 수 있는 일반 조건으로 둔다.
@@ -115,7 +132,12 @@ function (JSONModel, Device) {
                 PoDlvDlyHdrCnt: 0,
                 PoDlvDlyItmCnt: 0,
                 IvIncHdrCnt: 0,
-                IvIncItmCnt: 0
+                IvIncItmCnt: 0,
+
+                // DelayListSet의 Header 대표 상태가 NORMAL인 문서/품목 수다.
+                // KPI 카드가 조달 문서 목록 필터 역할을 할 때 정상 문서도 같은 기준으로 선택하기 위해 둔다.
+                NormalHdrCnt: 0,
+                NormalItmCnt: 0
             });
         },
 
@@ -139,6 +161,36 @@ function (JSONModel, Device) {
                 Waers: "KRW",
                 CompGrHdrCnt: 0,
                 IvIncHdrCnt: 0
+            });
+        },
+
+        /**
+         * DelayListSet 결과를 담을 지연 대상 목록 전용 JSONModel을 생성한다.
+         *
+         * rows는 sap.m.Table의 items aggregation에 바인딩하고,
+         * count는 패널 제목의 건수 표시와 빈 목록 판단에 사용한다.
+         *
+         * @returns {sap.ui.model.json.JSONModel} 지연 대상 목록 기본값이 담긴 JSONModel
+         */
+        createDelayListModel: function () {
+            return new JSONModel({
+                rows: [],
+                count: 0
+            });
+        },
+
+        /**
+         * RfqQuotationStatusSet 결과를 담을 RFQ/MQ 현황 전용 JSONModel을 생성한다.
+         *
+         * rows는 RFQ별 접수/채택 현황 테이블에 바인딩하고,
+         * count는 패널 제목의 건수 표시와 noData 판단에 사용한다.
+         *
+         * @returns {sap.ui.model.json.JSONModel} RFQ/MQ 현황 기본값이 담긴 JSONModel
+         */
+        createRfqStatusModel: function () {
+            return new JSONModel({
+                rows: [],
+                count: 0
             });
         },
 
