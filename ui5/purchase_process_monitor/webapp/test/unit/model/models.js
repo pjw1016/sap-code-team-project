@@ -13,6 +13,7 @@ sap.ui.define([
 
         assert.ok(oFilterData.KeyDate instanceof Date, "기준일은 DatePicker와 OData Date 필터에서 바로 쓸 수 있는 Date 객체이다.");
         assert.strictEqual(oFilterData.LookbackMonths, "3", "조회기간 기본값은 최근 3개월이다.");
+        assert.strictEqual(oFilterData.DocType, "ALL", "문서유형 기본값은 전체이다.");
         assert.strictEqual(oFilterData.PrNo, "", "PR번호는 기본 조회조건이지만 초기값은 공백이다.");
         assert.strictEqual(oFilterData.PoNo, "", "PO번호는 기본 조회조건이지만 초기값은 공백이다.");
         assert.strictEqual(oFilterData.Matnr, "", "자재코드는 상세 조회조건이며 초기값은 공백이다.");

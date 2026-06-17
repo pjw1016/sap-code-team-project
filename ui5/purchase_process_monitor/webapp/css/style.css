@@ -25,13 +25,47 @@
 
 /*
  * KPI 요약과 주간 요약은 넓은 화면에서는 좌우 배치하지만,
- * 좁은 화면에서는 같은 폭의 세로 카드처럼 쌓아 패널이 서로 붙어 보이지 않게 한다.
+ * FCL Mid Column이 열리면 Begin Column 자체가 좁아진다.
+ *
+ * 이때 브라우저 전체 폭은 여전히 900px보다 클 수 있으므로, 일반적인 viewport media query만으로는
+ * Begin Column 내부 overflow를 잡을 수 없다. 그래서 Summary Row의 자식 컬럼은 XML의 64%/34% 폭을
+ * 그대로 믿지 않고, flex-basis와 max-width 기준으로 다시 계산되게 한다.
+ *
+ * - 넓은 Begin Column: KPI와 주간 요약이 좌우 배치된다.
+ * - 좁은 Begin Column: 두 패널이 자동으로 세로 배치된다.
+ * - 매우 좁은 Begin Column: 카드와 주간 요약 항목도 부모 폭을 넘지 않는다.
  */
-@media (max-width: 900px) {
-    .ppmSummaryRow {
-        gap: 1rem;
-    }
+.ppmSummaryRow {
+    align-items: stretch;
+    gap: 1rem;
+}
 
+.ppmKpiSummaryColumn,
+.ppmWeeklySummaryColumn {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: min(100%, 16rem);
+}
+
+.ppmKpiSummaryColumn {
+    flex: 2 1 32rem;
+    width: auto !important;
+}
+
+.ppmWeeklySummaryColumn {
+    flex: 1 1 18rem;
+    width: auto !important;
+}
+
+.ppmKpiSummaryColumn .sapMGT {
+    max-width: calc(100% - 0.5rem);
+}
+
+.ppmWeeklySummaryItem {
+    max-width: calc(100% - 1rem);
+}
+
+@media (max-width: 900px) {
     .ppmKpiSummaryColumn,
     .ppmWeeklySummaryColumn {
         width: 100% !important;

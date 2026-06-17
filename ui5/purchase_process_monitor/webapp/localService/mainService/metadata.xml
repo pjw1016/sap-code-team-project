@@ -8,6 +8,7 @@
                 </Key>
                 <Property Name="SummaryId" Type="Edm.String" Nullable="false" MaxLength="20" sap:unicode="false" sap:label="요약 ID" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
                 <Property Name="KeyDate" Type="Edm.DateTime" Precision="7" sap:unicode="false" sap:label="조회 기준일" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
+                <Property Name="LookbackMonths" Type="Edm.Int32" sap:unicode="false" sap:label="조회 개월 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="PrDlyHdrCnt" Type="Edm.Int32" sap:unicode="false" sap:label="PR 지연 문서 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
                 <Property Name="PrDlyItmCnt" Type="Edm.Int32" sap:unicode="false" sap:label="PR 지연 품목 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
                 <Property Name="RfqNoqHdrCnt" Type="Edm.Int32" sap:unicode="false" sap:label="RFQ 미접수 문서 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
@@ -70,10 +71,13 @@
                 <Property Name="DocType" Type="Edm.String" Nullable="false" MaxLength="4" sap:unicode="false" sap:label="기준 문서유형" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="DocNo" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="기준 문서번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="KeyDate" Type="Edm.DateTime" Precision="7" sap:unicode="false" sap:label="조회 기준일" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
+                <Property Name="LookbackMonths" Type="Edm.Int32" sap:unicode="false" sap:label="조회 개월 수" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="PrNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="PR 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="PoNo" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="PO 번호" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="Matnr" Type="Edm.String" MaxLength="10" sap:unicode="false" sap:label="자재코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
+                <Property Name="Maktx" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="자재명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="Lifnr" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="공급업체" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
+                <Property Name="Name1" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="공급업체명" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="Werks" Type="Edm.String" MaxLength="6" sap:unicode="false" sap:label="플랜트" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="DelayStatus" Type="Edm.String" MaxLength="30" sap:unicode="false" sap:label="대표 지연상태 코드" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="true"/>
                 <Property Name="DelayStatusText" Type="Edm.String" MaxLength="40" sap:unicode="false" sap:label="대표 지연상태" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>

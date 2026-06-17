@@ -59,6 +59,15 @@ function (JSONModel, Device) {
                     "IV_INCOMPLETE"
                 ],
 
+                /*
+                 * 기본 조회조건: 조달 문서 목록의 기준 문서유형을 좁히는 조건이다.
+                 *
+                 * ALL은 Backend에 DocType 필터를 보내지 않는다는 뜻이다.
+                 * PR/RFQ/PO 중 하나를 선택하면 DelayListSet에 DocType EQ 'PO' 같은 단독 필터를 보낸다.
+                 * PO만 보고 Mid Column 상세로 진입하고 싶을 때 사용자가 목록을 빠르게 줄일 수 있다.
+                 */
+                DocType: "ALL",
+
                 // 상세 조회조건: 접기/펼치기 영역에 배치할 조건이다.
                 // 코드 필드(Matnr, Lifnr, Werks)는 이후 Search Help와 연결하고,
                 // 명칭 필드(Maktx, Name1)는 사용자가 일부 텍스트로 좁혀 볼 수 있는 일반 조건으로 둔다.

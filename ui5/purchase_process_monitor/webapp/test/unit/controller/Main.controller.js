@@ -90,6 +90,7 @@ sap.ui.define([
 
 		assert.ok(oNewFilterModel, "초기화 시 filter 모델을 기본값 모델로 교체한다.");
 		assert.strictEqual(oNewFilterModel.getData().LookbackMonths, "3", "조회기간은 최근 3개월로 초기화된다.");
+		assert.strictEqual(oNewFilterModel.getData().DocType, "ALL", "문서유형은 전체로 초기화된다.");
 		assert.strictEqual(oNewFilterModel.getData().PrNo, "", "PR번호는 공백으로 초기화된다.");
 		assert.strictEqual(oNewFilterModel.getData().RfqNo, "", "RFQ번호는 공백으로 초기화된다.");
 		assert.strictEqual(oNewFilterModel.getData().PoNo, "", "PO번호는 공백으로 초기화된다.");
@@ -341,13 +342,13 @@ sap.ui.define([
 		assert.strictEqual(mViewData.DelayTableSortGroupSummary, "정렬: 지연일 내림차순 / 그룹: 지연상태 오름차순", "정렬/그룹 요약 문구를 갱신한다.");
 	});
 
-	QUnit.test("onDelayListItemPress stores selected document key in view model", function (assert) {
+	QUnit.test("onDelayListItemPress keeps one column and shows guidance for PR row", function (assert) {
 		var oAppController = new Controller();
 		var oSelectedData = {};
 		var fnOriginalShow = MessageToast.show;
 
 		MessageToast.show = function (sMessage) {
-			assert.strictEqual(sMessage, "조달 문서를 선택했습니다: PR PR00000021", "선택 문서 안내 메시지를 표시한다.");
+			assert.strictEqual(sMessage, "PR 문서는 PO 조달 흐름 상세 대상이 아닙니다. PO 문서를 선택하세요.", "PR 행은 PO 상세 화면 대상이 아님을 안내한다.");
 		};
 
 		oAppController.getView = function () {
@@ -384,6 +385,153 @@ sap.ui.define([
 		MessageToast.show = fnOriginalShow;
 		assert.strictEqual(oSelectedData["/selectedDocType"], "PR", "선택 문서유형을 저장한다.");
 		assert.strictEqual(oSelectedData["/selectedDocNo"], "PR00000021", "선택 문서번호를 저장한다.");
+		assert.strictEqual(oSelectedData["/layout"], "OneColumn", "PR 선택 시 Mid Column을 열지 않는다.");
+	});
+
+	QUnit.test("onDelayListItemPress keeps one column and shows guidance for RFQ row", function (assert) {
+		var oAppController = new Controller();
+		var oSelectedData = {};
+		var fnOriginalShow = MessageToast.show;
+
+		MessageToast.show = function (sMessage) {
+			assert.strictEqual(sMessage, "RFQ 문서는 PO 조달 흐름 상세 대상이 아닙니다. PO 문서를 선택하세요.", "RFQ 행은 PO 상세 화면 대상이 아님을 안내한다.");
+		};
+
+		oAppController.getView = function () {
+			return {
+				getModel: function (sName) {
+					assert.strictEqual(sName, "view", "선택 상태는 view 모델에 저장한다.");
+					return {
+						setProperty: function (sPath, sValue) {
+							oSelectedData[sPath] = sValue;
+						}
+					};
+				}
+			};
+		};
+
+		oAppController.onDelayListItemPress({
+			getSource: function () {
+				return {
+					getBindingContext: function (sModelName) {
+						assert.strictEqual(sModelName, "delay", "선택 행은 delay 모델 바인딩 컨텍스트에서 읽는다.");
+						return {
+							getObject: function () {
+								return {
+									DocType: "RFQ",
+									DocNo: "RQ10000001"
+								};
+							}
+						};
+					}
+				};
+			}
+		});
+
+		MessageToast.show = fnOriginalShow;
+		assert.strictEqual(oSelectedData["/selectedDocType"], "RFQ", "선택 문서유형을 저장한다.");
+		assert.strictEqual(oSelectedData["/selectedDocNo"], "RQ10000001", "선택 문서번호를 저장한다.");
+		assert.strictEqual(oSelectedData["/layout"], "OneColumn", "RFQ 선택 시 Mid Column을 열지 않는다.");
+	});
+
+	QUnit.test("onDelayListItemPress opens mid column for PO row", function (assert) {
+		var oAppController = new Controller();
+		var oSelectedData = {};
+		var fnOriginalShow = MessageToast.show;
+
+		MessageToast.show = function (sMessage) {
+			assert.strictEqual(sMessage, "PO 조달 흐름 상세를 표시합니다: PO PO00000042", "PO 행은 Mid Column 상세 표시를 안내한다.");
+		};
+
+		oAppController.getView = function () {
+			return {
+				getModel: function (sName) {
+					assert.strictEqual(sName, "view", "선택 상태와 FCL layout은 view 모델에서 관리한다.");
+					return {
+						setProperty: function (sPath, sValue) {
+							oSelectedData[sPath] = sValue;
+						}
+					};
+				}
+			};
+		};
+
+		oAppController.onDelayListItemPress({
+			getSource: function () {
+				return {
+					getBindingContext: function (sModelName) {
+						assert.strictEqual(sModelName, "delay", "선택 행은 delay 모델 바인딩 컨텍스트에서 읽는다.");
+						return {
+							getObject: function () {
+								return {
+									DocType: "PO",
+									DocNo: "PO00000042"
+								};
+							}
+						};
+					}
+				};
+			}
+		});
+
+		MessageToast.show = fnOriginalShow;
+		assert.strictEqual(oSelectedData["/selectedDocType"], "PO", "선택 문서유형을 저장한다.");
+		assert.strictEqual(oSelectedData["/selectedDocNo"], "PO00000042", "선택 문서번호를 저장한다.");
+		assert.strictEqual(oSelectedData["/layout"], "TwoColumnsMidExpanded", "PO 선택 시 Begin/Mid 2컬럼 레이아웃을 연다.");
+	});
+
+	QUnit.test("Mid column navigation actions switch layout and close selected PO context", function (assert) {
+		var oAppController = new Controller();
+		var mViewData = {
+			layout: "TwoColumnsMidExpanded",
+			selectedDocType: "PO",
+			selectedDocNo: "PO00000042"
+		};
+		var oDetailData = {
+			processFlow: [{ Stage: "PO" }],
+			processItems: [{ ItemNo: "10" }],
+			processDocuments: [{ DocNo: "GR00000001" }],
+			documentDetails: [{ Field: "DocNo" }]
+		};
+
+		oAppController.getView = function () {
+			return {
+				getModel: function (sName) {
+					if (sName === "view") {
+						return {
+							getProperty: function (sPath) {
+								return mViewData[sPath.replace("/", "")];
+							},
+							setProperty: function (sPath, vValue) {
+								mViewData[sPath.replace("/", "")] = vValue;
+							}
+						};
+					}
+
+					assert.strictEqual(sName, "detail", "닫기 동작은 Mid 상세 모델을 초기화한다.");
+					return {
+						setData: function (oData) {
+							oDetailData = oData;
+						}
+					};
+				}
+			};
+		};
+
+		oAppController.onEnterMidFullScreen();
+		assert.strictEqual(mViewData.layout, "MidColumnFullScreen", "전체화면 버튼은 MidColumnFullScreen으로 전환한다.");
+
+		oAppController.onExitMidFullScreen();
+		assert.strictEqual(mViewData.layout, "TwoColumnsMidExpanded", "전체화면 해제 버튼은 2컬럼 화면으로 복귀한다.");
+
+		oAppController.onCloseMidColumn();
+		assert.strictEqual(mViewData.layout, "OneColumn", "닫기 버튼은 Begin Column 단독 화면으로 복귀한다.");
+		assert.strictEqual(mViewData.selectedDocType, "", "닫기 버튼은 선택 문서유형을 초기화한다.");
+		assert.strictEqual(mViewData.selectedDocNo, "", "닫기 버튼은 선택 문서번호를 초기화한다.");
+		assert.deepEqual(oDetailData.processFlow, [], "닫기 버튼은 ProcessFlow 데이터를 초기화한다.");
+		assert.deepEqual(oDetailData.processItems, [], "닫기 버튼은 품목 진행 상태 데이터를 초기화한다.");
+		assert.deepEqual(oDetailData.processDocuments, [], "닫기 버튼은 관련 문서 데이터를 초기화한다.");
+		assert.deepEqual(oDetailData.documentDetails, [], "닫기 버튼은 문서 상세 데이터를 초기화한다.");
 	});
 
 	QUnit.test("onSearch loads dashboard and weekly summaries", function (assert) {
@@ -535,7 +683,7 @@ sap.ui.define([
 		);
 	});
 
-	QUnit.test("_buildSummaryFilters sends only KeyDate for summary entity sets", function (assert) {
+	QUnit.test("_buildSummaryFilters sends KeyDate and LookbackMonths for dashboard summary", function (assert) {
 		var oAppController = new Controller();
 		var oKeyDate = new Date(2026, 5, 16);
 
@@ -547,6 +695,7 @@ sap.ui.define([
 						getData: function () {
 							return {
 								KeyDate: oKeyDate,
+								LookbackMonths: "6",
 								PrNo: "PR00000001",
 								PoNo: "4500000001",
 								Matnr: "100001",
@@ -561,8 +710,108 @@ sap.ui.define([
 
 		var aFilters = oAppController._buildSummaryFilters();
 
-		assert.strictEqual(aFilters.length, 1, "Summary EntityType에 존재하는 KeyDate만 필터로 전달한다.");
+		assert.strictEqual(aFilters.length, 2, "DashboardSummarySet에는 KeyDate와 LookbackMonths만 필터로 전달한다.");
 		assert.strictEqual(aFilters[0].sPath, "KeyDate", "필터 Property는 KeyDate이다.");
+		assert.strictEqual(aFilters[1].sPath, "LookbackMonths", "두 번째 필터 Property는 LookbackMonths이다.");
+		assert.strictEqual(aFilters[1].oValue1, 6, "조회기간 문자열 값을 Edm.Int32에 맞는 숫자로 변환한다.");
+	});
+
+	QUnit.test("_buildWeeklySummaryFilters sends only KeyDate for weekly summary", function (assert) {
+		var oAppController = new Controller();
+		var oKeyDate = new Date(2026, 5, 16);
+
+		oAppController.getView = function () {
+			return {
+				getModel: function (sName) {
+					assert.strictEqual(sName, "filter", "WeeklySummary 필터는 filter 모델 기준으로 만든다.");
+					return {
+						getData: function () {
+							return {
+								KeyDate: oKeyDate,
+								LookbackMonths: "6"
+							};
+						}
+					};
+				}
+			};
+		};
+
+		var aFilters = oAppController._buildWeeklySummaryFilters();
+
+		assert.strictEqual(aFilters.length, 1, "WeeklySummarySet에는 조회기간을 보내지 않고 KeyDate만 전달한다.");
+		assert.strictEqual(aFilters[0].sPath, "KeyDate", "필터 Property는 KeyDate이다.");
+	});
+
+	QUnit.test("_buildDelayListFilters sends LookbackMonths for procurement list", function (assert) {
+		var oAppController = new Controller();
+		var oKeyDate = new Date(2026, 5, 16);
+
+		oAppController.getView = function () {
+			return {
+				getModel: function () {
+					return {
+						getData: function () {
+							return {
+								KeyDate: oKeyDate,
+								LookbackMonths: "6",
+								PrNo: "",
+								RfqNo: "",
+								PoNo: "",
+								Matnr: "",
+								Lifnr: "",
+								Werks: "",
+								DelayStatuses: ["DELAY"]
+							};
+						}
+					};
+				}
+			};
+		};
+
+		var aFilters = oAppController._buildDelayListFilters();
+
+		assert.strictEqual(aFilters.length, 3, "DelayListSet에는 KeyDate, LookbackMonths, DelayStatus를 전달한다.");
+		assert.strictEqual(aFilters[0].sPath, "KeyDate", "첫 번째 필터는 KeyDate이다.");
+		assert.strictEqual(aFilters[1].sPath, "LookbackMonths", "두 번째 필터는 조회기간이다.");
+		assert.strictEqual(aFilters[1].oValue1, 6, "조회기간 문자열 값을 숫자로 변환한다.");
+		assert.strictEqual(aFilters[2].sPath, "DelayStatus", "마지막 필터는 지연상태이다.");
+	});
+
+	QUnit.test("_buildDelayListFilters adds selected document type when document number is empty", function (assert) {
+		var oAppController = new Controller();
+		var oKeyDate = new Date(2026, 5, 16);
+
+		oAppController.getView = function () {
+			return {
+				getModel: function () {
+					return {
+						getData: function () {
+							return {
+								KeyDate: oKeyDate,
+								LookbackMonths: "3",
+								DocType: "PO",
+								PrNo: "",
+								RfqNo: "",
+								PoNo: "",
+								Matnr: "",
+								Maktx: "",
+								Lifnr: "",
+								Name1: "",
+								Werks: "",
+								DelayStatuses: ["DELAY"]
+							};
+						}
+					};
+				}
+			};
+		};
+
+		var aFilters = oAppController._buildDelayListFilters();
+
+		assert.strictEqual(aFilters.length, 4, "DelayListSet에는 KeyDate, LookbackMonths, DocType, DelayStatus를 전달한다.");
+		assert.strictEqual(aFilters[2].sPath, "DocType", "문서번호가 없으면 선택한 문서유형을 단독 필터로 전달한다.");
+		assert.strictEqual(aFilters[2].oValue1, "PO", "PO 선택값을 DocType 필터 값으로 사용한다.");
+		assert.strictEqual(aFilters[3].sPath, "DelayStatus", "지연상태 필터는 문서유형 뒤에 추가한다.");
 	});
 
 	QUnit.test("_buildDelayListFilters maps PR number to DelayListSet document key filters", function (assert) {
@@ -679,7 +928,7 @@ sap.ui.define([
 		assert.strictEqual(aFilters[3].oValue1, "RFQ_NO_QUOTATION", "선택한 RFQ 지연상태를 DelayStatus 필터 값으로 전달한다.");
 	});
 
-	QUnit.test("_buildDelayListFilters adds material vendor and plant filters", function (assert) {
+	QUnit.test("_buildDelayListFilters adds material, vendor, plant, and name filters", function (assert) {
 		var oAppController = new Controller();
 		var oKeyDate = new Date(2026, 5, 16);
 
@@ -707,21 +956,18 @@ sap.ui.define([
 
 		var aFilters = oAppController._buildDelayListFilters();
 
-		assert.strictEqual(aFilters.length, 5, "DelayListSet에는 KeyDate, 자재, 공급업체, 플랜트, 지연상태 필터를 전달한다.");
+		assert.strictEqual(aFilters.length, 7, "DelayListSet에는 KeyDate, 자재/공급업체/플랜트 조건, 명칭 조건, 지연상태를 전달한다.");
 		assert.strictEqual(aFilters[1].sPath, "Matnr", "자재코드는 Matnr 필터로 전달한다.");
 		assert.strictEqual(aFilters[1].oValue1, "100030", "자재코드는 앞뒤 공백을 제거한다.");
-		assert.strictEqual(aFilters[2].sPath, "Lifnr", "공급업체코드는 Lifnr 필터로 전달한다.");
-		assert.strictEqual(aFilters[2].oValue1, "V00006", "공급업체코드는 대문자로 정규화한다.");
-		assert.strictEqual(aFilters[3].sPath, "Werks", "플랜트는 Werks 필터로 전달한다.");
-		assert.strictEqual(aFilters[3].oValue1, "P00001", "플랜트는 대문자로 정규화한다.");
-		assert.strictEqual(aFilters[4].sPath, "DelayStatus", "지연상태는 상세조건 뒤에 추가한다.");
-		assert.strictEqual(
-			aFilters.some(function (oFilter) {
-				return oFilter.sPath === "Maktx" || oFilter.sPath === "Name1";
-			}),
-			false,
-			"자재명과 공급업체명은 현재 Backend 필터 계약에 없으므로 전달하지 않는다."
-		);
+		assert.strictEqual(aFilters[2].sPath, "Maktx", "자재명은 Maktx 필터로 전달한다.");
+		assert.strictEqual(aFilters[2].oValue1, "700Wh Battery", "자재명은 대소문자를 유지하고 앞뒤 공백만 제거한다.");
+		assert.strictEqual(aFilters[3].sPath, "Lifnr", "공급업체코드는 Lifnr 필터로 전달한다.");
+		assert.strictEqual(aFilters[3].oValue1, "V00006", "공급업체코드는 대문자로 정규화한다.");
+		assert.strictEqual(aFilters[4].sPath, "Name1", "공급업체명은 Name1 필터로 전달한다.");
+		assert.strictEqual(aFilters[4].oValue1, "Shenzhen Battery Co.", "공급업체명은 대소문자를 유지하고 앞뒤 공백만 제거한다.");
+		assert.strictEqual(aFilters[5].sPath, "Werks", "플랜트는 Werks 필터로 전달한다.");
+		assert.strictEqual(aFilters[5].oValue1, "P00001", "플랜트는 대문자로 정규화한다.");
+		assert.strictEqual(aFilters[6].sPath, "DelayStatus", "지연상태는 상세조건 뒤에 추가한다.");
 	});
 
 	QUnit.test("_toBackendDelayStatuses compresses full delay selections to backend policy codes", function (assert) {

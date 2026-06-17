@@ -127,6 +127,29 @@
                                             <core:Item key="NORMAL" text="정상" />
                                         </MultiComboBox>
                                     </VBox>
+
+                                    <VBox
+                                        width="10rem"
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        <Label
+                                            text="문서유형"
+                                            labelFor="docTypeSelect" />
+                                        <!--
+                                            문서유형은 조달 문서 목록의 Header 기준 문서 종류를 좁히는 기본 조회조건이다.
+                                            전체(ALL)는 DocType 필터를 보내지 않고, PR/RFQ/PO 선택 시 DelayListSet에
+                                            DocType 단독 필터를 전달한다. 사용자가 PO만 조회한 뒤 Mid Column 상세로
+                                            진입하기 쉽게 하기 위한 보조 필터다.
+                                        -->
+                                        <Select
+                                            id="docTypeSelect"
+                                            selectedKey="{filter>/DocType}"
+                                            width="100%">
+                                            <core:Item key="ALL" text="전체" />
+                                            <core:Item key="PR" text="PR(구매요청)" />
+                                            <core:Item key="RFQ" text="RFQ(견적요청)" />
+                                            <core:Item key="PO" text="PO(구매오더)" />
+                                        </Select>
+                                    </VBox>
                                 </HBox>
                             </VBox>
 
@@ -693,6 +716,31 @@
                                 level="H2"
                                 text="PO 조달 흐름 상세" />
                         </f:heading>
+                        <f:actions>
+                            <!--
+                                Mid Column 제어 버튼.
+                                PO 행을 선택한 경우에만 표시하고, FCL layout 값에 따라 전체화면/전체화면 해제 버튼을 교대로 보여준다.
+                                닫기 버튼은 선택 PO 컨텍스트를 정리하고 Begin Column만 남기는 역할을 한다.
+                            -->
+                            <OverflowToolbarButton
+                                type="Transparent"
+                                icon="sap-icon://full-screen"
+                                tooltip="전체화면"
+                                press=".onEnterMidFullScreen"
+                                visible="{= ${view>/selectedDocType} === 'PO' &amp;&amp; ${view>/layout} !== 'MidColumnFullScreen' }" />
+                            <OverflowToolbarButton
+                                type="Transparent"
+                                icon="sap-icon://exit-full-screen"
+                                tooltip="전체화면 해제"
+                                press=".onExitMidFullScreen"
+                                visible="{= ${view>/selectedDocType} === 'PO' &amp;&amp; ${view>/layout} === 'MidColumnFullScreen' }" />
+                            <OverflowToolbarButton
+                                type="Transparent"
+                                icon="sap-icon://decline"
+                                tooltip="닫기"
+                                press=".onCloseMidColumn"
+                                visible="{= ${view>/selectedDocType} === 'PO' }" />
+                        </f:actions>
                     </f:DynamicPageTitle>
                 </f:title>
 

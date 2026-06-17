@@ -251,6 +251,50 @@ sap.ui.define([
         },
 
         /**
+         * Mid Column을 전체화면으로 확장한다.
+         *
+         * FlexibleColumnLayout은 문자열 layout 값으로 컬럼 표시 방식을 제어한다.
+         * `MidColumnFullScreen`은 Begin Column을 숨기고 Mid Column을 넓게 보여주는 표준 레이아웃이다.
+         * 이후 ProcessFlow/품목 Table이 들어오면 사용자가 좁은 화면에서도 상세 정보를 확인할 때 사용한다.
+         */
+        onEnterMidFullScreen() {
+            this._setFclLayout("MidColumnFullScreen");
+        },
+
+        /**
+         * Mid Column 전체화면을 해제하고 Begin + Mid 2컬럼 화면으로 돌아간다.
+         *
+         * 이 앱의 기본 상세 흐름은 왼쪽 조달 문서 목록과 오른쪽 PO 상세를 함께 보는 구조다.
+         * 따라서 전체화면 해제 시에는 PO 선택 직후와 같은 `TwoColumnsMidExpanded`로 복귀한다.
+         */
+        onExitMidFullScreen() {
+            this._setFclLayout("TwoColumnsMidExpanded");
+        },
+
+        /**
+         * Mid Column을 닫고 선택 PO 컨텍스트를 초기화한다.
+         *
+         * 닫기 버튼은 단순히 오른쪽 컬럼만 숨기는 동작이 아니라,
+         * 사용자가 현재 선택 PO 상세 확인을 종료했다는 의미다.
+         * 그래서 선택 문서번호와 Mid 상세 모델을 함께 비워 다음 PO 선택 시 이전 데이터가 남지 않게 한다.
+         */
+        onCloseMidColumn() {
+            var oView = this.getView();
+            var oViewModel = oView.getModel("view");
+            var oDetailModel = oView.getModel("detail");
+
+            if (oViewModel) {
+                oViewModel.setProperty("/layout", "OneColumn");
+                oViewModel.setProperty("/selectedDocType", "");
+                oViewModel.setProperty("/selectedDocNo", "");
+            }
+
+            if (oDetailModel) {
+                oDetailModel.setData(models.createDetailModel().getData());
+            }
+        },
+
+        /**
          * 조달 문서 목록 행 선택 이벤트.
          *
          * 20단계에서는 PR/RFQ/PO 후속 동작을 바로 실행하지 않고,
@@ -265,16 +309,58 @@ sap.ui.define([
             var oContext = oItem && oItem.getBindingContext && oItem.getBindingContext("delay");
             var oRow = oContext && oContext.getObject && oContext.getObject();
             var oViewModel = this.getView().getModel("view");
+            var sDocType = oRow && oRow.DocType ? oRow.DocType : "";
+            var sDocNo = oRow && oRow.DocNo ? oRow.DocNo : "";
 
             if (!oRow || !oViewModel) {
                 MessageToast.show("선택한 조달 문서 정보를 읽을 수 없습니다.");
                 return;
             }
 
-            oViewModel.setProperty("/selectedDocType", oRow.DocType || "");
-            oViewModel.setProperty("/selectedDocNo", oRow.DocNo || "");
+            oViewModel.setProperty("/selectedDocType", sDocType);
+            oViewModel.setProperty("/selectedDocNo", sDocNo);
 
-            MessageToast.show("조달 문서를 선택했습니다: " + (oRow.DocType || "-") + " " + (oRow.DocNo || ""));
+            /*
+             * V1.2.1 기준 Mid Column 상세 화면은 PO를 기준으로 PR/RFQ/MQ/PO/GR/IV 흐름을 보여준다.
+             * PR과 RFQ는 아직 PO가 확정되지 않았거나 PO Flow의 기준 문서가 아니므로
+             * ProcessFlowSet/ProcessItemSet을 호출하지 않고 Begin Column에 머무르게 한다.
+             */
+            if (sDocType === "PR") {
+                oViewModel.setProperty("/layout", "OneColumn");
+                MessageToast.show("PR 문서는 PO 조달 흐름 상세 대상이 아닙니다. PO 문서를 선택하세요.");
+                return;
+            }
+
+            if (sDocType === "RFQ") {
+                oViewModel.setProperty("/layout", "OneColumn");
+                MessageToast.show("RFQ 문서는 PO 조달 흐름 상세 대상이 아닙니다. PO 문서를 선택하세요.");
+                return;
+            }
+
+            if (sDocType === "PO") {
+                oViewModel.setProperty("/layout", "TwoColumnsMidExpanded");
+                MessageToast.show("PO 조달 흐름 상세를 표시합니다: PO " + sDocNo);
+                return;
+            }
+
+            oViewModel.setProperty("/layout", "OneColumn");
+            MessageToast.show("지원하지 않는 문서유형입니다: " + (sDocType || "-"));
+        },
+
+        /**
+         * FCL layout 값을 안전하게 변경한다.
+         *
+         * 버튼 핸들러마다 view 모델 접근 코드를 반복하지 않기 위한 작은 공통 함수다.
+         * 테스트 환경처럼 view 모델이 없을 수 있는 경우에는 조용히 종료한다.
+         *
+         * @param {string} sLayout sap.f.LayoutType에 해당하는 문자열 레이아웃 값
+         */
+        _setFclLayout(sLayout) {
+            var oViewModel = this.getView().getModel("view");
+
+            if (oViewModel) {
+                oViewModel.setProperty("/layout", sLayout);
+            }
         },
 
         /**
@@ -356,7 +442,7 @@ sap.ui.define([
          * @returns {Promise<object>} WeeklySummarySet 첫 번째 행
          */
         _readWeeklySummary() {
-            return this._readEntitySet("/WeeklySummarySet", this._buildSummaryFilters()).then(function (aRows) {
+            return this._readEntitySet("/WeeklySummarySet", this._buildWeeklySummaryFilters()).then(function (aRows) {
                 var oWeeklyModel = this.getView().getModel("weekly");
                 var oRow = aRows[0] || models.createWeeklyModel().getData();
 
@@ -964,15 +1050,17 @@ sap.ui.define([
         },
 
         /**
-         * Summary EntitySet에 안전하게 보낼 수 있는 OData Filter를 만든다.
+         * DashboardSummarySet에 안전하게 보낼 수 있는 OData Filter를 만든다.
          *
-         * 다른 조회조건도 화면에는 존재하지만, Summary EntityType에 없는 Property는 제외한다.
-         * Backend SEGW metadata가 확장되면 여기에서 허용 Property만 추가하면 된다.
+         * Backend 최신 metadata 기준 DashboardSummarySet은 KeyDate와 LookbackMonths를 필터로 받는다.
+         * PR/RFQ/PO번호, 자재, 공급업체, 플랜트 조건은 조달 문서 목록용 조건이므로
+         * DashboardSummarySet에는 보내지 않는다.
          *
-         * @returns {sap.ui.model.Filter[]} ODataModel.read에 전달할 Filter 배열
+         * @returns {sap.ui.model.Filter[]} DashboardSummarySet 조회용 Filter 배열
          */
         _buildSummaryFilters() {
             var oFilterData = this.getView().getModel("filter").getData();
+            var iLookbackMonths = Number(oFilterData.LookbackMonths);
             var aFilters = [];
 
             if (oFilterData.KeyDate) {
@@ -980,10 +1068,33 @@ sap.ui.define([
             }
 
             /*
-             * 현재 실제 Gateway metadata에는 Summary EntityType에 LookbackMonths Property가 없다.
-             * metadata에 없는 Property를 필터로 보내면 UI5 ODataModel과 Gateway가 모두 오류를 발생시키므로,
-             * Backend MPC/metadata가 갱신되기 전까지 Summary 조회는 KeyDate만 전달한다.
+             * UI의 SegmentedButton은 "3", "6" 같은 문자열을 보관한다.
+             * OData metadata의 LookbackMonths는 Edm.Int32이므로 숫자로 변환해 전송한다.
+             * 값이 비어 있거나 숫자가 아니면 Backend의 기본값 3개월 보정 로직에 맡긴다.
              */
+            if (Number.isFinite(iLookbackMonths) && iLookbackMonths > 0) {
+                aFilters.push(new Filter("LookbackMonths", FilterOperator.EQ, iLookbackMonths));
+            }
+
+            return aFilters;
+        },
+
+        /**
+         * WeeklySummarySet 조회용 Filter를 만든다.
+         *
+         * 주간 요약은 기준일이 속한 "한 주"의 구매/입고/송장 금액과 건수를 보여준다.
+         * 최근 3개월/6개월 조회기간과는 의미가 다르므로 Backend 계약에 맞춰 KeyDate만 전송한다.
+         *
+         * @returns {sap.ui.model.Filter[]} WeeklySummarySet 조회용 Filter 배열
+         */
+        _buildWeeklySummaryFilters() {
+            var oFilterData = this.getView().getModel("filter").getData();
+            var aFilters = [];
+
+            if (oFilterData.KeyDate) {
+                aFilters.push(new Filter("KeyDate", FilterOperator.EQ, this._normalizeDate(oFilterData.KeyDate)));
+            }
+
             return aFilters;
         },
 
@@ -999,11 +1110,15 @@ sap.ui.define([
         _buildDelayListFilters(aDelayStatuses) {
             var oView = this.getView();
             var oFilterData = oView.getModel("filter").getData();
+            var iLookbackMonths = Number(oFilterData.LookbackMonths);
             var sPrNo = this._normalizeSearchText(oFilterData.PrNo);
             var sRfqNo = this._normalizeSearchText(oFilterData.RfqNo);
             var sPoNo = this._normalizeSearchText(oFilterData.PoNo);
+            var sDocType = this._normalizeSearchText(oFilterData.DocType);
             var sMatnr = this._normalizeSearchText(oFilterData.Matnr);
+            var sMaktx = this._normalizeFreeText(oFilterData.Maktx);
             var sLifnr = this._normalizeSearchText(oFilterData.Lifnr);
+            var sName1 = this._normalizeFreeText(oFilterData.Name1);
             var sWerks = this._normalizeSearchText(oFilterData.Werks);
             var aFilters = [];
 
@@ -1012,12 +1127,22 @@ sap.ui.define([
             }
 
             /*
-             * 현재 실제 Gateway metadata에는 DelayList EntityType에 LookbackMonths Property가 없다.
-             * 조회기간 UI 값은 filter 모델에 보관하되, Backend MPC/metadata가 갱신되기 전까지 OData 필터로 보내지 않는다.
-             *
+             * DelayListSet도 Backend 최신 metadata에서 LookbackMonths를 지원한다.
+             * 이 값을 보내야 조달 문서 목록과 그 목록 기준으로 다시 계산하는 KPI 카드가
+             * 최근 3개월/6개월 선택값에 맞게 함께 바뀐다.
+             */
+            if (Number.isFinite(iLookbackMonths) && iLookbackMonths > 0) {
+                aFilters.push(new Filter("LookbackMonths", FilterOperator.EQ, iLookbackMonths));
+            }
+
+            /*
              * DelayListSet의 기준 문서는 DocType + DocNo 조합이다.
              * 따라서 화면의 PR번호/PO번호 입력값은 Backend에 직접 PrNo/PoNo로 보내지 않고,
              * 실제 목록 Key인 문서유형과 문서번호로 변환해서 전달한다.
+             *
+             * 문서유형 Select는 문서번호가 없을 때만 단독 DocType 필터로 사용한다.
+             * 예를 들어 사용자가 문서유형을 PO로 둔 상태에서 PR번호를 입력했다면,
+             * 더 구체적인 PR번호 조건이 우선되어 DocType은 PR로 고정된다.
              *
              * PR번호와 PO번호가 동시에 입력된 경우에는 하나의 Header 기준문서를 고르는 화면 특성상
              * PR번호를 우선한다. 동시 입력 경고는 이후 Busy/오류 처리 고도화 단계에서 사용자 안내로 분리한다.
@@ -1031,19 +1156,32 @@ sap.ui.define([
             } else if (sPoNo) {
                 aFilters.push(new Filter("DocType", FilterOperator.EQ, "PO"));
                 aFilters.push(new Filter("DocNo", FilterOperator.EQ, sPoNo));
+            } else if (["PR", "RFQ", "PO"].indexOf(sDocType) > -1) {
+                aFilters.push(new Filter("DocType", FilterOperator.EQ, sDocType));
             }
 
             /*
-             * 상세 조회조건 중 Backend 필터 Property가 확정된 코드 필드만 전달한다.
-             * 자재명(Maktx), 공급업체명(Name1)은 현재 DelayListSet metadata 필터 계약에 없으므로 보내지 않는다.
-             * metadata에 없는 Property를 보내면 Gateway에서 400 오류가 발생할 수 있기 때문이다.
+             * 상세 조회조건은 DelayListSet에 직접 전달한다.
+             *
+             * 자재코드/공급업체코드/플랜트는 코드값 그대로 동등 비교한다.
+             * 자재명(Maktx), 공급업체명(Name1)은 Frontend에서는 EQ로 보내지만,
+             * Backend DPC_EXT에서 LIKE '%검색어%' 방식의 부분일치 검색으로 해석한다.
+             * 이렇게 하면 UI5 OData Filter 구조는 단순하게 유지하면서도 사용자는 포함 검색처럼 사용할 수 있다.
              */
             if (sMatnr) {
                 aFilters.push(new Filter("Matnr", FilterOperator.EQ, sMatnr));
             }
 
+            if (sMaktx) {
+                aFilters.push(new Filter("Maktx", FilterOperator.EQ, sMaktx));
+            }
+
             if (sLifnr) {
                 aFilters.push(new Filter("Lifnr", FilterOperator.EQ, sLifnr));
+            }
+
+            if (sName1) {
+                aFilters.push(new Filter("Name1", FilterOperator.EQ, sName1));
             }
 
             if (sWerks) {
@@ -1151,6 +1289,20 @@ sap.ui.define([
          */
         _normalizeSearchText(vValue) {
             return String(vValue || "").trim().toUpperCase();
+        },
+
+        /**
+         * 자재명/공급업체명처럼 사람이 읽는 명칭 검색어를 정규화한다.
+         *
+         * 코드/문서번호는 대문자로 고정해도 안전하지만, 명칭은 Backend와 DB의 대소문자 처리 방식에 따라
+         * "Battery"와 "BATTERY"가 다르게 해석될 수 있다.
+         * 그래서 명칭 검색어는 사용자가 입력한 대소문자를 유지하고 앞뒤 공백만 제거한다.
+         *
+         * @param {string|number|null|undefined} vValue 명칭 검색어 입력값
+         * @returns {string} 앞뒤 공백만 제거한 검색어. 값이 없으면 빈 문자열
+         */
+        _normalizeFreeText(vValue) {
+            return String(vValue || "").trim();
         },
 
         /**
