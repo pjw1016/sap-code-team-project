@@ -1,0 +1,115 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <!--
+        V1.2.1 문서 상세 Dialog는 상단 관련 문서 목록과 하단 상세 필드의 2단 구조다.
+        상단은 PO를 열 때 미리 조회한 ProcessDocumentSet을 사용하고,
+        하단은 관련 문서 선택 시 DocumentDetailSet을 조회해 상세 필드를 표시한다.
+    -->
+    <Dialog
+        id="documentDetailDialog"
+        title="&#44288;&#47144; &#47928;&#49436; &#48143; &#49345;&#49464; &#51221;&#48372;"
+        contentWidth="72rem"
+        contentHeight="40rem"
+        stretchOnPhone="true"
+        draggable="true"
+        resizable="true"
+        busy="{view>/dialogBusy}"
+        busyIndicatorDelay="0">
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <Title
+                    text="{= '&#44288;&#47144; &#47928;&#49436; &#47785;&#47197; (' + ${detail>/processDocumentCount} + ')' }"
+                    level="H3"
+                    class="sapUiTinyMarginBottom" />
+                <Table
+                    id="processDocumentTable"
+                    width="100%"
+                    growing="true"
+                    growingThreshold="10"
+                    noDataText="&#49440;&#53469;&#54620; PO&#50752; &#50672;&#44208;&#46108; &#44288;&#47144; &#47928;&#49436;&#44032; &#50630;&#49845;&#45768;&#45796;."
+                    itemPress=".onProcessDocumentPress"
+                    items="{detail>/processDocuments}">
+                    <columns>
+                        <Column width="5rem" minScreenWidth="Tablet" demandPopin="true">
+                            <Text text="&#45800;&#44228;" />
+                        </Column>
+                        <Column width="12rem">
+                            <Text text="&#47928;&#49436;" />
+                        </Column>
+                        <Column width="6rem" minScreenWidth="Tablet" demandPopin="true">
+                            <Text text="&#54408;&#47785;" />
+                        </Column>
+                        <Column width="13rem" minScreenWidth="Tablet" demandPopin="true">
+                            <Text text="&#51088;&#51116;" />
+                        </Column>
+                        <Column width="13rem" minScreenWidth="Desktop" demandPopin="true">
+                            <Text text="&#44277;&#44553;&#50629;&#52404;" />
+                        </Column>
+                        <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+                            <Text text="&#49345;&#53468;" />
+                        </Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem type="Navigation">
+                            <cells>
+                                <ObjectStatus
+                                    text="{detail>Stage}"
+                                    state="{path: 'detail>Criticality', formatter: '.formatter.criticalityToValueState'}" />
+                                <ObjectIdentifier
+                                    title="{detail>DocNo}"
+                                    text="{detail>DocYear}" />
+                                <Text text="{path: 'detail>ItemNo', formatter: '.formatter.formatItemNo'}" />
+                                <ObjectIdentifier
+                                    title="{detail>Matnr}"
+                                    text="{detail>Maktx}" />
+                                <ObjectIdentifier
+                                    title="{detail>Lifnr}"
+                                    text="{detail>Name1}" />
+                                <ObjectStatus
+                                    text="{detail>StatusText}"
+                                    state="{path: 'detail>Criticality', formatter: '.formatter.criticalityToValueState'}" />
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+
+                <Title
+                    text="{= ${view>/selectedDocumentNo} ? '&#47928;&#49436; &#49345;&#49464; - ' + ${view>/selectedDocumentStage} + ' ' + ${view>/selectedDocumentNo} : '&#47928;&#49436; &#49345;&#49464;' }"
+                    level="H3"
+                    class="sapUiMediumMarginTop sapUiTinyMarginBottom" />
+                <Table
+                    id="documentDetailTable"
+                    width="100%"
+                    noDataText="{path: 'view>/selectedDocumentNo', formatter: '.formatter.formatDocumentDetailNoDataText'}"
+                    items="{detail>/documentDetails}">
+                    <columns>
+                        <Column width="12rem" minScreenWidth="Tablet" demandPopin="true">
+                            <Text text="&#44536;&#47353;" />
+                        </Column>
+                        <Column width="10rem">
+                            <Text text="&#54637;&#47785;" />
+                        </Column>
+                        <Column>
+                            <Text text="&#44050;" />
+                        </Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem type="Inactive">
+                            <cells>
+                                <Text text="{detail>GroupName}" />
+                                <Label text="{detail>FieldName}" />
+                                <Text text="{detail>FieldValue}" wrapping="true" />
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </VBox>
+        </content>
+        <endButton>
+            <Button
+                text="&#45803;&#44592;"
+                press=".onCloseDocumentDetailDialog" />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

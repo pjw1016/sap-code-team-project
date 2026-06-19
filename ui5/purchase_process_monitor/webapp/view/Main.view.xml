@@ -4,7 +4,8 @@
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
     xmlns:f="sap.f"
-    xmlns:mvc="sap.ui.core.mvc">
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:suite="sap.suite.ui.commons">
     <!--
         FlexibleColumnLayout은 이번 앱의 핵심 화면 뼈대다.
         Begin Column은 전체 조달 병목을 보는 모니터링 영역이고,
@@ -23,6 +24,8 @@
             <f:DynamicPage
                 id="beginPage"
                 fitContent="false"
+                busy="{view>/busy}"
+                busyIndicatorDelay="0"
                 headerExpanded="true"
                 preserveHeaderStateOnScroll="false"
                 showFooter="false">
@@ -65,7 +68,7 @@
                                     renderType="Bare">
                                     <VBox
                                         width="11rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="기준일"
                                             labelFor="keyDatePicker"
@@ -80,7 +83,7 @@
 
                                     <VBox
                                         width="16rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="조회기간"
                                             labelFor="lookbackSegmentedButton" />
@@ -101,7 +104,7 @@
 
                                     <VBox
                                         width="18rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="지연 상태"
                                             labelFor="delayStatusCombo" />
@@ -130,7 +133,7 @@
 
                                     <VBox
                                         width="10rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="문서유형"
                                             labelFor="docTypeSelect" />
@@ -171,7 +174,7 @@
                                     renderType="Bare">
                                     <VBox
                                         width="12rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="자재코드"
                                             labelFor="matnrInput" />
@@ -186,7 +189,7 @@
 
                                     <VBox
                                         width="14rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="자재명"
                                             labelFor="matnrNameInput" />
@@ -200,7 +203,7 @@
 
                                     <VBox
                                         width="12rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="공급업체"
                                             labelFor="lifnrInput" />
@@ -215,7 +218,7 @@
 
                                     <VBox
                                         width="14rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="공급업체명"
                                             labelFor="lifnrNameInput" />
@@ -229,7 +232,7 @@
 
                                     <VBox
                                         width="10rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="플랜트"
                                             labelFor="werksInput" />
@@ -244,7 +247,7 @@
 
                                     <VBox
                                         width="10.5rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="PR번호"
                                             labelFor="prNoInput" />
@@ -258,7 +261,7 @@
 
                                     <VBox
                                         width="10.5rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="RFQ번호"
                                             labelFor="rfqNoInput" />
@@ -272,7 +275,7 @@
 
                                     <VBox
                                         width="10.5rem"
-                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                        class="sapUiSmallMarginEnd sapUiTinyMarginBottom ppmFilterField">
                                         <Label
                                             text="PO번호"
                                             labelFor="poNoInput" />
@@ -593,15 +596,15 @@
                                     </headerToolbar>
                                     <!--
                                         DelayListSet Header 목록.
-                                        사용자가 행을 선택하면 다음 단계에서 Mid Column의 ProcessFlowSet/ProcessItemSet 조회로 연결한다.
-                                        지금 단계에서는 목록 조회와 표시를 먼저 안정화한다.
+                                        PR/RFQ 행은 안내 메시지를 표시하고, PO 행은 Mid Column을 열어
+                                        ProcessFlowSet/ProcessItemSet/ProcessDocumentSet을 조회한다.
                                     -->
                                     <Table
                                         id="delayListTable"
                                         items="{delay>/rows}"
                                         growing="true"
                                         growingThreshold="10"
-                                        noDataText="조회된 조달 문서가 없습니다.">
+                                        noDataText="조회 조건에 해당하는 조달 문서가 없습니다. 조건을 변경한 후 다시 조회하세요.">
                                         <columns>
                                             <Column
                                                 width="7rem"
@@ -612,8 +615,6 @@
                                             </Column>
                                             <Column
                                                 width="12rem"
-                                                minScreenWidth="40rem"
-                                                demandPopin="true"
                                                 popinDisplay="Inline">
                                                 <Text text="기준문서" />
                                             </Column>
@@ -707,6 +708,8 @@
             <f:DynamicPage
                 id="midPage"
                 fitContent="false"
+                busy="{view>/midBusy}"
+                busyIndicatorDelay="0"
                 preserveHeaderStateOnScroll="true"
                 showFooter="true">
                 <f:title>
@@ -747,21 +750,195 @@
                 <f:content>
                     <VBox class="sapUiSmallMargin" renderType="Bare">
                         <Panel
+                            id="poSummarySection"
+                            class="sapUiNoContentPadding sapUiSmallMarginBottom"
+                            headerText="&#49440;&#53469; PO &#50836;&#50557;">
+                            <!--
+                                Begin Column에서 선택한 PO Header의 핵심 정보를 먼저 보여준다.
+                                별도 OData 호출 없이 DelayListSet 선택 행과 조회 기준일을 재사용하므로
+                                ProcessFlow/품목 조회 중에도 선택 문맥을 즉시 확인할 수 있다.
+                            -->
+                            <FlexBox
+                                wrap="Wrap"
+                                class="sapUiSmallMargin">
+                                <VBox width="11rem" class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                    <Label text="&#44592;&#51456;&#47928;&#49436;" />
+                                    <ObjectIdentifier
+                                        title="{detail>/poSummary/DocNo}"
+                                        text="{detail>/poSummary/DocType}" />
+                                </VBox>
+                                <VBox width="11rem" class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                    <Label text="&#51648;&#50672;&#49345;&#53468;" />
+                                    <ObjectStatus
+                                        text="{detail>/poSummary/DelayStatusText}"
+                                        state="{path: 'detail>/poSummary/Criticality', formatter: '.formatter.criticalityToValueState'}" />
+                                </VBox>
+                                <VBox width="11rem" class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                    <Label text="&#51312;&#54924; &#44592;&#51456;&#51068;" />
+                                    <Text text="{path: 'filter>/KeyDate', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'yyyy.MM.dd'}}" />
+                                </VBox>
+                                <VBox width="11rem" class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                                    <Label text="&#52572;&#45824; &#51648;&#50672;&#51068;" />
+                                    <ObjectNumber
+                                        number="{path: 'detail>/poSummary/DelayDays', formatter: '.formatter.formatDelayDays'}"
+                                        state="{path: 'detail>/poSummary/Criticality', formatter: '.formatter.criticalityToValueState'}" />
+                                </VBox>
+                                <VBox width="11rem" class="sapUiTinyMarginBottom">
+                                    <Label text="&#51648;&#50672;&#54408;&#47785;" />
+                                    <ObjectNumber
+                                        number="{detail>/poSummary/DelayedItemCount}"
+                                        unit="{= ' / ' + ${detail>/poSummary/TotalItemCount} + '&#44148;' }" />
+                                </VBox>
+                            </FlexBox>
+                        </Panel>
+
+                        <Panel
                             id="processFlowSection"
                             class="sapUiNoContentPadding sapUiSmallMarginBottom"
-                            headerText="조달 문서 흐름">
-                            <VBox class="sapUiSmallMargin">
-                                <Text text="ProcessFlowSet 기반 PR → RFQ → MQ → PO → GR → IV 카드 영역" />
-                            </VBox>
+                            headerText="{= '조달 문서 흐름 (' + ${detail>/processFlowCount} + ')' }">
+                            <!--
+                                설계서 기준 조달 흐름은 sap.suite.ui.commons.ProcessFlow로 표시한다.
+                                Backend ProcessFlowSet 원본은 Controller에서 ProcessFlow 전용 nodes/lanes 구조로 변환한다.
+
+                                nodes: PR/RFQ/MQ/PO/GR/IV 단계별 집계 노드
+                                lanes: 각 단계의 Header 영역
+                                단계 선택은 아래 SegmentedButton에서 처리하고, ProcessFlow는 시각화 전용으로 둔다.
+                            -->
+                            <suite:ProcessFlow
+                                id="poProcessFlow"
+                                visible="{= ${detail>/processFlowCount} > 0 }"
+                                scrollable="true"
+                                foldedCorners="true"
+                                wheelZoomable="false"
+                                nodes="{detail>/processFlowNodes}"
+                                lanes="{detail>/processFlowLanes}">
+                                <suite:nodes>
+                                    <suite:ProcessFlowNode
+                                        laneId="{detail>lane}"
+                                        nodeId="{detail>id}"
+                                        title="{detail>title}"
+                                        titleAbbreviation="{detail>titleAbbreviation}"
+                                        children="{detail>children}"
+                                        state="{detail>state}"
+                                        stateText="{detail>stateText}"
+                                        texts="{detail>texts}"
+                                        highlighted="{detail>highlighted}"
+                                        focused="{detail>focused}" />
+                                </suite:nodes>
+                                <suite:lanes>
+                                    <suite:ProcessFlowLaneHeader
+                                        laneId="{detail>id}"
+                                        iconSrc="{detail>icon}"
+                                        text="{detail>label}"
+                                        position="{detail>position}" />
+                                </suite:lanes>
+                            </suite:ProcessFlow>
+                            <!--
+                                ProcessFlow는 sap.m.Table처럼 noDataText 속성을 제공하지 않는다.
+                                따라서 PO 상세 조회가 끝났는데 Flow가 0건이면 UI5 표준 MessageStrip으로 안내한다.
+                                midBusy 중에는 잠깐 0건으로 초기화되는 상태가 보이지 않도록 표시하지 않는다.
+                            -->
+                            <MessageStrip
+                                text="선택한 PO의 조달 문서 흐름 정보가 없습니다."
+                                type="Information"
+                                showIcon="true"
+                                showCloseButton="false"
+                                visible="{= !!${detail>/poSummary/DocNo} &amp;&amp; ${detail>/processFlowCount} === 0 &amp;&amp; !${view>/midBusy} }"
+                                class="sapUiSmallMargin" />
+                            <Toolbar
+                                visible="{= ${detail>/processFlowCount} > 0 }"
+                                class="sapUiSmallMarginBegin sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                                <Text text="&#49440;&#53469; &#45800;&#44228;" />
+                                <SegmentedButton
+                                    selectedKey="{view>/selectedProcessStage}"
+                                    selectionChange=".onProcessStageSelect">
+                                    <items>
+                                        <SegmentedButtonItem key="PR" text="PR" />
+                                        <SegmentedButtonItem key="RFQ" text="RFQ" />
+                                        <SegmentedButtonItem key="MQ" text="MQ" />
+                                        <SegmentedButtonItem key="PO" text="PO" />
+                                        <SegmentedButtonItem key="GR" text="GR" />
+                                        <SegmentedButtonItem key="IV" text="IV" />
+                                    </items>
+                                </SegmentedButton>
+                            </Toolbar>
                         </Panel>
 
                         <Panel
                             id="processItemSection"
                             class="sapUiNoContentPadding"
-                            headerText="품목별 진행 상태">
-                            <VBox class="sapUiSmallMargin">
-                                <Text text="ProcessItemSet 기반 품목별 진행 상태 Table 영역" />
-                            </VBox>
+                            headerText="{= '&#54408;&#47785;&#48324; &#51652;&#54665; &#49345;&#53468; (' + ${detail>/processItemCount} + ')' }">
+                            <!--
+                                ProcessItemSet rows are displayed by PO item.
+                                ProcessFlow is visualization-only; stage buttons filter this table by CurrentStage.
+                            -->
+                            <Table
+                                id="processItemTable"
+                                width="100%"
+                                growing="true"
+                                growingThreshold="10"
+                                noDataText="{path: 'view>/selectedProcessStage', formatter: '.formatter.formatProcessItemNoDataText'}"
+                                items="{detail>/processItems}">
+                                <columns>
+                                    <Column width="5rem">
+                                        <Text text="&#54408;&#47785;" />
+                                    </Column>
+                                    <Column width="13rem" minScreenWidth="Tablet" demandPopin="true">
+                                        <Text text="&#51088;&#51116;" />
+                                    </Column>
+                                    <Column width="12rem" minScreenWidth="Tablet" demandPopin="true">
+                                        <Text text="&#44277;&#44553;&#50629;&#52404;" />
+                                    </Column>
+                                    <Column width="10rem" minScreenWidth="Tablet" demandPopin="true">
+                                        <Text text="&#54540;&#47004;&#53944;" />
+                                    </Column>
+                                    <Column width="7rem" minScreenWidth="Tablet" demandPopin="true">
+                                        <Text text="&#54788;&#51116;&#45800;&#44228;" />
+                                    </Column>
+                                    <Column width="11rem" minScreenWidth="Phone" demandPopin="true">
+                                        <Text text="&#49345;&#53468;" />
+                                    </Column>
+                                    <Column width="15rem" minScreenWidth="Tablet" demandPopin="true">
+                                        <Text text="&#49688;&#47049; (PO/GR/IV)" />
+                                    </Column>
+                                    <Column width="7rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true">
+                                        <Text text="&#51648;&#50672;&#51068;" />
+                                    </Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem type="Inactive">
+                                        <cells>
+                                            <ObjectIdentifier
+                                                title="{path: 'detail>ItemNo', formatter: '.formatter.formatItemNo'}" />
+                                            <ObjectIdentifier
+                                                title="{detail>Matnr}"
+                                                text="{detail>Maktx}" />
+                                            <ObjectIdentifier
+                                                title="{detail>Lifnr}"
+                                                text="{detail>Name1}" />
+                                            <ObjectIdentifier
+                                                title="{detail>Werks}"
+                                                text="{detail>PlantName}" />
+                                            <Text text="{detail>CurrentStage}" />
+                                            <ObjectStatus
+                                                text="{detail>DelayStatusText}"
+                                                state="{path: 'detail>Criticality', formatter: '.formatter.criticalityToValueState'}" />
+                                            <!--
+                                                PO/GR/IV 수량을 라벨 없이 세로로 쌓으면 동일한 값이
+                                                중복 출력된 것처럼 보이므로 한 줄의 단계별 요약으로 표시한다.
+                                                예: PO 10 EA / GR 10 EA / IV 0 EA
+                                            -->
+                                            <Text
+                                                wrapping="false"
+                                                tooltip="{parts: [{path: 'detail>Quantity'}, {path: 'detail>ReceivedQuantity'}, {path: 'detail>InvoicedQuantity'}, {path: 'detail>Meins'}], formatter: '.formatter.formatProcessQuantities'}"
+                                                text="{parts: [{path: 'detail>Quantity'}, {path: 'detail>ReceivedQuantity'}, {path: 'detail>InvoicedQuantity'}, {path: 'detail>Meins'}], formatter: '.formatter.formatProcessQuantities'}" />
+                                            <ObjectNumber
+                                                number="{path: 'detail>DelayDays', formatter: '.formatter.formatDelayDays'}"
+                                                state="{path: 'detail>Criticality', formatter: '.formatter.criticalityToValueState'}" />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
                         </Panel>
                     </VBox>
                 </f:content>
@@ -770,13 +947,18 @@
                     <OverflowToolbar>
                         <ToolbarSpacer />
                         <Button
+                            id="delayFormulaButton"
                             text="지연 산식 보기"
                             type="Transparent"
-                            enabled="false" />
+                            icon="sap-icon://hint"
+                            tooltip="선택한 PO의 Working Day 지연 산식 보기"
+                            enabled="{= !!${detail>/poSummary/DocNo} }"
+                            press=".onOpenDelayFormulaPopover" />
                         <Button
                             text="문서 상세 보기"
                             type="Emphasized"
-                            enabled="false" />
+                            enabled="{= ${detail>/processDocumentCount} > 0 }"
+                            press=".onOpenDocumentDetailDialog" />
                         <Button
                             text="납기/미입고 앱 이동"
                             type="Transparent"

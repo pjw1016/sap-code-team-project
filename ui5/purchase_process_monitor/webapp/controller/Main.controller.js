@@ -287,6 +287,7 @@ sap.ui.define([
                 oViewModel.setProperty("/layout", "OneColumn");
                 oViewModel.setProperty("/selectedDocType", "");
                 oViewModel.setProperty("/selectedDocNo", "");
+                oViewModel.setProperty("/selectedProcessStage", "");
             }
 
             if (oDetailModel) {
@@ -338,13 +339,625 @@ sap.ui.define([
             }
 
             if (sDocType === "PO") {
-                oViewModel.setProperty("/layout", "TwoColumnsMidExpanded");
-                MessageToast.show("PO 조달 흐름 상세를 표시합니다: PO " + sDocNo);
+                // Mid Column 상단 요약에서 목록의 Header 집계값을 재사용할 수 있도록 선택 행 전체를 넘긴다.
+                this._openMidColumnForPo(sDocNo, oRow);
                 return;
             }
 
             oViewModel.setProperty("/layout", "OneColumn");
             MessageToast.show("지원하지 않는 문서유형입니다: " + (sDocType || "-"));
+        },
+
+        /**
+         * 선택한 PO 기준으로 Mid Column을 열고 ProcessFlowSet 데이터를 조회한다.
+         *
+         * Mid Column은 PO를 기준으로 PR → RFQ → MQ → PO → GR → IV 흐름을 보여준다.
+         * 따라서 Backend에는 ContextDocType='PO', ContextDocNo=선택 PO 번호를 전달한다.
+         * 이후 단계에서 같은 Context 필터를 ProcessItemSet, ProcessDocumentSet에도 재사용한다.
+         *
+         * @param {string} sPoNo 선택한 PO 번호
+         * @param {object} oSelectedRow Begin Column의 DelayListSet 선택 행
+         * @returns {Promise} ProcessFlowSet 조회 Promise
+         */
+        _openMidColumnForPo(sPoNo, oSelectedRow) {
+            var oView = this.getView();
+            var oViewModel = oView.getModel("view");
+            var oDetailModel = oView.getModel("detail");
+            var oPoSummary = {
+                DocType: "PO",
+                DocNo: sPoNo || "",
+                DelayStatusText: oSelectedRow && oSelectedRow.DelayStatusText || "",
+                Criticality: oSelectedRow && oSelectedRow.Criticality || "None",
+                BaseDate: oSelectedRow && oSelectedRow.BaseDate || null,
+                DelayDays: oSelectedRow && oSelectedRow.DelayDays || 0,
+                DelayedItemCount: oSelectedRow && oSelectedRow.DelayedItemCount || 0,
+                TotalItemCount: oSelectedRow && oSelectedRow.TotalItemCount || 0
+            };
+
+            /*
+             * Mid Busy는 오른쪽 컬럼만 차단하므로 사용자는 왼쪽 목록을 다시 누를 수 있다.
+             * 기존 상세 조회가 끝나기 전에 새 Flow/Item/Document 요청을 만들면 응답 순서에 따라
+             * 서로 다른 PO 데이터가 섞일 수 있으므로 진행 중인 Promise를 그대로 반환한다.
+             */
+            if (this._pMidLoad) {
+                return this._pMidLoad;
+            }
+
+            if (oViewModel) {
+                oViewModel.setProperty("/layout", "TwoColumnsMidExpanded");
+                oViewModel.setProperty("/midBusy", true);
+                oViewModel.setProperty("/selectedProcessStage", "");
+                // 다른 PO를 연 경우 이전 Dialog에서 선택했던 관련 문서 문맥을 제거한다.
+                oViewModel.setProperty("/selectedDocumentStage", "");
+                oViewModel.setProperty("/selectedDocumentNo", "");
+                oViewModel.setProperty("/selectedDocumentYear", "");
+                oViewModel.setProperty("/selectedDocumentItemNo", "");
+            }
+
+            if (oDetailModel) {
+                oDetailModel.setData(models.createDetailModel().getData());
+                /*
+                 * 상세 OData 조회보다 먼저 선택 PO 요약을 저장한다.
+                 * 따라서 ProcessFlowSet/ProcessItemSet 응답을 기다리는 동안에도 사용자는
+                 * 어떤 PO를 열었는지와 현재 지연 상태를 즉시 확인할 수 있다.
+                 */
+                oDetailModel.setProperty("/poSummary", oPoSummary);
+            }
+
+            MessageToast.show("PO 조달 흐름 상세를 표시합니다: PO " + sPoNo);
+
+            /*
+             * PO 상세 화면은 같은 기준 문서(ContextDocType/ContextDocNo)를 사용해
+             * 상단 ProcessFlowSet과 하단 ProcessItemSet을 함께 조회한다.
+             */
+            this._pMidLoad = Promise.all([
+                this._readProcessFlow("PO", sPoNo),
+                this._readProcessItems("PO", sPoNo),
+                this._readProcessDocuments("PO", sPoNo)
+            ]).catch(function (oError) {
+                if (oDetailModel) {
+                    oDetailModel.setData(models.createDetailModel().getData());
+                    // 상세 조회가 실패해도 사용자가 선택한 PO 문맥은 상단 요약에 유지한다.
+                    oDetailModel.setProperty("/poSummary", oPoSummary);
+                }
+
+                MessageBox.error(
+                    this._getODataErrorMessage(oError, "PO 상세 정보를 조회하지 못했습니다."),
+                    { title: "조회 오류" }
+                );
+                throw oError;
+            }.bind(this)).finally(function () {
+                if (oViewModel) {
+                    oViewModel.setProperty("/midBusy", false);
+                }
+
+                this._pMidLoad = null;
+            }.bind(this));
+
+            return this._pMidLoad;
+        },
+
+        /**
+         * ProcessFlowSet을 조회해 detail 모델에 저장한다.
+         *
+         * Backend가 StageOrder를 내려주므로 화면에서는 단계 순서대로 정렬해 표시한다.
+         * 이 정렬은 업무 판정이 아니라 표시 순서 보정이므로 Frontend에서 수행해도 안전하다.
+         *
+         * @param {string} sContextDocType 기준 문서유형. 현재는 PO
+         * @param {string} sContextDocNo 기준 문서번호
+         * @returns {Promise<object[]>} 조회된 ProcessFlowSet 행 배열
+         */
+        /**
+         * ProcessItemSet을 조회해 detail 모델에 저장한다.
+         *
+         * Mid Column은 선택 PO 기준의 조달 흐름 상세 화면이므로 품목 테이블도 선택한 PO를
+         * ContextDocType/ContextDocNo로 전달해 Backend에서 계산된 품목별 진행 상태를 받는다.
+         * PR/RFQ/MQ/GR/IV 단계 클릭 필터는 다음 단계에서 이 전체 품목 배열을 기준으로 적용한다.
+         *
+         * @param {string} sContextDocType 기준 문서유형. 현재는 PO
+         * @param {string} sContextDocNo 기준 문서번호
+         * @returns {Promise<object[]>} 조회 후 품목번호 기준으로 정렬된 ProcessItemSet 행 배열
+         */
+        _readProcessItems(sContextDocType, sContextDocNo) {
+            return this._readEntitySet("/ProcessItemSet", this._buildProcessContextFilters(sContextDocType, sContextDocNo))
+                .then(function (aRows) {
+                    var oDetailModel = this.getView().getModel("detail");
+                    var aItemRows = (Array.isArray(aRows) ? aRows : []).slice().sort(function (oLeft, oRight) {
+                        /*
+                         * SAP 품목번호는 '00010', '10'처럼 문자열로 들어올 수 있다.
+                         * 화면에서는 업무 순서가 중요하므로 숫자로 비교하고, 숫자 변환이 불가능한 값은
+                         * 문자열 비교로 보정해 예외 데이터에서도 정렬이 깨지지 않게 한다.
+                         */
+                        var iLeft = Number(oLeft.ItemNo || 0);
+                        var iRight = Number(oRight.ItemNo || 0);
+
+                        if (!Number.isNaN(iLeft) && !Number.isNaN(iRight) && iLeft !== iRight) {
+                            return iLeft - iRight;
+                        }
+
+                        return String(oLeft.ItemNo || "").localeCompare(String(oRight.ItemNo || ""));
+                    });
+
+                    if (oDetailModel) {
+                        /*
+                         * Backend 원본과 화면 표시 배열을 분리한다.
+                         * 같은 배열 객체를 두 경로에서 공유하면 이후 필터/정렬 과정에서 원본까지 바뀔 수 있으므로
+                         * slice()로 별도 배열을 만들어 단계 버튼을 반복 선택해도 항상 전체 원본에서 다시 계산한다.
+                         */
+                        oDetailModel.setProperty("/processItemsAll", aItemRows.slice());
+                        oDetailModel.setProperty("/processItems", aItemRows.slice());
+                        oDetailModel.setProperty("/processItemCount", aItemRows.length);
+                    }
+
+                    return aItemRows;
+                }.bind(this));
+        },
+
+        /**
+         * 선택 PO와 연결된 PR/RFQ/MQ/PO/GR/IV 문서 목록을 조회한다.
+         *
+         * ProcessDocumentSet은 이후 문서 상세 Dialog의 탐색 기준이 된다.
+         * 이번 단계에서는 화면을 추가하지 않고, 선택 PO를 열 때 관련 문서를 미리 조회해
+         * detail 모델에 보관하는 책임만 수행한다.
+         *
+         * Backend 결과 순서에 의존하면 호출 시점마다 문서 배열 순서가 달라질 수 있으므로
+         * 조달 업무 흐름(PR → RFQ → MQ → PO → GR → IV), 문서번호, 회계연도, 품목번호 순으로 정렬한다.
+         * 이 정렬은 상태 판정이 아니라 화면 탐색 순서만 안정화하는 Frontend 표시 로직이다.
+         *
+         * @param {string} sContextDocType 기준 문서유형. 현재는 PO
+         * @param {string} sContextDocNo 기준 문서번호
+         * @returns {Promise<object[]>} 정렬된 ProcessDocumentSet 행 배열
+         */
+        _readProcessDocuments(sContextDocType, sContextDocNo) {
+            return this._readEntitySet("/ProcessDocumentSet", this._buildProcessContextFilters(sContextDocType, sContextDocNo))
+                .then(function (aRows) {
+                    var oDetailModel = this.getView().getModel("detail");
+                    var mStageOrder = {
+                        PR: 10,
+                        RFQ: 20,
+                        MQ: 30,
+                        PO: 40,
+                        GR: 50,
+                        IV: 60
+                    };
+                    var aDocumentRows = (Array.isArray(aRows) ? aRows : []).slice().sort(function (oLeft, oRight) {
+                        var sLeftStage = String(oLeft.Stage || "").trim().toUpperCase();
+                        var sRightStage = String(oRight.Stage || "").trim().toUpperCase();
+                        var iStageDifference = (mStageOrder[sLeftStage] || 999) - (mStageOrder[sRightStage] || 999);
+                        var iDocumentDifference;
+                        var iYearDifference;
+                        var iLeftItem;
+                        var iRightItem;
+
+                        if (iStageDifference !== 0) {
+                            return iStageDifference;
+                        }
+
+                        // 정의되지 않은 단계끼리는 단계 코드까지 비교해 결과 순서를 고정한다.
+                        if (sLeftStage !== sRightStage) {
+                            return sLeftStage.localeCompare(sRightStage);
+                        }
+
+                        iDocumentDifference = String(oLeft.DocNo || "").localeCompare(String(oRight.DocNo || ""));
+                        if (iDocumentDifference !== 0) {
+                            return iDocumentDifference;
+                        }
+
+                        iYearDifference = String(oLeft.DocYear || "").localeCompare(String(oRight.DocYear || ""));
+                        if (iYearDifference !== 0) {
+                            return iYearDifference;
+                        }
+
+                        iLeftItem = Number(oLeft.ItemNo || 0);
+                        iRightItem = Number(oRight.ItemNo || 0);
+                        if (!Number.isNaN(iLeftItem) && !Number.isNaN(iRightItem) && iLeftItem !== iRightItem) {
+                            return iLeftItem - iRightItem;
+                        }
+
+                        return String(oLeft.ItemNo || "").localeCompare(String(oRight.ItemNo || ""));
+                    });
+
+                    if (oDetailModel) {
+                        oDetailModel.setProperty("/processDocuments", aDocumentRows);
+                        oDetailModel.setProperty("/processDocumentCount", aDocumentRows.length);
+                    }
+
+                    return aDocumentRows;
+                }.bind(this));
+        },
+
+        /**
+         * 문서 상세 Dialog를 최초 한 번만 로드하고 이후에는 같은 인스턴스를 재사용한다.
+         *
+         * Controller.loadFragment를 사용하면 Fragment의 상대 경로, Controller 이벤트 연결,
+         * View 종속성 관리가 UI5 표준 방식으로 처리된다. Dialog 상단에는 이미 조회한
+         * ProcessDocumentSet 목록을 표시하고, 행 선택 시 하단에 DocumentDetailSet 결과를 표시한다.
+         *
+         * @returns {Promise<sap.m.Dialog>} 열린 문서 상세 Dialog
+         */
+        onOpenDocumentDetailDialog() {
+            if (!this._pDocumentDetailDialog) {
+                this._pDocumentDetailDialog = this.loadFragment({
+                    name: "code.d3.purchaseprocessmonitor.fragment.DocumentDetailDialog"
+                }).catch(function (oError) {
+                    // 로드 실패 Promise를 보관하면 재시도도 계속 실패하므로 캐시를 비운다.
+                    this._pDocumentDetailDialog = null;
+                    throw oError;
+                }.bind(this));
+            }
+
+            return this._pDocumentDetailDialog.then(function (oDialog) {
+                oDialog.open();
+                return oDialog;
+            });
+        },
+
+        /**
+         * 문서 상세 Dialog 닫기 버튼 이벤트.
+         * Dialog 인스턴스는 파괴하지 않고 유지해 다음 열기에서 Fragment를 다시 만들지 않는다.
+         *
+         * @returns {Promise<sap.m.Dialog|null>} 닫힌 Dialog, 아직 생성되지 않았으면 null
+         */
+        onCloseDocumentDetailDialog() {
+            if (!this._pDocumentDetailDialog) {
+                return Promise.resolve(null);
+            }
+
+            return this._pDocumentDetailDialog.then(function (oDialog) {
+                oDialog.close();
+                return oDialog;
+            });
+        },
+
+        /**
+         * 선택한 PO의 지연 산식 설명을 ResponsivePopover로 표시한다.
+         *
+         * SAPUI5의 ResponsivePopover는 데스크톱/태블릿에서는 전달한 버튼 옆에 Popover로 열리고,
+         * 휴대폰에서는 전체 화면 Dialog로 전환된다. Fragment는 최초 클릭 시 한 번만 로드하고
+         * 이후에는 같은 인스턴스를 재사용해 불필요한 컨트롤 생성을 막는다.
+         *
+         * 이 Popover의 목적은 Backend가 반환한 BaseDate와 DelayDays를 설명하는 것이다.
+         * 공휴일과 Working Day 계산을 Frontend에서 다시 수행하면 Backend 판정과 달라질 수 있으므로
+         * Controller에서는 날짜 차이를 계산하지 않는다.
+         *
+         * @param {sap.ui.base.Event} oEvent 지연 산식 보기 Button press 이벤트
+         * @returns {Promise<sap.m.ResponsivePopover|null>} 열린 Popover. 기준 버튼이 없으면 null
+         */
+        onOpenDelayFormulaPopover(oEvent) {
+            var oSource = oEvent && oEvent.getSource && oEvent.getSource();
+
+            if (!oSource) {
+                return Promise.resolve(null);
+            }
+
+            if (!this._pDelayFormulaPopover) {
+                this._pDelayFormulaPopover = this.loadFragment({
+                    name: "code.d3.purchaseprocessmonitor.fragment.DelayFormulaPopover"
+                }).catch(function (oError) {
+                    // 로드에 실패한 Promise를 보관하면 다음 클릭도 같은 실패를 재사용하므로 캐시를 비운다.
+                    this._pDelayFormulaPopover = null;
+                    throw oError;
+                }.bind(this));
+            }
+
+            return this._pDelayFormulaPopover.then(function (oPopover) {
+                oPopover.openBy(oSource);
+                return oPopover;
+            });
+        },
+
+        /**
+         * 휴대폰 Dialog 모드에서 표시되는 닫기 버튼과 데스크톱 Popover 닫기를 공통 처리한다.
+         *
+         * @returns {Promise<sap.m.ResponsivePopover|null>} 닫힌 Popover 또는 아직 생성 전이면 null
+         */
+        onCloseDelayFormulaPopover() {
+            if (!this._pDelayFormulaPopover) {
+                return Promise.resolve(null);
+            }
+
+            return this._pDelayFormulaPopover.then(function (oPopover) {
+                oPopover.close();
+                return oPopover;
+            });
+        },
+
+        /**
+         * Dialog 상단 관련 문서 행 선택 이벤트.
+         *
+         * DocumentDetailSet의 Key 필터인 Stage/DocNo/DocYear/ItemNo를 view 모델에 저장하고,
+         * 선택한 문서의 상세 필드를 즉시 조회한다. 새 문서를 선택하는 순간에는 이전 문서의
+         * 상세 값이 잠깐 남아 보이지 않도록 documentDetails 배열을 먼저 비운다.
+         *
+         * @param {sap.ui.base.Event} oEvent ProcessDocumentSet Table itemPress 이벤트
+         * @returns {Promise<object[]>|undefined} 조회된 DocumentDetailSet 행 목록
+         */
+        onProcessDocumentPress(oEvent) {
+            var oItem = oEvent && oEvent.getParameter && oEvent.getParameter("listItem");
+            var oContext = oItem && oItem.getBindingContext && oItem.getBindingContext("detail");
+            var oDocument = oContext && oContext.getObject && oContext.getObject();
+            var oViewModel = this.getView().getModel("view");
+            var oDetailModel = this.getView().getModel("detail");
+
+            if (!oDocument || !oViewModel) {
+                MessageToast.show("관련 문서 정보를 읽을 수 없습니다.");
+                return Promise.resolve([]);
+            }
+
+            oViewModel.setProperty("/selectedDocumentStage", oDocument.Stage || "");
+            oViewModel.setProperty("/selectedDocumentNo", oDocument.DocNo || "");
+            oViewModel.setProperty("/selectedDocumentYear", oDocument.DocYear || "");
+            oViewModel.setProperty("/selectedDocumentItemNo", oDocument.ItemNo || "");
+
+            if (oDetailModel) {
+                oDetailModel.setProperty("/documentDetails", []);
+            }
+
+            oViewModel.setProperty("/dialogBusy", true);
+
+            return this._readDocumentDetails(
+                oDocument.Stage,
+                oDocument.DocNo,
+                oDocument.DocYear,
+                oDocument.ItemNo
+            ).catch(function (oError) {
+                // UI 이벤트 Promise에서 오류를 다시 throw하면 브라우저에 Unhandled Promise가 남는다.
+                // 사용자에게 OData 오류를 안내하고 빈 상세 목록을 유지하는 방식으로 종료한다.
+                MessageBox.error(
+                    this._getODataErrorMessage(oError, "문서 상세 정보를 조회하지 못했습니다."),
+                    { title: "조회 오류" }
+                );
+                return [];
+            }.bind(this)).finally(function () {
+                oViewModel.setProperty("/dialogBusy", false);
+            });
+        },
+
+        /**
+         * 선택한 관련 문서의 상세 필드를 DocumentDetailSet에서 조회한다.
+         *
+         * Stage/DocNo/DocYear/ItemNo 네 값은 Backend Entity Key를 식별하는 필터다.
+         * 어떤 필드를 보여줄지는 Backend가 GroupName/FieldName/FieldValue 형태로 결정하므로,
+         * Frontend는 업무 필드를 하드코딩하지 않고 DisplayOrder 순서만 보장한다.
+         *
+         * @param {string} sStage 문서 단계(PR/RFQ/MQ/PO/GR/IV)
+         * @param {string} sDocNo 문서번호
+         * @param {string} sDocYear 문서연도
+         * @param {string} sItemNo 문서품목번호
+         * @returns {Promise<object[]>} DisplayOrder 순으로 정렬된 상세 필드 목록
+         * @private
+         */
+        _readDocumentDetails(sStage, sDocNo, sDocYear, sItemNo) {
+            var aFilters = [
+                new Filter("Stage", FilterOperator.EQ, this._normalizeSearchText(sStage)),
+                new Filter("DocNo", FilterOperator.EQ, this._normalizeSearchText(sDocNo)),
+                new Filter("DocYear", FilterOperator.EQ, this._normalizeSearchText(sDocYear)),
+                new Filter("ItemNo", FilterOperator.EQ, this._normalizeSearchText(sItemNo))
+            ];
+
+            return this._readEntitySet("/DocumentDetailSet", aFilters).then(function (aRows) {
+                var oDetailModel = this.getView().getModel("detail");
+                var aDetailRows = (Array.isArray(aRows) ? aRows : []).slice().sort(function (oLeft, oRight) {
+                    return Number(oLeft.DisplayOrder || 0) - Number(oRight.DisplayOrder || 0);
+                });
+
+                if (oDetailModel) {
+                    oDetailModel.setProperty("/documentDetails", aDetailRows);
+                }
+
+                return aDetailRows;
+            }.bind(this));
+        },
+
+        _readProcessFlow(sContextDocType, sContextDocNo) {
+            return this._readEntitySet("/ProcessFlowSet", this._buildProcessContextFilters(sContextDocType, sContextDocNo))
+                .then(function (aRows) {
+                    var oDetailModel = this.getView().getModel("detail");
+                    var aFlowRows = (Array.isArray(aRows) ? aRows : []).slice().sort(function (oLeft, oRight) {
+                        return Number(oLeft.StageOrder || 0) - Number(oRight.StageOrder || 0);
+                    });
+                    var oProcessFlowData = this._toProcessFlowData(aFlowRows);
+
+                    if (oDetailModel) {
+                        oDetailModel.setProperty("/processFlow", aFlowRows);
+                        oDetailModel.setProperty("/processFlowCount", aFlowRows.length);
+                        oDetailModel.setProperty("/processFlowNodes", oProcessFlowData.nodes);
+                        oDetailModel.setProperty("/processFlowLanes", oProcessFlowData.lanes);
+                    }
+
+                    /*
+                     * sap.suite.ui.commons.ProcessFlow는 nodes/lanes 바인딩 변경 후 내부 그래프를 다시 계산해야 한다.
+                     * SDK 샘플도 JSONModel 로드 완료 후 updateModel()을 호출한다.
+                     * 여기서는 OData 조회 결과를 JSONModel에 직접 넣으므로, 모델 반영 직후 한 번 갱신한다.
+                     */
+                    if (this.byId && this.byId("poProcessFlow") && this.byId("poProcessFlow").updateModel) {
+                        this.byId("poProcessFlow").updateModel();
+                    }
+
+                    return aFlowRows;
+                }.bind(this));
+        },
+
+
+        /**
+         * ProcessFlow 아래 단계 선택 버튼 이벤트.
+         *
+         * ProcessFlow는 조달 흐름을 시각화하는 용도로만 사용한다.
+         * 단계별 품목 Table 필터 기준은 사용자가 명확히 조작할 수 있는 SegmentedButton에서 관리한다.
+         *
+         * @param {sap.ui.base.Event} oEvent SegmentedButton selectionChange 이벤트
+         */
+        onProcessStageSelect(oEvent) {
+            var oItem = oEvent && oEvent.getParameter && oEvent.getParameter("item");
+            var sStage = oItem && oItem.getKey ? oItem.getKey() : "";
+            var oViewModel = this.getView().getModel("view");
+
+            if (oViewModel) {
+                oViewModel.setProperty("/selectedProcessStage", sStage || "");
+            }
+
+            this._applyProcessStageFilter(sStage);
+        },
+
+        /**
+         * 선택한 조달 단계에 해당하는 품목만 화면용 배열에 반영한다.
+         *
+         * ProcessItemSet은 PO 상세를 열 때 한 번만 조회한다. 이후 PR/RFQ/MQ/PO/GR/IV 버튼을
+         * 전환할 때는 추가 OData 요청 없이 processItemsAll 원본 배열의 CurrentStage를 비교한다.
+         * Backend 문자열에 공백이나 소문자가 포함되어도 정상 비교되도록 양쪽 값을 정규화한다.
+         * 선택 단계가 비어 있으면 전체 원본을 다시 표시하므로 초기 로딩에도 같은 함수를 사용할 수 있다.
+         *
+         * @param {string} sStage 사용자가 선택한 단계 키
+         * @returns {object[]} 현재 Table에 표시하도록 필터링된 품목 배열
+         */
+        _applyProcessStageFilter(sStage) {
+            var oDetailModel = this.getView().getModel("detail");
+            var aAllItems = oDetailModel && oDetailModel.getProperty("/processItemsAll");
+            var sNormalizedStage = String(sStage || "").trim().toUpperCase();
+            var aFilteredItems = (Array.isArray(aAllItems) ? aAllItems : []).filter(function (oRow) {
+                if (!sNormalizedStage) {
+                    return true;
+                }
+
+                return String(oRow && oRow.CurrentStage || "").trim().toUpperCase() === sNormalizedStage;
+            });
+
+            if (oDetailModel) {
+                oDetailModel.setProperty("/processItems", aFilteredItems);
+                oDetailModel.setProperty("/processItemCount", aFilteredItems.length);
+            }
+
+            return aFilteredItems;
+        },
+
+        /**
+         * Backend ProcessFlowSet 결과를 sap.suite.ui.commons.ProcessFlow 바인딩 구조로 변환한다.
+         *
+         * ProcessFlow는 업무 EntitySet 원본 필드명을 직접 이해하지 않는다.
+         * 그래서 Stage/StageOrder/ChildStage/Criticality 같은 Backend 필드를
+         * ProcessFlowNode와 ProcessFlowLaneHeader가 요구하는 id/lane/children/state 구조로 매핑한다.
+         *
+         * @param {object[]} aFlowRows StageOrder 기준으로 정렬된 ProcessFlowSet 행
+         * @returns {{nodes: object[], lanes: object[]}} ProcessFlow 바인딩 데이터
+         */
+        _toProcessFlowData(aFlowRows) {
+            var mExistingStage = {};
+            var aRows = Array.isArray(aFlowRows) ? aFlowRows : [];
+            var aLanes;
+            var aNodes;
+
+            aRows.forEach(function (oRow) {
+                if (oRow && oRow.Stage) {
+                    mExistingStage[oRow.Stage] = true;
+                }
+            });
+
+            aLanes = aRows.map(function (oRow, iIndex) {
+                var sStage = oRow.Stage || String(iIndex);
+
+                return {
+                    id: sStage,
+                    icon: this._getProcessStageIcon(sStage),
+                    label: oRow.StageText || sStage,
+                    /*
+                     * ProcessFlowLaneHeader.position은 화면의 Lane 위치이며 0부터 빠짐없이 이어져야 한다.
+                     * Backend StageOrder는 정렬용 업무 순서일 뿐이고 10,20,30처럼 간격이 있을 수 있다.
+                     * StageOrder를 그대로 position으로 쓰면 중간 Lane이 undefined가 되어
+                     * ProcessFlowRenderer에서 getLaneId 오류가 발생한다.
+                     */
+                    position: iIndex
+                };
+            }.bind(this));
+
+            aNodes = aRows.map(function (oRow, iIndex) {
+                var sStage = oRow.Stage || String(iIndex);
+                var sChildStage = oRow.ChildStage && mExistingStage[oRow.ChildStage] ? oRow.ChildStage : "";
+                var iDocumentCount = Number(oRow.DocumentCount || 0);
+                var iItemCount = Number(oRow.ItemCount || 0);
+                var iDelayedItemCount = Number(oRow.DelayedItemCount || 0);
+
+                return {
+                    id: sStage,
+                    lane: sStage,
+                    title: oRow.NodeTitle || oRow.StageText || sStage,
+                    titleAbbreviation: oRow.StageText || sStage,
+                    children: sChildStage ? [sChildStage] : null,
+                    state: this._toProcessFlowNodeState(oRow.Criticality),
+                    stateText: oRow.Status || oRow.StageText || "",
+                    texts: [
+                        "문서 " + iDocumentCount + "건 / 품목 " + iItemCount + "건",
+                        "지연 품목 " + iDelayedItemCount + "건"
+                    ],
+                    highlighted: iDelayedItemCount > 0 || oRow.Criticality === "Negative" || oRow.Criticality === "Critical",
+                    focused: false
+                };
+            }.bind(this));
+
+            return {
+                nodes: aNodes,
+                lanes: aLanes
+            };
+        },
+
+        /**
+         * Backend Criticality를 ProcessFlowNode.state 값으로 변환한다.
+         *
+         * sap.m.ObjectStatus와 달리 ProcessFlowNode는 Positive/Negative/Critical/Neutral/Planned 계열 값을 사용한다.
+         * Backend의 Information/None은 별도 문제 상태가 아니므로 Neutral로 표시한다.
+         *
+         * @param {string} sCriticality Backend Criticality
+         * @returns {string} sap.suite.ui.commons.ProcessFlowNodeState 문자열
+         */
+        _toProcessFlowNodeState(sCriticality) {
+            switch (sCriticality) {
+                case "Positive":
+                    return "Positive";
+                case "Negative":
+                    return "Negative";
+                case "Critical":
+                    return "Critical";
+                default:
+                    return "Neutral";
+            }
+        },
+
+        /**
+         * 조달 단계별 ProcessFlow Lane 아이콘을 반환한다.
+         *
+         * 아이콘은 업무 판정이 아니라 시각적 식별 보조다.
+         * Stage 코드가 추가되더라도 기본 문서 아이콘으로 표시해 화면이 깨지지 않게 한다.
+         *
+         * @param {string} sStage PR/RFQ/MQ/PO/GR/IV 등 단계 코드
+         * @returns {string} sap-icon URI
+         */
+        _getProcessStageIcon(sStage) {
+            var mIconByStage = {
+                PR: "sap-icon://request",
+                RFQ: "sap-icon://request",
+                MQ: "sap-icon://target-group",
+                PO: "sap-icon://sales-order",
+                GR: "sap-icon://shipping-status",
+                IV: "sap-icon://expense-report"
+            };
+
+            return mIconByStage[sStage] || "sap-icon://document";
+        },
+
+        /**
+         * PO 상세 EntitySet들이 공통으로 사용하는 Context 필터를 만든다.
+         *
+         * ProcessFlowSet, ProcessItemSet, ProcessDocumentSet은 모두 선택한 기준 문서를
+         * ContextDocType + ContextDocNo 조합으로 받는다.
+         *
+         * @param {string} sContextDocType 기준 문서유형
+         * @param {string} sContextDocNo 기준 문서번호
+         * @returns {sap.ui.model.Filter[]} Context 필터 배열
+         */
+        _buildProcessContextFilters(sContextDocType, sContextDocNo) {
+            return [
+                new Filter("ContextDocType", FilterOperator.EQ, this._normalizeSearchText(sContextDocType)),
+                new Filter("ContextDocNo", FilterOperator.EQ, this._normalizeSearchText(sContextDocNo))
+            ];
         },
 
         /**
@@ -395,11 +1008,20 @@ sap.ui.define([
             var oView = this.getView();
             var oViewModel = oView.getModel("view");
 
+            /*
+             * 조회 버튼, KPI 카드, 새로고침은 모두 같은 Begin 조회 함수를 사용한다.
+             * 사용자가 응답 전에 다시 눌러도 동일한 OData 요청을 중복 전송하지 않도록
+             * 진행 중인 Promise를 보관하고, 완료된 뒤에만 다음 조회를 허용한다.
+             */
+            if (this._pBeginLoad) {
+                return this._pBeginLoad;
+            }
+
             if (oViewModel) {
                 oViewModel.setProperty("/busy", true);
             }
 
-            return Promise.all([
+            this._pBeginLoad = Promise.all([
                 this._readDashboardSummary(),
                 this._readWeeklySummary(),
                 this._readDelayList()
@@ -413,12 +1035,20 @@ sap.ui.define([
                 MessageToast.show("모니터링 데이터를 조회했습니다.");
             }.bind(this)).catch(function (oError) {
                 this._resetSummaryModels();
-                MessageBox.error(this._getODataErrorMessage(oError));
+                MessageBox.error(
+                    this._getODataErrorMessage(oError, "모니터링 데이터를 조회하지 못했습니다."),
+                    { title: "조회 오류" }
+                );
             }.bind(this)).finally(function () {
                 if (oViewModel) {
                     oViewModel.setProperty("/busy", false);
                 }
-            });
+
+                // 완료된 Promise는 제거해 이후 조회조건 변경 후 새 요청을 실행할 수 있게 한다.
+                this._pBeginLoad = null;
+            }.bind(this));
+
+            return this._pBeginLoad;
         },
 
         /**
@@ -1318,21 +1948,108 @@ sap.ui.define([
         },
 
         /**
-         * OData 오류 객체에서 사용자가 이해할 수 있는 메시지를 추출한다.
+         * OData 조회 오류를 사용자가 이해하고 조치할 수 있는 안내 문구로 변환한다.
+         *
+         * SAP Gateway가 JSON 오류 본문에 업무 메시지를 전달한 경우 그 문구를 가장 먼저 사용한다.
+         * 반면 `HTTP request failed`, `Internal Server Error` 같은 기술 문구는 화면에 그대로 노출하지 않고
+         * 연결, 권한, 조회 조건, 서버 처리 오류처럼 사용자가 이해할 수 있는 표현으로 바꾼다.
          *
          * @param {object|Error|string} vError ODataModel.read error 콜백 값
-         * @returns {string} 화면에 표시할 오류 메시지
+         * @param {string} sContextMessage 오류가 발생한 화면 작업을 설명하는 기본 안내
+         * @returns {string} MessageBox에 표시할 사용자용 오류 메시지
          */
-        _getODataErrorMessage(vError) {
-            if (vError && vError.message) {
-                return vError.message;
+        _getODataErrorMessage(vError, sContextMessage) {
+            var sBusinessMessage = this._extractODataBusinessMessage(vError);
+            var iStatusCode = Number(vError && (vError.statusCode || vError.status));
+
+            if (sBusinessMessage && !this._isTechnicalErrorMessage(sBusinessMessage)) {
+                return sBusinessMessage;
             }
 
-            if (vError && vError.responseText) {
-                return vError.responseText;
+            if (!iStatusCode || iStatusCode === 408 || iStatusCode === 504) {
+                if (iStatusCode === 408 || iStatusCode === 504 || this._isConnectionError(vError)) {
+                    return "서버에 연결할 수 없습니다. 네트워크 상태와 로그인 세션을 확인한 후 다시 시도하세요.";
+                }
             }
 
-            return "요약 데이터 조회 중 오류가 발생했습니다.";
+            if (iStatusCode === 401 || iStatusCode === 403) {
+                return "이 정보를 조회할 권한이 없거나 로그인 세션이 만료되었습니다. 다시 로그인한 후 시도하세요.";
+            }
+
+            if (iStatusCode === 404) {
+                return "요청한 조회 서비스를 찾을 수 없습니다. 시스템 관리자에게 문의하세요.";
+            }
+
+            if (iStatusCode === 400 || iStatusCode === 422) {
+                return "조회 조건을 처리하지 못했습니다. 입력한 조건을 확인한 후 다시 시도하세요.";
+            }
+
+            if (iStatusCode >= 500) {
+                return "요청을 처리하는 중 문제가 발생했습니다. 잠시 후 다시 시도하세요.";
+            }
+
+            return sContextMessage || "데이터를 조회하지 못했습니다. 잠시 후 다시 시도하세요.";
+        },
+
+        /**
+         * SAP Gateway OData 오류 응답의 JSON 본문에서 업무 메시지를 추출한다.
+         *
+         * OData V2는 일반적으로 `error.message.value`, 일부 응답은 `error.message` 문자열을 사용한다.
+         * JSON 형식이 아니거나 구조가 다르면 빈 문자열을 반환하여 상태 코드별 안내를 사용하게 한다.
+         * 원문 전체를 화면에 표시하지 않으므로 HTML, XML, 예외 스택이 노출되는 문제도 방지한다.
+         *
+         * @param {object|Error|string} vError OData 오류 객체
+         * @returns {string} Gateway 업무 메시지 또는 빈 문자열
+         * @private
+         */
+        _extractODataBusinessMessage(vError) {
+            var sResponseText = vError && (
+                vError.responseText ||
+                vError.response && vError.response.body
+            );
+            var oResponse;
+            var vMessage;
+
+            if (!sResponseText || typeof sResponseText !== "string") {
+                return "";
+            }
+
+            try {
+                oResponse = JSON.parse(sResponseText);
+                vMessage = oResponse && oResponse.error && oResponse.error.message;
+
+                if (typeof vMessage === "string") {
+                    return vMessage.trim();
+                }
+
+                return vMessage && typeof vMessage.value === "string" ? vMessage.value.trim() : "";
+            } catch {
+                return "";
+            }
+        },
+
+        /**
+         * 오류 문구가 사용자 안내가 아니라 통신 계층의 기술 문구인지 판별한다.
+         *
+         * @param {string} sMessage 검사할 오류 문구
+         * @returns {boolean} 기술 문구이면 true
+         * @private
+         */
+        _isTechnicalErrorMessage(sMessage) {
+            return /http request failed|network error|internal server error|failed to fetch/i.test(String(sMessage || ""));
+        },
+
+        /**
+         * 상태 코드가 없는 브라우저 통신 실패를 판별한다.
+         *
+         * @param {object|Error|string} vError OData 오류 객체
+         * @returns {boolean} 네트워크 또는 연결 실패이면 true
+         * @private
+         */
+        _isConnectionError(vError) {
+            var sMessage = vError && vError.message || "";
+
+            return /network error|failed to fetch|connection|timeout/i.test(String(sMessage));
         }
     });
 });

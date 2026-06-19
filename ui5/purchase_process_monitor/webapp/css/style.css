@@ -76,6 +76,25 @@
     }
 }
 
+/*
+ * 휴대폰에서는 고정 rem 폭의 조회조건을 한 열로 배치한다.
+ * XML의 HBox wrap만 사용하면 18rem 필드와 오른쪽 margin의 합이 작은 화면 폭을 넘을 수 있다.
+ * Control 자체 폭을 100%로 바꾸고 행 끝 여백을 제거해 입력 필드가 화면 안에 유지되도록 한다.
+ */
+@media (max-width: 600px) {
+    .ppmFilterField {
+        box-sizing: border-box;
+        width: 100% !important;
+        margin-right: 0 !important;
+    }
+
+    /* 모바일에서 주간 요약 패널의 데스크톱용 최소 높이 때문에 빈 공간이 생기지 않게 한다. */
+    .ppmWeeklySummaryPanel,
+    .ppmWeeklySummaryPanel .sapMPanelContent {
+        min-height: auto;
+    }
+}
+
 /* 조달 문서 목록의 긴 자재/공급업체/비고 텍스트는 한 줄 말줄임 처리한다. */
 .ppmDocMetaText {
     display: block;

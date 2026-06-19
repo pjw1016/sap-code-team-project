@@ -112,6 +112,7 @@ function (JSONModel, Device) {
                 // PO이면 Mid Column을 열고, RFQ이면 RFQ/MQ 현황 영역만 강조한다.
                 selectedDocType: "",
                 selectedDocNo: "",
+                selectedProcessStage: "",
 
                 // 조달 문서 목록 Header에 표시할 현재 상태/정렬/그룹 요약 문구.
                 DelayTableStatusSummary: "상태: 전체",
@@ -223,9 +224,39 @@ function (JSONModel, Device) {
          */
         createDetailModel: function () {
             return new JSONModel({
+                /*
+                 * Begin Column에서 선택한 PO Header의 요약 정보다.
+                 * ProcessFlowSet/ProcessItemSet은 흐름과 품목 데이터만 제공하므로,
+                 * 목록에서 이미 받은 문서 상태와 지연 집계는 별도로 보관해 Mid Column 상단에 표시한다.
+                 */
+                poSummary: {
+                    DocType: "",
+                    DocNo: "",
+                    DelayStatusText: "",
+                    Criticality: "None",
+                    // DelayListSet이 반환한 지연 판정 기준일. Popover에서는 설명 목적으로만 표시한다.
+                    BaseDate: null,
+                    DelayDays: 0,
+                    DelayedItemCount: 0,
+                    TotalItemCount: 0
+                },
+
+                // Backend ProcessFlowSet 원본 행. 디버깅과 후속 상세 연동에 사용한다.
                 processFlow: [],
+                processFlowCount: 0,
+
+                // sap.suite.ui.commons.ProcessFlow가 직접 바인딩할 화면 전용 구조다.
+                processFlowNodes: [],
+                processFlowLanes: [],
+
+                // ProcessItemSet에서 받은 전체 원본. 단계 버튼을 바꿀 때마다 이 배열에서 다시 필터링한다.
+                processItemsAll: [],
+
+                // 현재 선택 단계에 따라 품목 Table에 실제로 표시할 배열.
                 processItems: [],
+                processItemCount: 0,
                 processDocuments: [],
+                processDocumentCount: 0,
                 documentDetails: []
             });
         }

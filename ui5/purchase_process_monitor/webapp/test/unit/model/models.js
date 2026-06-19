@@ -37,6 +37,8 @@ sap.ui.define([
 
         assert.strictEqual(oViewData.layout, "OneColumn", "최초 진입은 Begin Column만 표시한다.");
         assert.strictEqual(oViewData.busy, false, "최초 진입 전 전체 Busy는 꺼져 있다.");
+        assert.strictEqual(oViewData.midBusy, false, "PO 상세 조회 전 Mid Busy는 꺼져 있다.");
+        assert.strictEqual(oViewData.dialogBusy, false, "문서 상세 조회 전 Dialog Busy는 꺼져 있다.");
         assert.strictEqual(oViewData.showAdvancedFilters, false, "상세 조회조건은 기본적으로 접혀 있다.");
         assert.strictEqual(oViewData.selectedDocType, "", "선택 문서 유형은 초기에는 비어 있다.");
         assert.strictEqual(oViewData.selectedDocNo, "", "선택 문서 번호는 초기에는 비어 있다.");
@@ -82,5 +84,31 @@ sap.ui.define([
 
         assert.deepEqual(oRfqStatusData.rows, [], "RFQ/MQ 현황의 초기 rows는 빈 배열이다.");
         assert.strictEqual(oRfqStatusData.count, 0, "RFQ/MQ 현황의 초기 건수는 0이다.");
+    });
+
+    QUnit.test("createDetailModel provides empty Mid Column defaults", function (assert) {
+        var oDetailModel = models.createDetailModel();
+        var oDetailData = oDetailModel.getData();
+
+        assert.deepEqual(oDetailData.poSummary, {
+            DocType: "",
+            DocNo: "",
+            DelayStatusText: "",
+            Criticality: "None",
+            BaseDate: null,
+            DelayDays: 0,
+            DelayedItemCount: 0,
+            TotalItemCount: 0
+        }, "선택 PO 요약은 바인딩 오류가 없도록 빈 기본 구조를 제공한다.");
+        assert.deepEqual(oDetailData.processFlow, [], "ProcessFlowSet 결과 기본값은 빈 배열이다.");
+        assert.strictEqual(oDetailData.processFlowCount, 0, "ProcessFlowSet 건수 기본값은 0이다.");
+        assert.deepEqual(oDetailData.processFlowNodes, [], "ProcessFlow nodes 기본값은 빈 배열이다.");
+        assert.deepEqual(oDetailData.processFlowLanes, [], "ProcessFlow lanes 기본값은 빈 배열이다.");
+        assert.deepEqual(oDetailData.processItemsAll, [], "ProcessItemSet 원본 데이터 기본값은 빈 배열이다.");
+        assert.deepEqual(oDetailData.processItems, [], "ProcessItemSet 화면 데이터 기본값은 빈 배열이다.");
+        assert.strictEqual(oDetailData.processItemCount, 0, "ProcessItemSet 건수 기본값은 0이다.");
+        assert.deepEqual(oDetailData.processDocuments, [], "ProcessDocumentSet 결과 기본값은 빈 배열이다.");
+        assert.strictEqual(oDetailData.processDocumentCount, 0, "ProcessDocumentSet 건수 기본값은 0이다.");
+        assert.deepEqual(oDetailData.documentDetails, [], "DocumentDetailSet 결과 기본값은 빈 배열이다.");
     });
 });
